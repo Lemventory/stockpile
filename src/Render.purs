@@ -14,8 +14,9 @@ import Data.String.Pattern (Replacement(..))
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Deku.Core (Nut, text_)
+import Deku.DOM (img)
 import Deku.DOM as D
-import Deku.DOM.Attributes (klass_)
+import Deku.DOM.Attributes (alt_, klass_, src_)
 import Deku.Effect (useState)
 import Deku.Hooks ((<#~>))
 import Deku.Toplevel (runInBody)
@@ -105,26 +106,16 @@ renderItem (MenuItem item) =
   in
   D.div
     [ klass_ ("inventory-item-card " <> generateClassName { category: item.category, subcategory: item.subcategory, species: meta.species }) ]
-    [ D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
-    , D.div [ klass_ "item-brand" ] [ text_ ( item.brand) ]
-    , D.div [ klass_ "item-category" ] [ text_ (item.category <> " - " <> item.subcategory) ]
-    -- , D.div [ klass_ "item-description" ] [ text_ ("Description: " <> item.description) ]
-    -- , D.div [ klass_ "item-tags" ] [ text_ ("tags: " <> intercalate ", " item.tags) ]
-    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
-    , D.div [ klass_ "item-strain_lineage" ] 
-        [ text_ (
-                -- "species: " <> meta.species
-                --  <> " THC: " <> meta.thc 
-                --  <> " CBD: " <> meta.cbd
-                --  <> " CBG: " <> meta.cbg
-                " Strain: " <> meta.strain 
-                --  <> " Creator: " <> meta.creator
-                --  <> " dominant tarpene: " <> meta.dominant_tarpene
-                --  <> " Tarpenes: " <> intercalate ", " meta.tarpenes
-                --  <> " lineage: " <> intercalate ", " meta.lineage                                   
-                 ) 
+    [ D.div [ klass_ "item-header" ]
+        [ D.div []
+            [ D.div [ klass_ "item-brand" ] [ text_ item.brand ]
+            , D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
+            ]
+        , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
         ]
-    -- , D.div [ klass_ "item-units" ] [ text_ (item.per_package <> " " <> item.measure_unit) ]
+    , D.div [ klass_ "item-category" ] [ text_ (item.category <> " - " <> item.subcategory) ]
+    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
+    , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
     , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
     , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
     ]
@@ -144,7 +135,7 @@ app = do
   setInventory /\ inventory <- useState (Inventory [])
   let
     config =
-      { sortFields: [ SortByCategory /\ Descending
+      { sortFields: [ SortByCategory /\ Ascending
                     , SortBySpecies /\ Descending
                     , SortByQuantity /\ Descending
                     ]

@@ -7,9 +7,9 @@
         "price": 30.00,
         "measure_unit": "oz",
         "per_package": "1/8",
-        "quantity": 1,
+        "quantity": 45,
         "category": "Flower",
-        "subcategory": "",
+        "subcategory": "Buds",
         "description": "Chronic is a hybrid marijuana strain made by crossing Northern Lights with Skunk and AK-47. This balanced strain produces energizing and uplifting effects. Chronic features a flavor profile of sweet honey, flower, and spice. Medical marijuana patients choose this strain to help relieve symptoms associated with stress and depression.",
         "tags": ["Indica", "Flower", "1g", "Live Resin"],
         "effects": ["giggly", "happy", "talkative"], 
@@ -35,7 +35,7 @@
         "price": 100.00,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1000,
+        "quantity": 33,
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Sativa vape with a sharp, uplifting effect.",
@@ -52,7 +52,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     { 
@@ -63,7 +63,7 @@
         "price": 150.02,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 12,
+        "quantity": 15,
         "category": "Vape",
         "subcategory": "Live Rosin",
         "description": "High-quality live rosin for the seasoned user.",
@@ -80,7 +80,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -91,7 +91,7 @@
         "price": 1,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1000,
+        "quantity": 12,
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Classic indica vape for relaxation.",
@@ -108,7 +108,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -119,7 +119,7 @@
         "price": 200,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1,
+        "quantity": 12,
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Hybrid vape offering a balanced experience.",
@@ -136,7 +136,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -147,7 +147,7 @@
         "price": 10,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1,
+        "quantity": 12,
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Unique vape product with indica effects.",
@@ -164,7 +164,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg"
         }
     },
     {
@@ -175,7 +175,7 @@
         "price": 4,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1,        
+        "quantity": 44,        
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Mild indica with social effects.",
@@ -192,7 +192,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -220,7 +220,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -231,7 +231,7 @@
         "price": 54.66,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1,        
+        "quantity": 16,        
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Energizing sativa vape with fruity notes.",
@@ -248,7 +248,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     },
     {
@@ -259,7 +259,7 @@
         "price": 23,
         "measure_unit": "g",
         "per_package": "1",
-        "quantity": 1,        
+        "quantity": 2,        
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Sativa vape that’s perfect for daytime use.",
@@ -276,7 +276,7 @@
             "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
-            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+            "img": "https://www.cannabis-nb.com/globalassets/01/all/menu/vape-pens--cartridges/421135-0.5g_000_001.jpg?20241031"
         }
     }, 
     { 
@@ -287,7 +287,7 @@
         "price": 30.00,
         "measure_unit": "oz",
         "per_package": "1/8",
-        "quantity": 1,
+        "quantity": 3,
         "category": "Flower",
         "subcategory": "Buds",
         "description": "Lemon OG Haze by Nirvana is the sensible combination of its titular elements: Lemon OG and Haze. While Lemon OG contains weighty Kush elements that are kind on the body, the excess limonene and alpha-pinene lead the consumer into a state of mental alertness and euphoria. In the right measure, this strain can be a one-way ticket to productivity, hazing the mind into a content lull while wrapping the body in a calm focus. Enjoy this strain as a means to crush anxiety, depression, lethargy, and fatigue.",

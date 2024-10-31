@@ -54,6 +54,8 @@ newtype StrainLineage = StrainLineage
   , dominant_tarpene :: String
   , tarpenes :: Array String
   , lineage :: Array String
+  , leafly_url :: String
+  , img :: String
   }
 
 instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody where
@@ -88,7 +90,9 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     dominant_tarpene <- readProp "dominant_tarpene" json >>= readImpl
     tarpenes <- readProp "tarpenes" json >>= readImpl
     lineage <- readProp "lineage" json >>= readImpl
-    pure $ StrainLineage { thc, cbd, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage
+    leafly_url <- readProp "leafly_url" json >>= readImpl
+    img <- readProp "img" json >>= readImpl
+    pure $ StrainLineage { thc, cbd, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img
  }
 
 instance readForeignInventory :: ReadForeign Inventory where
