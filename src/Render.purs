@@ -2,14 +2,13 @@ module Render where
 
 import Prelude
 
-import BudView (Inventory(..), InventoryResponse(..), MenuItem(..), QueryMode(..), fetchInventory)
+import BudView (Inventory(..), InventoryResponse(..), MenuItem(..), Metadata(..), QueryMode(..), fetchInventory)
 import CSS.Color (Color) as CSS
 import CSS.Color (fromInt)
-import Data.Array (filter, sortBy)
+import Data.Array (filter, intercalate, sortBy)
 import Data.Either (Either(..))
 import Data.String (Pattern(..), replace, toLower)
 import Data.String.Pattern (Replacement(..))
--- import Data.String.Utils (toCharArray)
 import Data.Tuple.Nested ((/\))
 import Deku.Core (Nut, text_)
 import Deku.DOM as D
@@ -81,11 +80,19 @@ renderInventory config (Inventory items) = D.div
 renderItem :: MenuItem -> Nut
 renderItem (MenuItem item) = D.div
   [ klass_ ("inventory-item-card " <> generateClassName { category: item.category, subcategory: item.subcategory, species: item.species }) ]
-  [ D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
+  [ D.div [ klass_ "item-uuid" ] [ text_ ("ID: " <> show item.uuid) ]
+  , D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
+  , D.div [ klass_ "item-brand" ] [ text_ ("Brand: " <> item.brand) ]
   , D.div [ klass_ "item-category" ] [ text_ (item.category <> " - " <> item.subcategory) ]
-  , D.div [ klass_ "item-species" ] [ text_ ( item.species) ]
+  , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> item.species) ]
+  , D.div [ klass_ "item-description" ] [ text_ ("Description: " <> item.description) ]
   , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price) ]
-  , D.div [ klass_ "item-quantity" ] [ text_ ("qty:" <> show item.quantity) ]
+  , D.div [ klass_ "item-quantity" ] [ text_ ("Quantity: " <> show item.quantity) ]
+  , D.div [ klass_ "item-tags" ] [ text_ ("Tags: " <> intercalate ", " item.tags) ]
+  , D.div [ klass_ "item-metadata" ] 
+      [ let Metadata metadata = item.metadata in
+          text_ ("THC: " <> metadata.thc <> ", CBD: " <> metadata.cbd <> ", Strain: " <> metadata.strain) 
+      ]
   ]
 
 generateClassName :: { category :: String, subcategory :: String, species :: String } -> String
