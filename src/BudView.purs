@@ -29,7 +29,7 @@ data QueryMode = JsonMode | HttpMode
 newtype Inventory = Inventory (Array MenuItem)
 
 newtype MenuItem = MenuItem
-  { uuid :: Int  
+  { sort :: Int  
   , sku :: String
   , brand :: String
   , name :: String
@@ -38,7 +38,6 @@ newtype MenuItem = MenuItem
   , category :: String
   , subcategory :: String
   , description :: String
-  , species :: String
   , tags :: Array String
   , metadata :: Metadata
   }
@@ -47,6 +46,7 @@ newtype Metadata = Metadata
   { thc :: String
   , cbd :: String
   , strain :: String
+  , species :: String
   }
 
 instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody where
@@ -55,7 +55,7 @@ instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody whe
 
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
-    uuid <- readProp "uuid" json >>= readImpl
+    sort <- readProp "sort" json >>= readImpl
     sku <- readProp "sku" json >>= readImpl
     brand <- readProp "brand" json >>= readImpl
     name <- readProp "name" json >>= readImpl
@@ -64,17 +64,18 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
     category <- readProp "category" json >>= readImpl
     subcategory <- readProp "subcategory" json >>= readImpl
     description <- readProp "description" json >>= readImpl
-    species <- readProp "species" json >>= readImpl
     tags <- readProp "tags" json >>= readImpl
     metadata <- readProp "metadata" json >>= readImpl
-    pure $ MenuItem { uuid, sku, brand, name, price, quantity, category, subcategory, description, species, tags, metadata }
+    pure $ MenuItem { sort, sku, brand, name, price, quantity, category, subcategory, description, tags, metadata }
 
 instance readForeignMetadata :: ReadForeign Metadata where
   readImpl json = do
     thc <- readProp "thc" json >>= readImpl
     cbd <- readProp "cbd" json >>= readImpl
     strain <- readProp "strain" json >>= readImpl
-    pure $ Metadata { thc, cbd, strain }
+    species <- readProp "species" json >>= readImpl
+
+    pure $ Metadata { thc, cbd, strain, species }
 
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do

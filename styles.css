@@ -1,78 +1,99 @@
-/* General layout remains the same */
+/* General Layout */
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-  padding: 3px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  padding: 10px;
+  background-color: #1a1a1a; /* Dark background for the grid */
 }
 
-/* Individual item card styling */
+/* Inventory Item Card */
 .inventory-item-card {
-  border: 1px solid #ccc;
+  border: 1px solid #333;
   padding: 16px;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(232, 229, 229, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  min-height: 10vh;
+  border-radius: 10px;
+  background-color: #262626; /* Darker card background */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* Subtle shadow for depth */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   text-align: left;
 }
 
-/* Dynamic species-specific styles */
+/* .inventory-item-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+} */
+
+/* Species-Specific Border Styling */
 .species-indica {
-  border-left: 5px solid #b25fff; /* Green for Indica */
+  border: 3px solid #9b59b6; /* Muted purple for Indica */
 }
 
 .species-sativa {
-  border-left: 5px solid #ff6600; /* Orange for Sativa */
+  border: 3px solid #e67e22; /* Muted orange for Sativa */
 }
 
 .species-hybrid {
-  border-left: 5px solid #7db190; /* Blue for Hybrid */
+  border: 3px solid #3498db; /* Muted blue for Hybrid */
 }
 
-/* Dynamic category-specific styles */
+/* Category-Specific Background Styling */
 .category-flower {
-  background-color: #a68888; /* Light grey for Flower */
+  background-color: #3a3a3a; /* Dark grey for Flower */
 }
 
 .category-vape {
-  background-color: #64817ccf; /* Light orange for Vape */
+  background-color: #2c3e50; /* Darker blue-grey for Vape */
 }
 
-/* Dynamic subcategory-specific styles */
-.subcategory-live-resin {
-  font-style: italic;
-}
-
-.subcategory-live-rosin {
-  font-weight: bold;
-}
-
-/* Text styling for inventory items */
+/* Text Styling for Inventory Items */
 .item-name {
-  font-weight: bold;
-  color: rgb(217, 229, 146);
-  margin-bottom: 2px;
+  font-weight: 700;
+  color: #ecf0f1; /* Light text color for contrast */
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.item-brand {
+  font-weight: 500;
+  color: #bdc3c7; /* Subtle grey for brand text */
+  margin-bottom: 6px;
+}
+
+.item-category, .item-subcategory, .item-species, .item-tags {
+  margin: 4px 0;
+  font-size: 1rem;
+  color: #ecf0f1; /* Consistent light color for details */
 }
 
 .item-price {
-  font-weight: bold;
-  color: rgb(120, 255, 165);
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2ecc71; /* Light green for price */
+  font-size: 1.1rem;
+  margin: 10px 0;
 }
 
 .item-quantity {
-  font-weight: bold;
-  color: rgb(255, 255, 255);
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: #e74c3c; /* Light red for quantity */
+  margin-bottom: 10px;
 }
 
+/* Consistent Font Sizing */
 .item-category, .item-subcategory, .item-species, .item-price, .item-quantity {
-  margin: 1px 0;
-  font-size: calc(0.8vw + 0.8vh + 0.3vmin); /* Dynamic font size */
+  font-size: calc(0.9vw + 0.9vh + 0.7vmin); /* Adaptive font size */
+}
+
+/* Smoothly Responsive */
+@media (max-width: 768px) {
+  .item-name, .item-price, .item-quantity {
+    font-size: 1rem;
+  }
+
+  .inventory-item-card {
+    padding: 12px;
+  }
 }

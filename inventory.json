@@ -1,6 +1,6 @@
 [
     { 
-        "uuid": 1,
+        "sort": 1,
         "sku": "8eacb499-76e6-42cb-aa05-103713dd2bd6",
         "brand": "Green Leaf",
         "name": "Chronic",
@@ -9,16 +9,16 @@
         "category": "Flower",
         "subcategory": "Live Resin",
         "description": "A potent indica flower known for relaxation.",
-        "species": "Indica",
         "tags": ["Indica", "Flower", "1g", "Live Resin"],
         "metadata": {
             "thc": "20%",
             "cbd": "1%",
-            "strain": "Chronic"
+            "strain": "Chronic",
+            "species": "Indica"
         }
     },
     { 
-        "uuid": 2,
+        "sort": 2,
         "sku": "14f7473a-f99b-41d9-a715-4ae6ed9ec0df",
         "brand": "High Times",
         "name": "Trom",
@@ -27,16 +27,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Sativa vape with a sharp, uplifting effect.",
-        "species": "Sativa",
         "tags": ["Sativa", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "78%",
             "cbd": "0.2%",
-            "strain": "Trom"
+            "strain": "Trom",
+            "species": "Sativa"
         }
     },
     { 
-        "uuid": 3,
+        "sort": 3,
         "sku": "a2b85c24-98d2-45e5-b607-216ba91a1437",
         "brand": "CannaDreams",
         "name": "420 BLaze It",
@@ -45,16 +45,16 @@
         "category": "Vape",
         "subcategory": "Live Rosin",
         "description": "High-quality live rosin for the seasoned user.",
-        "species": "Indica",
         "tags": ["Indica", "Vape", "Live Rosin", "1g"],
         "metadata": {
             "thc": "85%",
             "cbd": "0%",
-            "strain": "Blaze It"
+            "strain": "Blaze It",
+            "species": "Indica"
         }
     },
     {
-        "uuid": 4,
+        "sort": 4,
         "sku": "c69bda02-e561-40ae-8d6f-32629c4bbbea",
         "brand": "Organic Herbals",
         "name": "Weed",
@@ -63,16 +63,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Classic indica vape for relaxation.",
-        "species": "Indica",
         "tags": ["Indica", "Vape", "Live Resin", "0.5g"],
         "metadata": {
             "thc": "75%",
             "cbd": "0.5%",
-            "strain": "Classic Indica"
+            "strain": "Classic Indica",
+            "species": "Indica"
         }
     },
     {
-        "uuid": 5,
+        "sort": 5,
         "sku": "8e91ba59-0ffa-4c86-bbd8-013fcfd98d61",
         "brand": "Sunny Side",
         "name": "Durban Poison",
@@ -81,16 +81,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Hybrid vape offering a balanced experience.",
-        "species": "Hybrid",
         "tags": ["Hybrid", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "80%",
             "cbd": "0.3%",
-            "strain": "Durban Poison"
+            "strain": "Durban Poison",
+            "species": "Hybrid"
         }
     },
     {
-        "uuid": 6,
+        "sort": 6,
         "sku": "8b21869d-45b6-469b-9963-9f155b2cfb73",
         "brand": "Stoney Bros",
         "name": "Malabsorbed Melvin",
@@ -99,16 +99,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Unique vape product with indica effects.",
-        "species": "Indica",
         "tags": ["Indica", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "76%",
             "cbd": "0.4%",
-            "strain": "Melvin"
+            "strain": "Melvin",
+            "species": "Indica"
         }
     },
     {
-        "uuid": 7,
+        "sort": 7,
         "sku": "9e9bb80f-193a-48c3-a331-02126eaa64f5",
         "brand": "Cloud 9",
         "name": "Chatty Kathy",
@@ -117,16 +117,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Mild indica with social effects.",
-        "species": "Indica",
         "tags": ["Indica", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "72%",
             "cbd": "1%",
-            "strain": "Kathy"
+            "strain": "Kathy",
+            "species": "Indica"
         }
     },
     {
-        "uuid": 8,
+        "sort": 8,
         "sku": "989031da-b290-4c14-96b9-2631225cbe66",
         "brand": "Supreme High",
         "name": "Super Crunky Tpunk",
@@ -135,16 +135,16 @@
         "category": "Vape",
         "subcategory": "Live Rosin",
         "description": "A potent indica for relaxation.",
-        "species": "Indica",
         "tags": ["Indica", "Vape", "Live Rosin", "1g"],
         "metadata": {
             "thc": "82%",
             "cbd": "0%",
-            "strain": "Tpunk"
+            "strain": "Tpunk",
+            "species": "Indica"
         }
     },
     {
-        "uuid": 9,
+        "sort": 9,
         "sku": "15b6ad32-7546-4213-89d4-6fcac66a834b",
         "brand": "Happy Leaf",
         "name": "Waifu",
@@ -153,16 +153,16 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Energizing sativa vape with fruity notes.",
-        "species": "Sativa",
         "tags": ["Sativa", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "80%",
             "cbd": "0.3%",
-            "strain": "Waifu"
+            "strain": "Waifu",
+            "species": "Sativa"
         }
     },
     {
-        "uuid": 10,
+        "sort": 10,
         "sku": "0ce685aa-d309-47a3-99ff-dd701dc6bc08",
         "brand": "Herb Masters",
         "name": "Totes Adorbs",
@@ -171,12 +171,12 @@
         "category": "Vape",
         "subcategory": "Live Resin",
         "description": "Sativa vape that’s perfect for daytime use.",
-        "species": "Sativa",
         "tags": ["Sativa", "Vape", "Live Resin", "1g"],
         "metadata": {
             "thc": "77%",
             "cbd": "0.2%",
-            "strain": "Adorbs"
+            "strain": "Adorbs",
+            "species": "Sativa"
         }
     }
 ]
