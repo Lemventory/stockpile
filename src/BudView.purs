@@ -34,19 +34,26 @@ newtype MenuItem = MenuItem
   , brand :: String
   , name :: String
   , price :: Number
+  , measure_unit :: String
+  , per_package :: String
   , quantity :: Int
   , category :: String
   , subcategory :: String
   , description :: String
   , tags :: Array String
-  , metadata :: Metadata
+  , strain_lineage :: StrainLineage
   }
 
-newtype Metadata = Metadata
+newtype StrainLineage = StrainLineage
   { thc :: String
   , cbd :: String
+  , cbg :: String
   , strain :: String
+  , creator :: String
   , species :: String
+  , dominant_tarpene :: String
+  , tarpenes :: Array String
+  , lineage :: Array String
   }
 
 instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody where
@@ -60,22 +67,29 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
     brand <- readProp "brand" json >>= readImpl
     name <- readProp "name" json >>= readImpl
     price <- readProp "price" json >>= readImpl
+    measure_unit <- readProp "measure_unit" json >>= readImpl
+    per_package <- readProp "per_package" json >>= readImpl
     quantity <- readProp "quantity" json >>= readImpl
     category <- readProp "category" json >>= readImpl
     subcategory <- readProp "subcategory" json >>= readImpl
     description <- readProp "description" json >>= readImpl
     tags <- readProp "tags" json >>= readImpl
-    metadata <- readProp "metadata" json >>= readImpl
-    pure $ MenuItem { sort, sku, brand, name, price, quantity, category, subcategory, description, tags, metadata }
+    strain_lineage <- readProp "strain_lineage" json >>= readImpl
+    pure $ MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }
 
-instance readForeignMetadata :: ReadForeign Metadata where
+instance readForeignStrainLineage :: ReadForeign StrainLineage where
   readImpl json = do
     thc <- readProp "thc" json >>= readImpl
     cbd <- readProp "cbd" json >>= readImpl
+    cbg <- readProp "cbg" json >>= readImpl
     strain <- readProp "strain" json >>= readImpl
+    creator <- readProp "creator" json >>= readImpl
     species <- readProp "species" json >>= readImpl
-
-    pure $ Metadata { thc, cbd, strain, species }
+    dominant_tarpene <- readProp "dominant_tarpene" json >>= readImpl
+    tarpenes <- readProp "tarpenes" json >>= readImpl
+    lineage <- readProp "lineage" json >>= readImpl
+    pure $ StrainLineage { thc, cbd, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage
+ }
 
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do

@@ -4,7 +4,7 @@ module Render
 
 import Prelude
 
-import BudView (Inventory(..), InventoryResponse(..), MenuItem(..), Metadata(..), QueryMode(..), fetchInventory)
+import BudView (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..), QueryMode(..), fetchInventory)
 import Data.Array (filter, intercalate, sortBy)
 import Data.Array as Array
 import Data.Either (Either(..))
@@ -54,13 +54,13 @@ invertOrdering GT = LT
 compareMenuItems :: Config -> MenuItem -> MenuItem -> Ordering
 compareMenuItems config (MenuItem item1) (MenuItem item2) =
   let
-    -- Unwrapping metadata for species comparison
-    Metadata meta1 = item1.metadata
-    Metadata meta2 = item2.metadata
+    -- Unwrapping strain_lineage for species comparison
+    StrainLineage meta1 = item1.strain_lineage
+    StrainLineage meta2 = item2.strain_lineage
 
     -- Helper function to compare two items by a single field and order
     compareByField :: Tuple SortField SortOrder -> Ordering
-    compareByField (Tuple sortField sortOrder) =
+    compareByField (sortField /\ sortOrder) =
       let
         fieldComparison = case sortField of
           SortByOrder -> compare item1.sort item2.sort
@@ -101,24 +101,32 @@ renderInventory config (Inventory items) = D.div
 renderItem :: MenuItem -> Nut
 renderItem (MenuItem item) = 
   let
-    Metadata meta = item.metadata
+    StrainLineage meta = item.strain_lineage
   in
   D.div
     [ klass_ ("inventory-item-card " <> generateClassName { category: item.category, subcategory: item.subcategory, species: meta.species }) ]
     [ D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
-    , D.div [ klass_ "item-brand" ] [ text_ ("Brand: " <> item.brand) ]
+    , D.div [ klass_ "item-brand" ] [ text_ ( item.brand) ]
     , D.div [ klass_ "item-category" ] [ text_ (item.category <> " - " <> item.subcategory) ]
-    -- , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
     -- , D.div [ klass_ "item-description" ] [ text_ ("Description: " <> item.description) ]
-    , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price) ]
-    , D.div [ klass_ "item-quantity" ] [ text_ ("x" <> show item.quantity) ]
-    , D.div [ klass_ "item-tags" ] [ text_ ("" <> intercalate ", " item.tags) ]
-    , D.div [ klass_ "item-metadata" ] 
-        [ text_ ("Species: " <> meta.species
-                 <> ", Strain: " <> meta.strain 
-                 <> ", THC: " <> meta.thc 
-                 <> ", CBD: " <> meta.cbd) 
+    -- , D.div [ klass_ "item-tags" ] [ text_ ("tags: " <> intercalate ", " item.tags) ]
+    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
+    , D.div [ klass_ "item-strain_lineage" ] 
+        [ text_ (
+                -- "species: " <> meta.species
+                --  <> " THC: " <> meta.thc 
+                --  <> " CBD: " <> meta.cbd
+                --  <> " CBG: " <> meta.cbg
+                " Strain: " <> meta.strain 
+                --  <> " Creator: " <> meta.creator
+                --  <> " dominant tarpene: " <> meta.dominant_tarpene
+                --  <> " Tarpenes: " <> intercalate ", " meta.tarpenes
+                --  <> " lineage: " <> intercalate ", " meta.lineage                                   
+                 ) 
         ]
+    -- , D.div [ klass_ "item-units" ] [ text_ (item.per_package <> " " <> item.measure_unit) ]
+    , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
+    , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
     ]
 
 generateClassName :: { category :: String, subcategory :: String, species :: String } -> String
@@ -136,7 +144,10 @@ app = do
   setInventory /\ inventory <- useState (Inventory [])
   let
     config =
-      { sortFields: [ Tuple SortByCategory Ascending, Tuple SortBySpecies Ascending, Tuple SortByName Ascending ]
+      { sortFields: [ SortByCategory /\ Descending
+                    , SortBySpecies /\ Descending
+                    , SortByQuantity /\ Descending
+                    ]
       , hideOutOfStock: true
       , mode: JsonMode
       , refreshRate: 3000
