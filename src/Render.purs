@@ -4,14 +4,14 @@ module Render
 
 import Prelude
 
-import BudView (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..), QueryMode(..), fetchInventory)
-import Data.Array (filter, intercalate, sortBy)
+import BudView (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), fetchInventory, itemCategoryToString)
+import Data.Array (filter, sortBy)
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), replace, toLower)
 import Data.String.Pattern (Replacement(..))
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Deku.Core (Nut, text_)
 import Deku.DOM (img)
@@ -55,18 +55,16 @@ invertOrdering GT = LT
 compareMenuItems :: Config -> MenuItem -> MenuItem -> Ordering
 compareMenuItems config (MenuItem item1) (MenuItem item2) =
   let
-    -- Unwrapping strain_lineage for species comparison
     StrainLineage meta1 = item1.strain_lineage
     StrainLineage meta2 = item2.strain_lineage
 
-    -- Helper function to compare two items by a single field and order
     compareByField :: Tuple SortField SortOrder -> Ordering
     compareByField (sortField /\ sortOrder) =
       let
         fieldComparison = case sortField of
           SortByOrder -> compare item1.sort item2.sort
           SortByName -> compare item1.name item2.name
-          SortByCategory -> compare item1.category item2.category
+          SortByCategory -> compare (itemCategoryToString item1.category) (itemCategoryToString item2.category)
           SortBySubCategory -> compare item1.subcategory item2.subcategory
           SortBySpecies -> compare meta1.species meta2.species
           SortBySKU -> compare item1.sku item2.sku
@@ -77,7 +75,6 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
           Ascending -> fieldComparison
           Descending -> invertOrdering fieldComparison
 
-    -- Apply sorting priority list, finding the first non-EQ comparison
     compareWithPriority :: Array (Tuple SortField SortOrder) -> Ordering
     compareWithPriority priorities = case Array.uncons priorities of
       Nothing -> EQ
@@ -87,7 +84,6 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
           result -> result
   in
     compareWithPriority config.sortFields
-
 
 renderInventory :: Config -> Inventory -> Nut
 renderInventory config (Inventory items) = D.div
@@ -113,20 +109,19 @@ renderItem (MenuItem item) =
             ]
         , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
         ]
-    , D.div [ klass_ "item-category" ] [ text_ (item.category <> " - " <> item.subcategory) ]
+    , D.div [ klass_ "item-category" ] [ text_ (itemCategoryToString item.category <> " - " <> item.subcategory) ]
     , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
     , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
     , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
     , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
     ]
 
-generateClassName :: { category :: String, subcategory :: String, species :: String } -> String
+generateClassName :: { category :: ItemCategory, subcategory :: String, species :: String } -> String
 generateClassName item =
   "species-" <> toClassName item.species <> 
-  " category-" <> toClassName item.category <> 
+  " category-" <> toClassName (itemCategoryToString item.category) <> 
   " subcategory-" <> toClassName item.subcategory
 
--- Helper function to convert strings to lowercase and replace spaces with hyphens
 toClassName :: String -> String
 toClassName str = toLower (replace (Pattern " ") (Replacement "-") str)
 

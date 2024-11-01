@@ -13,10 +13,11 @@ import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Internal.RequestBody (class ToRequestBody)
 import Fetch.Yoga.Json (fromJSON)
-import Foreign (Foreign, ForeignError)
+import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
 import JS.Fetch.RequestBody as RB
 import Yoga.JSON (class ReadForeign, readImpl, unsafeStringify, writeImpl)
+
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -28,6 +29,34 @@ data QueryMode = JsonMode | HttpMode
 
 newtype Inventory = Inventory (Array MenuItem)
 
+data ItemCategory
+  = Flower
+  | PreRolls
+  | Vaporizers
+  | Edibles
+  | Drinks
+  | Concentrates
+  | Topicals
+  | Tinctures
+  | Accessories
+
+-- Implement Show instance for ItemCategory
+instance showItemCategory :: Show ItemCategory where
+  show category = itemCategoryToString category
+
+-- Helper function to convert ItemCategory to a specific string
+itemCategoryToString :: ItemCategory -> String
+itemCategoryToString category = case category of
+  Flower -> "Flower"
+  PreRolls -> "PreRolls"
+  Vaporizers -> "Vaporizers"
+  Edibles -> "Edibles"
+  Drinks -> "Drinks"
+  Concentrates -> "Concentrates"
+  Topicals -> "Topicals"
+  Tinctures -> "Tinctures"
+  Accessories -> "Accessories"
+
 newtype MenuItem = MenuItem
   { sort :: Int  
   , sku :: String
@@ -37,7 +66,7 @@ newtype MenuItem = MenuItem
   , measure_unit :: String
   , per_package :: String
   , quantity :: Int
-  , category :: String
+  , category :: ItemCategory
   , subcategory :: String
   , description :: String
   , tags :: Array String
@@ -46,7 +75,6 @@ newtype MenuItem = MenuItem
 
 newtype StrainLineage = StrainLineage
   { thc :: String
-  , cbd :: String
   , cbg :: String
   , strain :: String
   , creator :: String
@@ -82,7 +110,6 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
 instance readForeignStrainLineage :: ReadForeign StrainLineage where
   readImpl json = do
     thc <- readProp "thc" json >>= readImpl
-    cbd <- readProp "cbd" json >>= readImpl
     cbg <- readProp "cbg" json >>= readImpl
     strain <- readProp "strain" json >>= readImpl
     creator <- readProp "creator" json >>= readImpl
@@ -92,8 +119,23 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     lineage <- readProp "lineage" json >>= readImpl
     leafly_url <- readProp "leafly_url" json >>= readImpl
     img <- readProp "img" json >>= readImpl
-    pure $ StrainLineage { thc, cbd, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img
+    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img
  }
+
+instance readForeignItemCategory :: ReadForeign ItemCategory where
+  readImpl json = do
+    categoryStr <- readImpl json
+    case categoryStr of
+      "Flower" -> pure Flower
+      "PreRolls" -> pure PreRolls
+      "Vaporizers" -> pure Vaporizers
+      "Edibles" -> pure Edibles
+      "Drinks" -> pure Drinks
+      "Concentrates" -> pure Concentrates
+      "Topicals" -> pure Topicals
+      "Tinctures" -> pure Tinctures
+      "Accessories" -> pure Accessories
+      _ -> fail (ForeignError "Invalid ItemCategory value")
 
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do
@@ -105,36 +147,30 @@ fetchInventory mode = case mode of
   JsonMode -> fetchInventoryFromJson
   HttpMode -> fetchInventoryFromHttp
 
--- Fetch Inventory from Local JSON
 fetchInventoryFromJson :: Aff (Either String InventoryResponse)
 fetchInventoryFromJson = do
   result <- attempt do
     timestamp <- liftEffect $ show <$> now
     let url = "/inventory.json?t=" <> timestamp
     liftEffect $ log ("Fetching URL: " <> url)
-    
     coreResponse <- fetch url {}
     inventory <- fromJSON coreResponse.json :: Aff Inventory
-    
     pure inventory
 
   case result of
     Left err -> pure $ Left $ "Fetch error: " <> show err
     Right inventory -> pure $ Right $ InventoryData inventory
 
--- Fetch Inventory from HTTP API
 fetchInventoryFromHttp :: Aff (Either String InventoryResponse)
 fetchInventoryFromHttp = do
   result <- attempt do
     let requestHeaders = { "Content-Type": "application/json" }
     let requestBody = ForeignRequestBody (writeImpl { hello: "world" })
-    
     coreResponse <- fetch "https://httpbin.org/post"
       { method: POST
       , body: requestBody
       , headers: requestHeaders
       }
-    
     res <- fromJSON coreResponse.json :: Aff Foreign
     pure $ "Received response: " <> unsafeStringify res
 
