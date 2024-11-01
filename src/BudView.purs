@@ -16,8 +16,7 @@ import Fetch.Yoga.Json (fromJSON)
 import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
 import JS.Fetch.RequestBody as RB
-import Yoga.JSON (class ReadForeign, readImpl, unsafeStringify, writeImpl)
-
+import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl, unsafeStringify)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -40,7 +39,7 @@ data ItemCategory
   | Tinctures
   | Accessories
 
--- Implement Show instance for ItemCategory
+-- Implement Show instance for ItemCategory for display purposes
 instance showItemCategory :: Show ItemCategory where
   show category = itemCategoryToString category
 
@@ -56,6 +55,9 @@ itemCategoryToString category = case category of
   Topicals -> "Topicals"
   Tinctures -> "Tinctures"
   Accessories -> "Accessories"
+
+instance writeForeignItemCategory :: WriteForeign ItemCategory where
+  writeImpl category = writeImpl (itemCategoryToString category)
 
 newtype MenuItem = MenuItem
   { sort :: Int  
@@ -86,10 +88,46 @@ newtype StrainLineage = StrainLineage
   , img :: String
   }
 
+-- WriteForeign instances 
+instance writeForeignStrainLineage :: WriteForeign StrainLineage where
+  writeImpl (StrainLineage lineage) = writeImpl
+    { thc: lineage.thc
+    , cbg: lineage.cbg
+    , strain: lineage.strain
+    , creator: lineage.creator
+    , species: lineage.species
+    , dominant_tarpene: lineage.dominant_tarpene
+    , tarpenes: lineage.tarpenes
+    , lineage: lineage.lineage
+    , leafly_url: lineage.leafly_url
+    , img: lineage.img
+    }
+
+instance writeForeignMenuItem :: WriteForeign MenuItem where
+  writeImpl (MenuItem item) = writeImpl
+    { sort: item.sort
+    , sku: item.sku
+    , brand: item.brand
+    , name: item.name
+    , price: item.price
+    , measure_unit: item.measure_unit
+    , per_package: item.per_package
+    , quantity: item.quantity
+    , category: writeImpl item.category
+    , subcategory: item.subcategory
+    , description: item.description
+    , tags: item.tags
+    , strain_lineage: writeImpl item.strain_lineage
+    }
+
+instance writeForeignInventory :: WriteForeign Inventory where
+  writeImpl (Inventory items) = writeImpl items
+
 instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody where
   toRequestBody (ForeignRequestBody foreignValue) =
     RB.fromString (unsafeStringify foreignValue)
 
+-- ReadForeign instances 
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
     sort <- readProp "sort" json >>= readImpl
