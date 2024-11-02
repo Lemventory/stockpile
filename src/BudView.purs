@@ -11,12 +11,11 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Effect.Now (now)
 import Fetch (Method(..), fetch)
-import Fetch.Internal.RequestBody (class ToRequestBody)
 import Fetch.Yoga.Json (fromJSON)
 import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
-import JS.Fetch.RequestBody as RB
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl, unsafeStringify)
+
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -28,20 +27,7 @@ data QueryMode = JsonMode | HttpMode
 
 newtype Inventory = Inventory (Array MenuItem)
 
-data ItemCategory
-  = Flower
-  | PreRolls
-  | Vaporizers
-  | Edibles
-  | Drinks
-  | Concentrates
-  | Topicals
-  | Tinctures
-  | Accessories
-
--- Implement Show instance for ItemCategory for display purposes
-instance showItemCategory :: Show ItemCategory where
-  show category = itemCategoryToString category
+data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
 
 -- Helper function to convert ItemCategory to a specific string
 itemCategoryToString :: ItemCategory -> String
@@ -56,11 +42,23 @@ itemCategoryToString category = case category of
   Tinctures -> "Tinctures"
   Accessories -> "Accessories"
 
-instance writeForeignItemCategory :: WriteForeign ItemCategory where
-  writeImpl category = writeImpl (itemCategoryToString category)
+-- Define StrainLineage as a data type with a record to use it in instances
+data StrainLineage = StrainLineage
+  { thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: String
+  , dominant_tarpene :: String
+  , tarpenes :: Array String
+  , lineage :: Array String
+  , leafly_url :: String
+  , img :: String
+  }
 
-newtype MenuItem = MenuItem
-  { sort :: Int  
+-- Define MenuItem as a data type with a record to use it in instances
+data MenuItem = MenuItem
+  { sort :: Int
   , sku :: String
   , brand :: String
   , name :: String
@@ -75,20 +73,7 @@ newtype MenuItem = MenuItem
   , strain_lineage :: StrainLineage
   }
 
-newtype StrainLineage = StrainLineage
-  { thc :: String
-  , cbg :: String
-  , strain :: String
-  , creator :: String
-  , species :: String
-  , dominant_tarpene :: String
-  , tarpenes :: Array String
-  , lineage :: Array String
-  , leafly_url :: String
-  , img :: String
-  }
-
--- WriteForeign instances 
+-- WriteForeign instance for StrainLineage
 instance writeForeignStrainLineage :: WriteForeign StrainLineage where
   writeImpl (StrainLineage lineage) = writeImpl
     { thc: lineage.thc
@@ -103,6 +88,7 @@ instance writeForeignStrainLineage :: WriteForeign StrainLineage where
     , img: lineage.img
     }
 
+-- WriteForeign instance for MenuItem
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
@@ -113,38 +99,14 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , measure_unit: item.measure_unit
     , per_package: item.per_package
     , quantity: item.quantity
-    , category: writeImpl item.category
+    , category: itemCategoryToString item.category
     , subcategory: item.subcategory
     , description: item.description
     , tags: item.tags
     , strain_lineage: writeImpl item.strain_lineage
     }
 
-instance writeForeignInventory :: WriteForeign Inventory where
-  writeImpl (Inventory items) = writeImpl items
-
-instance toRequestBodyForeignRequestBody :: ToRequestBody ForeignRequestBody where
-  toRequestBody (ForeignRequestBody foreignValue) =
-    RB.fromString (unsafeStringify foreignValue)
-
--- ReadForeign instances 
-instance readForeignMenuItem :: ReadForeign MenuItem where
-  readImpl json = do
-    sort <- readProp "sort" json >>= readImpl
-    sku <- readProp "sku" json >>= readImpl
-    brand <- readProp "brand" json >>= readImpl
-    name <- readProp "name" json >>= readImpl
-    price <- readProp "price" json >>= readImpl
-    measure_unit <- readProp "measure_unit" json >>= readImpl
-    per_package <- readProp "per_package" json >>= readImpl
-    quantity <- readProp "quantity" json >>= readImpl
-    category <- readProp "category" json >>= readImpl
-    subcategory <- readProp "subcategory" json >>= readImpl
-    description <- readProp "description" json >>= readImpl
-    tags <- readProp "tags" json >>= readImpl
-    strain_lineage <- readProp "strain_lineage" json >>= readImpl
-    pure $ MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }
-
+-- ReadForeign instance for StrainLineage
 instance readForeignStrainLineage :: ReadForeign StrainLineage where
   readImpl json = do
     thc <- readProp "thc" json >>= readImpl
@@ -157,13 +119,21 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     lineage <- readProp "lineage" json >>= readImpl
     leafly_url <- readProp "leafly_url" json >>= readImpl
     img <- readProp "img" json >>= readImpl
-    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img
- }
+    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
 
-instance readForeignItemCategory :: ReadForeign ItemCategory where
+-- ReadForeign instance for MenuItem
+instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
-    categoryStr <- readImpl json
-    case categoryStr of
+    sort <- readProp "sort" json >>= readImpl
+    sku <- readProp "sku" json >>= readImpl
+    brand <- readProp "brand" json >>= readImpl
+    name <- readProp "name" json >>= readImpl
+    price <- readProp "price" json >>= readImpl
+    measure_unit <- readProp "measure_unit" json >>= readImpl
+    per_package <- readProp "per_package" json >>= readImpl
+    quantity <- readProp "quantity" json >>= readImpl
+    categoryStr <- readProp "category" json >>= readImpl
+    category <- case categoryStr of
       "Flower" -> pure Flower
       "PreRolls" -> pure PreRolls
       "Vaporizers" -> pure Vaporizers
@@ -174,12 +144,22 @@ instance readForeignItemCategory :: ReadForeign ItemCategory where
       "Tinctures" -> pure Tinctures
       "Accessories" -> pure Accessories
       _ -> fail (ForeignError "Invalid ItemCategory value")
+    subcategory <- readProp "subcategory" json >>= readImpl
+    description <- readProp "description" json >>= readImpl
+    tags <- readProp "tags" json >>= readImpl
+    strain_lineage <- readProp "strain_lineage" json >>= readImpl
+    pure $ MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }
+
+-- WriteForeign and ReadForeign instances for Inventory
+instance writeForeignInventory :: WriteForeign Inventory where
+  writeImpl (Inventory items) = writeImpl items
 
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do
     items <- readImpl json :: ExceptT (NonEmptyList ForeignError) Identity (Array MenuItem)
-    pure (Inventory items)
+    pure $ Inventory items
 
+-- Fetch functions for inventory
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory mode = case mode of
   JsonMode -> fetchInventoryFromJson
@@ -203,7 +183,8 @@ fetchInventoryFromHttp :: Aff (Either String InventoryResponse)
 fetchInventoryFromHttp = do
   result <- attempt do
     let requestHeaders = { "Content-Type": "application/json" }
-    let requestBody = ForeignRequestBody (writeImpl { hello: "world" })
+    -- Convert ForeignRequestBody to a JSON string
+    let requestBody = unsafeStringify (writeImpl { hello: "world" })
     coreResponse <- fetch "https://httpbin.org/post"
       { method: POST
       , body: requestBody
