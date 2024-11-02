@@ -29,7 +29,7 @@ newtype Inventory = Inventory (Array MenuItem)
 
 data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
 
--- Helper function to convert ItemCategory to a specific string
+-- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
 itemCategoryToString :: ItemCategory -> String
 itemCategoryToString category = case category of
   Flower -> "Flower"
