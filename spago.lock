@@ -19,6 +19,7 @@ workspace:
           - fetch-yoga-json
           - lists
           - maybe
+          - parsing
           - prelude
           - transformers
           - tuples
@@ -88,6 +89,7 @@ workspace:
           - ordered-collections
           - orders
           - parallel
+          - parsing
           - partial
           - prelude
           - profunctor
@@ -107,6 +109,7 @@ workspace:
           - type-equality
           - typelevel-prelude
           - unfoldable
+          - unicode
           - unsafe-coerce
           - unsafe-reference
           - untagged-union
@@ -1484,6 +1487,36 @@ packages:
       - profunctor
       - refs
       - transformers
+  parsing:
+    type: registry
+    version: 10.2.0
+    integrity: sha256-ZDIdMFAKkst57x6BVa1aUWJnS8smoZnXsZ339Aq1mPA=
+    dependencies:
+      - arrays
+      - control
+      - effect
+      - either
+      - enums
+      - foldable-traversable
+      - functions
+      - identity
+      - integers
+      - lazy
+      - lists
+      - maybe
+      - newtype
+      - nullable
+      - numbers
+      - partial
+      - prelude
+      - st
+      - strings
+      - tailrec
+      - transformers
+      - tuples
+      - unfoldable
+      - unicode
+      - unsafe-coerce
   partial:
     type: registry
     version: 4.0.0
@@ -1686,6 +1719,14 @@ packages:
       - partial
       - prelude
       - tuples
+  unicode:
+    type: registry
+    version: 6.0.0
+    integrity: sha256-QJnTVZpmihEAUiMeYrfkusVoziJWp2hJsgi9bMQLue8=
+    dependencies:
+      - foldable-traversable
+      - maybe
+      - strings
   unsafe-coerce:
     type: registry
     version: 6.0.0
