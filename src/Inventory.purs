@@ -17,7 +17,7 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.DOM.Self as Self
 import Deku.Do as Deku
-import Deku.Hooks (useDyn, useState, useState')
+import Deku.Hooks (useDyn, useDynAtBeginning, useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Console (log)
@@ -102,52 +102,62 @@ app = runInBody $ Deku.do
   -- Rendering the input form
   D.div_
     [ D.div
-        [ D.input
-            [ DA.value_ name
-            , DA.placeholder "Name"
-            , DL.input \evt -> do
-                for_ ((target evt) >>= HTMLInput.fromEventTarget) (guardAgainstEmpty setName)
-            , DA.klass_ inputClass
-            ]
-            []
-        , D.input
-            [ DA.value_ brand
-            , DA.placeholder "Brand"
-            , DL.input \evt -> do
-                for_ ((target evt) >>= HTMLInput.fromEventTarget) (guardAgainstEmpty setBrand)
-            , DA.klass_ inputClass
-            ]
-            []
-        , D.input
-            [ DA.value_ (show price)
-            , DA.placeholder "Price"
-            , DL.input \evt -> do
-                for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
-                  text <- HTMLInput.value inputEl
-                  setPrice (parseNumber text)
-            , DA.klass_ inputClass
-            ]
-            []
-        , D.input
-            [ DA.value_ (show quantity)
-            , DA.placeholder "Quantity"
-            , DL.input \evt -> do
-                for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
-                  text <- HTMLInput.value inputEl
-                  setQuantity (parseInt text)
-            , DA.klass_ inputClass
-            ]
-            []
-        , D.input
-            [ DA.value_ description
-            , DA.placeholder "Description"
-            , DL.input \evt -> do
-                for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
-                  text <- HTMLInput.value inputEl
-                  setDescription text
-            , DA.klass_ inputClass
-            ]
-            []
+        [ Deku.do
+            { value: currentName } <- useDynAtBeginning name
+            D.input
+              [ DA.value_ currentName
+              , DA.placeholder_ "Name"
+              , DL.input \evt -> do
+                  for_ ((target evt) >>= HTMLInput.fromEventTarget) (guardAgainstEmpty setName)
+              , DA.klass_ inputClass
+              ]
+              []
+        , Deku.do
+            { value: currentBrand } <- useDynAtBeginning brand
+            D.input
+              [ DA.value_ currentBrand
+              , DA.placeholder_ "Brand"
+              , DL.input \evt -> do
+                  for_ ((target evt) >>= HTMLInput.fromEventTarget) (guardAgainstEmpty setBrand)
+              , DA.klass_ inputClass
+              ]
+              []
+        , Deku.do
+            { value: currentPrice } <- useDynAtBeginning price
+            D.input
+              [ DA.value_ (show currentPrice)
+              , DA.placeholder_ "Price"
+              , DL.input \evt -> do
+                  for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
+                    text <- HTMLInput.value inputEl
+                    setPrice (parseNumber text)
+              , DA.klass_ inputClass
+              ]
+              []
+        , Deku.do
+            { value: currentQuantity } <- useDynAtBeginning quantity
+            D.input
+              [ DA.value_ (show currentQuantity)
+              , DA.placeholder_ "Quantity"
+              , DL.input \evt -> do
+                  for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
+                    text <- HTMLInput.value inputEl
+                    setQuantity (parseInt text)
+              , DA.klass_ inputClass
+              ]
+              []
+        , Deku.do
+            { value: currentDescription } <- useDynAtBeginning description
+            D.input
+              [ DA.value_ currentDescription
+              , DA.placeholder_ "Description"
+              , DL.input \evt -> do
+                  for_ ((target evt) >>= HTMLInput.fromEventTarget) \inputEl -> do
+                    text <- HTMLInput.value inputEl
+                    setDescription text
+              , DA.klass_ inputClass
+              ]
+              []
         , D.button
             [ DL.click_ \_ -> handleSubmit
             , DA.klass_ "p-2 bg-green-500 text-white rounded-md"
