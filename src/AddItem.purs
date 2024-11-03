@@ -7,13 +7,11 @@ import Data.Either (either)
 import Data.Foldable (for_)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
-import Deku.Core (Nut)
+import Deku.Core (Nut, useState')
 import Deku.DOM (HTMLInputElement)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
-import Deku.Do as Deku
-import Deku.Hooks (useDynAtBeginning, useRef, useState)
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Console (log)
@@ -40,9 +38,8 @@ guardAgainstEmpty setField text = do
     then window >>= alert "This field cannot be empty"
     else setField text
 
-renderTextInputField :: String -> Poll String -> (String -> Effect Unit) -> Boolean -> Nut
-renderTextInputField placeholderText state setter guardEmpty = Deku.do
-  { value: currentValue } <- useDynAtBeginning state
+renderTextInputField :: String -> String -> (String -> Effect Unit) -> Boolean -> Nut
+renderTextInputField placeholderText currentValue setter guardEmpty = 
   D.input
     [ DA.value_ currentValue
     , DA.placeholder_ placeholderText
@@ -56,9 +53,8 @@ renderTextInputField placeholderText state setter guardEmpty = Deku.do
     ]
     []
 
-renderNumberInputField :: String -> Poll Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
-renderNumberInputField placeholderText state setter parseFunc = Deku.do
-  { value: currentValue } <- useDynAtBeginning state
+renderNumberInputField :: String -> Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
+renderNumberInputField placeholderText currentValue setter parseFunc = 
   D.input
     [ DA.value_ (show currentValue)
     , DA.placeholder_ placeholderText
@@ -72,9 +68,8 @@ renderNumberInputField placeholderText state setter parseFunc = Deku.do
     ]
     []
 
-renderIntInputField :: String -> Poll Int -> (Int -> Effect Unit) -> (String -> Int) -> Nut
-renderIntInputField placeholderText state setter parseFunc = Deku.do
-  { value: currentValue } <- useDynAtBeginning state
+renderIntInputField :: String -> Int -> (Int -> Effect Unit) -> (String -> Int) -> Nut
+renderIntInputField placeholderText currentValue setter parseFunc = 
   D.input
     [ DA.value_ (show currentValue)
     , DA.placeholder_ placeholderText
@@ -89,26 +84,26 @@ renderIntInputField placeholderText state setter parseFunc = Deku.do
     []
 
 renderForm :: 
-  { setName :: String -> Effect Unit
-  , name :: Poll String
+  { nameValue :: String
+  , setName :: String -> Effect Unit
+  , brandValue :: String
   , setBrand :: String -> Effect Unit
-  , brand :: Poll String
+  , priceValue :: Number
   , setPrice :: Number -> Effect Unit
-  , price :: Poll Number
+  , quantityValue :: Int
   , setQuantity :: Int -> Effect Unit
-  , quantity :: Poll Int
+  , descriptionValue :: String
   , setDescription :: String -> Effect Unit
-  , description :: Poll String
   , handleSubmit :: Effect Unit
   } -> Nut
-renderForm { setName, name, setBrand, brand, setPrice, price, setQuantity, quantity, setDescription, description, handleSubmit } =
+renderForm { nameValue, setName, brandValue, setBrand, priceValue, setPrice, quantityValue, setQuantity, descriptionValue, setDescription, handleSubmit } =
   D.div_
     [ D.div
-        [ renderTextInputField "Name" name setName true
-        , renderTextInputField "Brand" brand setBrand true
-        , renderNumberInputField "Price" price setPrice parseNumber
-        , renderIntInputField "Quantity" quantity setQuantity parseInt
-        , renderTextInputField "Description" description setDescription false
+        [ renderTextInputField "Name" nameValue setName true
+        , renderTextInputField "Brand" brandValue setBrand true
+        , renderNumberInputField "Price" priceValue setPrice parseNumber
+        , renderIntInputField "Quantity" quantityValue setQuantity parseInt
+        , renderTextInputField "Description" descriptionValue setDescription false
         , D.button
             [ DL.click_ (\_ -> handleSubmit)
             , DA.klass_ "p-2 bg-green-500 text-white rounded-md"
@@ -118,26 +113,23 @@ renderForm { setName, name, setBrand, brand, setPrice, price, setQuantity, quant
     ]
 
 app :: Effect Unit
-app = runInBody $ Deku.do
-  setName /\ name <- useState ""
-  nameRef <- useRef "" name
-  setBrand /\ brand <- useState ""
-  brandRef <- useRef "" brand
-  setPrice /\ price <- useState 0.0
-  priceRef <- useRef 0.0 price
-  setQuantity /\ quantity <- useState 0
-  quantityRef <- useRef 0 quantity
-  setDescription /\ description <- useState ""
-  descriptionRef <- useRef "" description
+app = do
+  -- Initialize state and references
+  setName /\ name <- useState' ""
+  setBrand /\ brand <- useState' ""
+  setPrice /\ price <- useState' 0.0
+  setQuantity /\ quantity <- useState' 0
+  setDescription /\ description <- useState' ""
 
+  -- Define the submit handler
   let
     handleSubmit :: Effect Unit
     handleSubmit = do
-      nameValue <- nameRef
-      brandValue <- brandRef
-      priceValue <- priceRef
-      quantityValue <- quantityRef
-      descriptionValue <- descriptionRef
+      nameValue <- name
+      brandValue <- brand
+      priceValue <- price
+      quantityValue <- quantity
+      descriptionValue <- description
       let newItem = MenuItem
             { sort: 0
             , sku: "SKU001"
@@ -167,11 +159,18 @@ app = runInBody $ Deku.do
       log ("New Item: " <> show newItem)
       window >>= alert "New inventory item created successfully!"
 
-  renderForm
-    { setName, name
-    , setBrand, brand
-    , setPrice, price
-    , setQuantity, quantity
-    , setDescription, description
-    , handleSubmit
-    }
+  -- Render the form with Deku.do at the end
+  runInBody $ Deku.do
+    renderForm
+      { nameValue: name
+      , setName
+      , brandValue: brand
+      , setBrand
+      , priceValue: price
+      , setPrice
+      , quantityValue: quantity
+      , setQuantity
+      , descriptionValue: description
+      , setDescription
+      , handleSubmit
+      }
