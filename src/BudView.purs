@@ -188,8 +188,8 @@ fetchInventoryFromHttp = do
     Left err -> pure $ Left $ "Fetch error: " <> show err
     Right msg -> pure $ Right $ Message msg
 
-submitMenuItemToJson :: MenuItem -> Aff (Either String InventoryResponse)
-submitMenuItemToJson menuItem = do
+postInventoryToJson :: MenuItem -> Aff (Either String InventoryResponse)
+postInventoryToJson menuItem = do
   result <- attempt do
     let
       requestBody = unsafeStringify (writeImpl menuItem)
@@ -215,8 +215,8 @@ submitMenuItemToJson menuItem = do
     Right msg -> pure $ Right $ Message msg
 
 
-submitMenuItem :: MenuItem -> Aff (Either String InventoryResponse)
-submitMenuItem menuItem = do
+postInventoryToHttp :: MenuItem -> Aff (Either String InventoryResponse)
+postInventoryToHttp menuItem = do
   let
     -- Convert `MenuItem` to JSON
     requestBody = unsafeStringify (writeImpl menuItem)
