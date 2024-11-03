@@ -56,25 +56,24 @@ app :: Effect Unit
 app = runInBody $ Deku.do
   setName /\ name <- useState ""
   setBrand /\ brand <- useState ""
-  setCategory /\ category <- useState "Flower" -- default category
+  setCategory /\ category <- useState "Flower"
   setPrice /\ price <- useState 0.0
   setQuantity /\ quantity <- useState 0
   setDescription /\ description <- useState ""
 
-  -- Submit handler to create and display the new MenuItem
   let
     handleSubmit :: Effect Unit
     handleSubmit = do
       let newItem = MenuItem
-            { sort: 0 -- Sort can be configured differently as needed
-            , sku: "SKU001" -- SKU can be auto-generated or provided by user
+            { sort: 0 
+            , sku: "SKU001" 
             , brand
             , name
             , price
-            , measure_unit: "g" -- This is a sample measure unit
+            , measure_unit: "g" 
             , per_package: "1"
             , quantity
-            , category: Flower -- Convert from category input to ItemCategory
+            , category: Flower
             , subcategory: ""
             , description
             , tags: []
@@ -91,7 +90,6 @@ app = runInBody $ Deku.do
                 , img: ""
                 }
             }
-      -- Perform validation, then insert the new item
       log ("New Item: " <> show newItem)
       alert "New inventory item created successfully!"
 
