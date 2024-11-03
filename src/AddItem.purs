@@ -1,4 +1,4 @@
-module Inventory (app) where
+module AddItem (app) where
 
 import Prelude
 
