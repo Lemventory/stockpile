@@ -16,7 +16,6 @@ import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl, unsafeStringify)
 
-
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
 data InventoryResponse
@@ -27,36 +26,6 @@ data QueryMode = JsonMode | HttpMode
 
 newtype Inventory = Inventory (Array MenuItem)
 
-data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
-
--- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
-itemCategoryToString :: ItemCategory -> String
-itemCategoryToString category = case category of
-  Flower -> "Flower"
-  PreRolls -> "PreRolls"
-  Vaporizers -> "Vaporizers"
-  Edibles -> "Edibles"
-  Drinks -> "Drinks"
-  Concentrates -> "Concentrates"
-  Topicals -> "Topicals"
-  Tinctures -> "Tinctures"
-  Accessories -> "Accessories"
-
--- Define StrainLineage as a data type with a record to use it in instances
-data StrainLineage = StrainLineage
-  { thc :: String
-  , cbg :: String
-  , strain :: String
-  , creator :: String
-  , species :: String
-  , dominant_tarpene :: String
-  , tarpenes :: Array String
-  , lineage :: Array String
-  , leafly_url :: String
-  , img :: String
-  }
-
--- Define MenuItem as a data type with a record to use it in instances
 data MenuItem = MenuItem
   { sort :: Int
   , sku :: String
@@ -73,22 +42,34 @@ data MenuItem = MenuItem
   , strain_lineage :: StrainLineage
   }
 
--- WriteForeign instance for StrainLineage
-instance writeForeignStrainLineage :: WriteForeign StrainLineage where
-  writeImpl (StrainLineage lineage) = writeImpl
-    { thc: lineage.thc
-    , cbg: lineage.cbg
-    , strain: lineage.strain
-    , creator: lineage.creator
-    , species: lineage.species
-    , dominant_tarpene: lineage.dominant_tarpene
-    , tarpenes: lineage.tarpenes
-    , lineage: lineage.lineage
-    , leafly_url: lineage.leafly_url
-    , img: lineage.img
-    }
+data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
 
--- WriteForeign instance for MenuItem
+-- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
+itemCategoryToString :: ItemCategory -> String
+itemCategoryToString category = case category of
+  Flower -> "Flower"
+  PreRolls -> "PreRolls"
+  Vaporizers -> "Vaporizers"
+  Edibles -> "Edibles"
+  Drinks -> "Drinks"
+  Concentrates -> "Concentrates"
+  Topicals -> "Topicals"
+  Tinctures -> "Tinctures"
+  Accessories -> "Accessories"
+
+data StrainLineage = StrainLineage
+  { thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: String
+  , dominant_tarpene :: String
+  , tarpenes :: Array String
+  , lineage :: Array String
+  , leafly_url :: String
+  , img :: String
+  }
+
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
@@ -106,22 +87,6 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , strain_lineage: writeImpl item.strain_lineage
     }
 
--- ReadForeign instance for StrainLineage
-instance readForeignStrainLineage :: ReadForeign StrainLineage where
-  readImpl json = do
-    thc <- readProp "thc" json >>= readImpl
-    cbg <- readProp "cbg" json >>= readImpl
-    strain <- readProp "strain" json >>= readImpl
-    creator <- readProp "creator" json >>= readImpl
-    species <- readProp "species" json >>= readImpl
-    dominant_tarpene <- readProp "dominant_tarpene" json >>= readImpl
-    tarpenes <- readProp "tarpenes" json >>= readImpl
-    lineage <- readProp "lineage" json >>= readImpl
-    leafly_url <- readProp "leafly_url" json >>= readImpl
-    img <- readProp "img" json >>= readImpl
-    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
-
--- ReadForeign instance for MenuItem
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
     sort <- readProp "sort" json >>= readImpl
@@ -150,7 +115,6 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
     strain_lineage <- readProp "strain_lineage" json >>= readImpl
     pure $ MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }
 
--- WriteForeign and ReadForeign instances for Inventory
 instance writeForeignInventory :: WriteForeign Inventory where
   writeImpl (Inventory items) = writeImpl items
 
@@ -159,7 +123,34 @@ instance readForeignInventory :: ReadForeign Inventory where
     items <- readImpl json :: ExceptT (NonEmptyList ForeignError) Identity (Array MenuItem)
     pure $ Inventory items
 
--- Fetch functions for inventory
+instance writeForeignStrainLineage :: WriteForeign StrainLineage where
+  writeImpl (StrainLineage lineage) = writeImpl
+    { thc: lineage.thc
+    , cbg: lineage.cbg
+    , strain: lineage.strain
+    , creator: lineage.creator
+    , species: lineage.species
+    , dominant_tarpene: lineage.dominant_tarpene
+    , tarpenes: lineage.tarpenes
+    , lineage: lineage.lineage
+    , leafly_url: lineage.leafly_url
+    , img: lineage.img
+    }
+
+instance readForeignStrainLineage :: ReadForeign StrainLineage where
+  readImpl json = do
+    thc <- readProp "thc" json >>= readImpl
+    cbg <- readProp "cbg" json >>= readImpl
+    strain <- readProp "strain" json >>= readImpl
+    creator <- readProp "creator" json >>= readImpl
+    species <- readProp "species" json >>= readImpl
+    dominant_tarpene <- readProp "dominant_tarpene" json >>= readImpl
+    tarpenes <- readProp "tarpenes" json >>= readImpl
+    lineage <- readProp "lineage" json >>= readImpl
+    leafly_url <- readProp "leafly_url" json >>= readImpl
+    img <- readProp "img" json >>= readImpl
+    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
+
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory mode = case mode of
   JsonMode -> fetchInventoryFromJson
