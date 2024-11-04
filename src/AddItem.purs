@@ -7,11 +7,13 @@ import Data.Either (either)
 import Data.Foldable (for_)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
-import Deku.Core (Nut, useState')
+import Deku.Core (Nut)
 import Deku.DOM (HTMLInputElement)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
+import Deku.Do as Deku
+import Deku.Hooks (useDynAtBeginning, useRef, useState)
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Console (log)
@@ -38,10 +40,10 @@ guardAgainstEmpty setField text = do
     then window >>= alert "This field cannot be empty"
     else setField text
 
-renderTextInputField :: String -> String -> (String -> Effect Unit) -> Boolean -> Nut
-renderTextInputField placeholderText currentValue setter guardEmpty = 
+renderTextInputField :: String -> Poll String -> (String -> Effect Unit) -> Boolean -> Nut
+renderTextInputField placeholderText state setter guardEmpty = 
   D.input
-    [ DA.value_ currentValue
+    [ DA.value_ placeholderText
     , DA.placeholder_ placeholderText
     , DL.input_ (\evt -> do
         for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
@@ -52,11 +54,13 @@ renderTextInputField placeholderText currentValue setter guardEmpty =
     , DA.klass_ inputClass
     ]
     []
+  where
+    currentValue = useDynAtBeginning state
 
-renderNumberInputField :: String -> Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
-renderNumberInputField placeholderText currentValue setter parseFunc = 
+renderNumberInputField :: String -> Poll Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
+renderNumberInputField placeholderText state setter parseFunc = 
   D.input
-    [ DA.value_ (show currentValue)
+    [ DA.value_ (show currentValue)  -- directly use show without `text_`
     , DA.placeholder_ placeholderText
     , DL.input_ (\evt -> do
         for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
@@ -67,43 +71,47 @@ renderNumberInputField placeholderText currentValue setter parseFunc =
     , DA.klass_ inputClass
     ]
     []
+  where
+    currentValue = useDynAtBeginning state
 
-renderIntInputField :: String -> Int -> (Int -> Effect Unit) -> (String -> Int) -> Nut
-renderIntInputField placeholderText currentValue setter parseFunc = 
+renderIntInputField :: String -> Poll Int -> (Int -> Effect Unit) -> (String -> Int) -> Nut
+renderIntInputField placeholderText state setter parseFunc = 
   D.input
-    [ DA.value_ (show currentValue)
+    [ DA.value_ (show currentIntValue)  -- Ensure this is a String from `Int`
     , DA.placeholder_ placeholderText
     , DL.input_ (\evt -> do
         for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
           text <- HTMLInput.value inputEl
-          setter (parseFunc text)
+          setter (parseFunc text)  -- Apply `parseFunc` to convert `String` input
         )
       )
     , DA.klass_ inputClass
     ]
     []
+  where
+    currentIntValue = useDynAtBeginning state  -- Obtain the `Int` value directly
 
 renderForm :: 
-  { nameValue :: String
+  { name :: Poll String
   , setName :: String -> Effect Unit
-  , brandValue :: String
+  , brand :: Poll String
   , setBrand :: String -> Effect Unit
-  , priceValue :: Number
+  , price :: Poll Number
   , setPrice :: Number -> Effect Unit
-  , quantityValue :: Int
+  , quantity :: Poll Int
   , setQuantity :: Int -> Effect Unit
-  , descriptionValue :: String
+  , description :: Poll String
   , setDescription :: String -> Effect Unit
   , handleSubmit :: Effect Unit
   } -> Nut
-renderForm { nameValue, setName, brandValue, setBrand, priceValue, setPrice, quantityValue, setQuantity, descriptionValue, setDescription, handleSubmit } =
+renderForm { name, setName, brand, setBrand, price, setPrice, quantity, setQuantity, description, setDescription, handleSubmit } =
   D.div_
     [ D.div
-        [ renderTextInputField "Name" nameValue setName true
-        , renderTextInputField "Brand" brandValue setBrand true
-        , renderNumberInputField "Price" priceValue setPrice parseNumber
-        , renderIntInputField "Quantity" quantityValue setQuantity parseInt
-        , renderTextInputField "Description" descriptionValue setDescription false
+        [ renderTextInputField "Name" name setName true
+        , renderTextInputField "Brand" brand setBrand true
+        , renderNumberInputField "Price" price setPrice parseNumber
+        , renderIntInputField "Quantity" quantity setQuantity parseInt
+        , renderTextInputField "Description" description setDescription false
         , D.button
             [ DL.click_ (\_ -> handleSubmit)
             , DA.klass_ "p-2 bg-green-500 text-white rounded-md"
@@ -115,21 +123,21 @@ renderForm { nameValue, setName, brandValue, setBrand, priceValue, setPrice, qua
 app :: Effect Unit
 app = do
   -- Initialize state and references
-  setName /\ name <- useState' ""
-  setBrand /\ brand <- useState' ""
-  setPrice /\ price <- useState' 0.0
-  setQuantity /\ quantity <- useState' 0
-  setDescription /\ description <- useState' ""
+  setName /\ namePoll <- useState ""
+  setBrand /\ brandPoll <- useState ""
+  setPrice /\ pricePoll <- useState 0.0
+  setQuantity /\ quantityPoll <- useState 0
+  setDescription /\ descriptionPoll <- useState ""
 
   -- Define the submit handler
   let
     handleSubmit :: Effect Unit
     handleSubmit = do
-      nameValue <- name
-      brandValue <- brand
-      priceValue <- price
-      quantityValue <- quantity
-      descriptionValue <- description
+      nameValue <- namePoll
+      brandValue <- brandPoll
+      priceValue <- pricePoll
+      quantityValue <- quantityPoll
+      descriptionValue <- descriptionPoll
       let newItem = MenuItem
             { sort: 0
             , sku: "SKU001"
@@ -159,18 +167,24 @@ app = do
       log ("New Item: " <> show newItem)
       window >>= alert "New inventory item created successfully!"
 
-  -- Render the form with Deku.do at the end
+  -- Unwrap Poll values at the top level using Deku.do and pass them to renderForm
   runInBody $ Deku.do
+    name <- useDynAtBeginning namePoll
+    brand <- useDynAtBeginning brandPoll
+    price <- useDynAtBeginning pricePoll
+    quantity <- useDynAtBeginning quantityPoll
+    description <- useDynAtBeginning descriptionPoll
+
     renderForm
-      { nameValue: name
+      { name
       , setName
-      , brandValue: brand
+      , brand
       , setBrand
-      , priceValue: price
+      , price
       , setPrice
-      , quantityValue: quantity
+      , quantity
       , setQuantity
-      , descriptionValue: description
+      , description
       , setDescription
       , handleSubmit
       }
