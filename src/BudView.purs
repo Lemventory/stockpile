@@ -151,6 +151,48 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     img <- readProp "img" json >>= readImpl
     pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
 
+-- Assuming that ItemCategory and StrainLineage have show instances, if not define them similarly
+instance showItemCategory :: Show ItemCategory where
+  show category = case category of
+    Flower -> "Flower"
+    PreRolls -> "PreRolls"
+    Vaporizers -> "Vaporizers"
+    Edibles -> "Edibles"
+    Drinks -> "Drinks"
+    Concentrates -> "Concentrates"
+    Topicals -> "Topicals"
+    Tinctures -> "Tinctures"
+    Accessories -> "Accessories"
+
+instance showStrainLineage :: Show StrainLineage where
+  show (StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }) =
+    "{ thc: " <> thc <>
+    ", cbg: " <> cbg <>
+    ", strain: " <> strain <>
+    ", creator: " <> creator <>
+    ", species: " <> species <>
+    ", dominant_tarpene: " <> dominant_tarpene <>
+    ", tarpenes: " <> show tarpenes <>
+    ", lineage: " <> show lineage <>
+    ", leafly_url: " <> leafly_url <>
+    ", img: " <> img <> " }"
+    
+instance showMenuItem :: Show MenuItem where
+  show (MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }) =
+    "{ sort: " <> show sort <>
+    ", sku: " <> sku <>
+    ", brand: " <> brand <>
+    ", name: " <> name <>
+    ", price: " <> show price <>
+    ", measure_unit: " <> measure_unit <>
+    ", per_package: " <> per_package <>
+    ", quantity: " <> show quantity <>
+    ", category: " <> show category <>
+    ", subcategory: " <> subcategory <>
+    ", description: " <> description <>
+    ", tags: " <> show tags <>
+    ", strain_lineage: " <> show strain_lineage <> " }"
+
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory mode = case mode of
   JsonMode -> fetchInventoryFromJson
