@@ -3,55 +3,33 @@ module AddItem (app) where
 import Prelude
 
 import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
-import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
 import Data.Array (intercalate, null)
-import Data.Either (Either(..))
 import Data.Either (Either(..), either)
 import Data.Foldable (for_)
-import Data.Foldable (for_)
-import Data.Tuple.Nested ((/\))
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
-import Deku.Control (text_)
-import Deku.Core (Nut)
 import Deku.Core (Nut, useRant)
 import Deku.DOM (HTMLInputElement)
 import Deku.DOM as D
-import Deku.DOM as D
-import Deku.DOM.Attributes as DA
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Combinators (runOn_)
 import Deku.DOM.Listeners (runOn)
 import Deku.DOM.Listeners as DL
-import Deku.DOM.Listeners as DL
-import Deku.Do as Deku
 import Deku.Do as Deku
 import Deku.Effect (useState)
-import Deku.Effect (useState)
-import Deku.Hooks ((<#~>), useRef)
 import Deku.Hooks (useDynAtBeginning, useRef, (<#~>))
 import Deku.Toplevel (runInBody)
-import Deku.Toplevel (runInBody)
-import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
-import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Class (liftEffect)
-import Effect.Console (log)
 import Effect.Console (log)
 import FRP.Event (Event, makeEvent, sampleOnRight, subscribe)
-import FRP.Poll (Poll)
-import FRP.Poll (Poll)
+import FRP.Poll (Poll(..), sample)
 import Parsing (runParser)
-import Parsing (runParser)
-import Parsing.String.Basic (intDecimal, number)
 import Parsing.String.Basic (intDecimal, number)
 import Web.Event.Event (target)
 import Web.HTML (window)
-import Web.HTML (window)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as HTMLInput
-import Web.HTML.Window (alert)
 import Web.HTML.Window (alert)
 
 -- Constants
@@ -116,7 +94,6 @@ renderNumberInputField placeholder state setter parseFunc = Deku.do
       ]
       []
 
--- Form Validation and Submission Logic
 validateAndCreateMenuItem ::
   { name :: String
   , brand :: String
@@ -162,18 +139,39 @@ validateAndCreateMenuItem fields =
       else Left errors
 
 handleFormSubmit ::
-  Poll String -> Poll String -> Poll Number -> Poll Int -> Poll String -> Effect Unit
+  Poll String -> Poll String -> Poll Number -> Poll Int -> Poll String -> Poll Unit
 handleFormSubmit namePoll brandPoll pricePoll quantityPoll descriptionPoll = do
-  name <- namePoll
-  brand <- brandPoll
-  price <- pricePoll
-  quantity <- quantityPoll
-  description <- descriptionPoll
+  name <- sample namePoll
+  brand <- sample brandPoll
+  price <- sample pricePoll
+  quantity <- sample quantityPoll
+  description <- sample descriptionPoll
   case validateAndCreateMenuItem { name, brand, price, quantity, description } of
-    Left errors -> liftEffect $ window >>= alert (intercalate "\n" errors)
-    Right newItem -> do
-      liftEffect $ log ("New Item Created: " <> show newItem)
-      liftEffect $ window >>= alert "Item added to inventory successfully!"
+    Left errors -> alertErrors errors
+    Right newItem -> logNewItem newItem
+  pure unit
+
+-- Function to display errors within the Poll context
+alertErrors :: Array String -> Poll Unit
+alertErrors errors = do
+  let errorMessage = intercalate "\n" errors
+  OnlyEvent (makeEvent (\emit -> do
+    window >>= \win -> alert win errorMessage
+    emit unit
+  ))
+
+-- Function to log the new item within the Poll context
+logNewItem :: MenuItem -> Poll Unit
+logNewItem item = do
+  OnlyEvent (makeEvent (\emit -> do
+    storeNewItem item
+    emit unit
+  ))
+
+-- Helper function to store the item, in case `logNewItem` requires external logging or storage
+storeNewItem :: MenuItem -> Effect Unit
+storeNewItem item = do
+  log $ "New item added: " <> show item
 
 -- Form Rendering Function
 renderForm ::
@@ -214,7 +212,7 @@ renderForm { name, setName, brand, setBrand, price, setPrice, quantity, setQuant
 
 -- App Entry Point
 app :: Effect Unit
-app = Deku.do
+app = do
   setName /\ namePoll <- useState ""
   setBrand /\ brandPoll <- useState ""
   setPrice /\ pricePoll <- useState 0.0
@@ -223,7 +221,7 @@ app = Deku.do
 
   let handleSubmit = handleFormSubmit namePoll brandPoll pricePoll quantityPoll descriptionPoll
 
-  runInBody $ Deku.do
+  void $ runInBody $ Deku.do
     renderForm
       { name: namePoll
       , setName
