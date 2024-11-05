@@ -11,12 +11,17 @@ import Deku.Core (Nut)
 import Deku.DOM (HTMLInputElement)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
+import Deku.DOM.Combinators (runOn_)
+import Deku.DOM.Listeners (runOn)
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
-import Deku.Hooks (useDynAtBeginning, useRef, useState)
+import Deku.Hooks (useDynAtBeginning, useRef, useState, (<#~>))
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Aff (Aff, launchAff_)
+import Effect.Class (liftEffect)
 import Effect.Console (log)
+import FRP.Event (makeEvent, subscribe)
 import FRP.Poll (Poll)
 import Parsing (runParser)
 import Parsing.String.Basic (intDecimal, number)
@@ -41,57 +46,53 @@ guardAgainstEmpty setField text = do
     else setField text
 
 renderTextInputField :: String -> Poll String -> (String -> Effect Unit) -> Boolean -> Nut
-renderTextInputField placeholderText state setter guardEmpty = 
-  D.input
-    [ DA.value_ placeholderText
-    , DA.placeholder_ placeholderText
-    , DL.input_ (\evt -> do
-        for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
-          text <- HTMLInput.value inputEl
-          if guardEmpty then guardAgainstEmpty setter text else setter text
-        )
-      )
-    , DA.klass_ inputClass
-    ]
-    []
-  where
-    currentValue = useDynAtBeginning state
-
-renderNumberInputField :: String -> Poll Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
-renderNumberInputField placeholderText state setter parseFunc = 
-  D.input
-    [ DA.value_ (show currentValue)  -- directly use show without `text_`
-    , DA.placeholder_ placeholderText
-    , DL.input_ (\evt -> do
-        for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
-          text <- HTMLInput.value inputEl
-          setter (parseFunc text)
-        )
-      )
-    , DA.klass_ inputClass
-    ]
-    []
-  where
-    currentValue = useDynAtBeginning state
+renderTextInputField placeholderText state setter guardEmpty = Deku.do
+  state <#~> \currentValue ->
+    D.input
+      [ DA.value_ currentValue
+      , DA.placeholder_ placeholderText
+      , DL.input_ \evt -> do
+          let inputEl = HTMLInput.fromEventTarget =<< target evt
+          for_ inputEl \el -> do
+            text <- HTMLInput.value el
+            if guardEmpty
+              then guardAgainstEmpty setter text
+              else setter text
+      , DA.klass_ inputClass
+      ]
+      []
 
 renderIntInputField :: String -> Poll Int -> (Int -> Effect Unit) -> (String -> Int) -> Nut
-renderIntInputField placeholderText state setter parseFunc = 
-  D.input
-    [ DA.value_ (show currentIntValue)  -- Ensure this is a String from `Int`
-    , DA.placeholder_ placeholderText
-    , DL.input_ (\evt -> do
-        for_ ((target evt) >>= HTMLInput.fromEventTarget) (\inputEl -> do
-          text <- HTMLInput.value inputEl
-          setter (parseFunc text)  -- Apply `parseFunc` to convert `String` input
-        )
-      )
-    , DA.klass_ inputClass
-    ]
-    []
-  where
-    currentIntValue = useDynAtBeginning state  -- Obtain the `Int` value directly
+renderIntInputField placeholderText state setter parseFunc = Deku.do
+  state <#~> \currentIntValue ->
+    D.input
+      [ DA.value_ (show currentIntValue)
+      , DA.placeholder_ placeholderText
+      , DL.input_ \evt -> do
+          let inputEl = HTMLInput.fromEventTarget =<< target evt
+          for_ inputEl \el -> do
+            text <- HTMLInput.value el
+            setter (parseFunc text)
+      , DA.klass_ inputClass
+      ]
+      []
 
-renderForm :: 
+renderNumberInputField :: String -> Poll Number -> (Number -> Effect Unit) -> (String -> Number) -> Nut
+renderNumberInputField placeholderText state setter parseFunc = Deku.do
+  state <#~> \currentValue ->
+    D.input
+      [ DA.value_ (show currentValue)
+      , DA.placeholder_ placeholderText
+      , DL.input_ \evt -> do
+          let inputEl = HTMLInput.fromEventTarget =<< target evt
+          for_ inputEl \el -> do
+            text <- HTMLInput.value el
+            setter (parseFunc text)
+      , DA.klass_ inputClass
+      ]
+      []
+
+renderForm ::
   { name :: Poll String
   , setName :: String -> Effect Unit
   , brand :: Poll String
@@ -104,87 +105,90 @@ renderForm ::
   , setDescription :: String -> Effect Unit
   , handleSubmit :: Effect Unit
   } -> Nut
-renderForm { name, setName, brand, setBrand, price, setPrice, quantity, setQuantity, description, setDescription, handleSubmit } =
+renderForm { name, setName, brand, setBrand, price, setPrice, quantity, setQuantity, description, setDescription, handleSubmit } = Deku.do
+  nameField <- pure $ renderTextInputField "Name" name setName true
+  brandField <- pure $ renderTextInputField "Brand" brand setBrand true
+  priceField <- pure $ renderNumberInputField "Price" price setPrice parseNumber
+  quantityField <- pure $ renderIntInputField "Quantity" quantity setQuantity parseInt
+  descriptionField <- pure $ renderTextInputField "Description" description setDescription false
+  
+  let
+    submitButton :: Nut
+    submitButton = D.button
+      [ DA.klass_ "p-2 bg-green-500 text-white rounded-md"
+      , runOn_ DL.click (liftEffect handleSubmit)
+      ]
+      [ text_ "Create Item" ]
+
   D.div_
-    [ D.div
-        [ renderTextInputField "Name" name setName true
-        , renderTextInputField "Brand" brand setBrand true
-        , renderNumberInputField "Price" price setPrice parseNumber
-        , renderIntInputField "Quantity" quantity setQuantity parseInt
-        , renderTextInputField "Description" description setDescription false
-        , D.button
-            [ DL.click_ (\_ -> handleSubmit)
-            , DA.klass_ "p-2 bg-green-500 text-white rounded-md"
-            ]
-            [ text_ "Create Item" ]
-        ]
+    [ nameField
+    , brandField
+    , priceField
+    , quantityField
+    , descriptionField
+    , submitButton
     ]
 
 app :: Effect Unit
-app = do
-  -- Initialize state and references
+app = Deku.do
   setName /\ namePoll <- useState ""
   setBrand /\ brandPoll <- useState ""
   setPrice /\ pricePoll <- useState 0.0
   setQuantity /\ quantityPoll <- useState 0
   setDescription /\ descriptionPoll <- useState ""
 
-  -- Define the submit handler
   let
     handleSubmit :: Effect Unit
     handleSubmit = do
-      nameValue <- namePoll
+      nameValue <- namePoll  -- Could not match type Poll with type Effect
       brandValue <- brandPoll
       priceValue <- pricePoll
       quantityValue <- quantityPoll
       descriptionValue <- descriptionPoll
-      let newItem = MenuItem
-            { sort: 0
-            , sku: "SKU001"
-            , brand: brandValue
-            , name: nameValue
-            , price: priceValue
-            , measure_unit: "g"
-            , per_package: "1"
-            , quantity: quantityValue
-            , category: Flower
-            , subcategory: ""
-            , description: descriptionValue
-            , tags: []
-            , strain_lineage: StrainLineage
-                { thc: "15%"
-                , cbg: "1%"
-                , strain: "Sample Strain"
-                , creator: "Sample Creator"
-                , species: "Hybrid"
-                , dominant_tarpene: "Limonene"
-                , tarpenes: []
-                , lineage: []
-                , leafly_url: ""
-                , img: ""
+
+      if nameValue == "" || brandValue == "" || priceValue == 0.0 || quantityValue == 0
+        then liftEffect $ window >>= alert "All fields must be filled."
+        else do
+          let newItem = MenuItem
+                { sort: 0
+                , sku: "SKU001"
+                , brand: brandValue
+                , name: nameValue
+                , price: priceValue
+                , measure_unit: "g"
+                , per_package: "1"
+                , quantity: quantityValue
+                , category: Flower
+                , subcategory: ""
+                , description: descriptionValue
+                , tags: []
+                , strain_lineage: StrainLineage
+                    { thc: "15%"
+                    , cbg: "1%"
+                    , strain: "Sample Strain"
+                    , creator: "Sample Creator"
+                    , species: "Hybrid"
+                    , dominant_tarpene: "Limonene"
+                    , tarpenes: []
+                    , lineage: []
+                    , leafly_url: ""
+                    , img: ""
+                    }
                 }
-            }
-      log ("New Item: " <> show newItem)
-      window >>= alert "New inventory item created successfully!"
-
-  -- Unwrap Poll values at the top level using Deku.do and pass them to renderForm
+          liftEffect $ log ("New Item: " <> show newItem)
+          liftEffect $ window >>= alert "New inventory item created successfully!"
   runInBody $ Deku.do
-    name <- useDynAtBeginning namePoll
-    brand <- useDynAtBeginning brandPoll
-    price <- useDynAtBeginning pricePoll
-    quantity <- useDynAtBeginning quantityPoll
-    description <- useDynAtBeginning descriptionPoll
-
-    renderForm
-      { name
+    form <- renderForm
+      { name: namePoll
       , setName
-      , brand
+      , brand: brandPoll
       , setBrand
-      , price
+      , price: pricePoll
       , setPrice
-      , quantity
+      , quantity: quantityPoll
       , setQuantity
-      , description
+      , description: descriptionPoll
       , setDescription
       , handleSubmit
       }
+    pure form
