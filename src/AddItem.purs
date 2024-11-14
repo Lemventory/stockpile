@@ -88,6 +88,6 @@ app = void $ runInBody Deku.do
   D.div_
     [ top
     , Deku.do
-        { value: itemVal } <- useDynAtBeginning item
-        D.div_ [ text_ itemVal ]
+        { value: itemVal } <- useRef Nothing item
+        D.div_ [ text_ (fromMaybe "" itemVal) ]
     ]
