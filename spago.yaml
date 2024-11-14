@@ -20,6 +20,7 @@ package:
     - prelude
     - transformers
     - tuples
+    - validation
     - web-html
     - yoga-json
   test:

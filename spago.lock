@@ -23,6 +23,7 @@ workspace:
           - prelude
           - transformers
           - tuples
+          - validation
           - web-html
           - yoga-json
         build_plan:
@@ -113,6 +114,7 @@ workspace:
           - unsafe-coerce
           - unsafe-reference
           - untagged-union
+          - validation
           - variant
           - web-dom
           - web-events
@@ -1754,6 +1756,17 @@ packages:
       - psci-support
       - tuples
       - unsafe-coerce
+  validation:
+    type: registry
+    version: 6.0.0
+    integrity: sha256-kfFailaIW4spGxbRk4261z/RGT0Sb7Dx5f3qihy0MTw=
+    dependencies:
+      - bifunctors
+      - control
+      - either
+      - foldable-traversable
+      - newtype
+      - prelude
   variant:
     type: registry
     version: 8.0.0

@@ -1,137 +1,116 @@
-module AddItem (app) where
+module AddItem where
 
 import Prelude
 
-import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
-import Data.Array (intercalate, null)
-import Data.Either (Either(..), either)
-import Data.Foldable (for_)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Foldable (for_, traverse_)
+import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
-import Deku.Core (Nut, useRant)
-import Deku.DOM (HTMLInputElement)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.DOM.Combinators (runOn_)
-import Deku.DOM.Listeners (runOn)
-import Deku.DOM.Listeners (valueOn_)
 import Deku.DOM.Listeners as DL
+import Deku.DOM.Self as Self
 import Deku.Do as Deku
-import Deku.Effect (useState)
-import Deku.Hooks (useDynAtBeginning, useRef, (<#~>))
+import Deku.Hooks (useDynAtBeginning, useRef, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
-import Effect.Aff (Aff, launchAff_)
-import Effect.Class (liftEffect)
-import Effect.Console (log)
-import FRP.Event (Event, makeEvent, sampleOnRight, subscribe)
-import FRP.Poll (Poll(..), sample)
-import Parsing (runParser)
-import Parsing.String.Basic (intDecimal, number)
 import Web.Event.Event (target)
 import Web.HTML (window)
-import Web.HTML.HTMLInputElement (fromEventTarget, value) as HTMLInput
+import Web.HTML.HTMLInputElement (fromEventTarget, value)
 import Web.HTML.Window (alert)
+import Web.UIEvent.KeyboardEvent (code, toEvent)
 
--- input styling
-inputClass :: String
-inputClass = "border border-gray-300 rounded-md p-2 mb-2"
+-- Input styling
+inputKls :: String
+inputKls =
+  """rounded-md border-gray-300 shadow-sm
+     border-2 mr-2 border-solid
+     focus:border-indigo-500 focus:ring-indigo-500
+     sm:text-sm"""
 
--- fieldset helper
-fieldset
-  :: Poll String
-  -> String
-  -> (String -> Effect Unit)
-  -> Nut
-fieldset value placeholder pusher = D.fieldset [ DA.klass_ "form-group" ]
-  [ D.input
-      [ DA.klass_ inputClass
-      , DA.placeholder_ placeholder
-      , DA.value value
-      , valueOn_ DL.input pusher
-      ]
-      []
-  ]
+buttonClass :: String -> String
+buttonClass color =
+  replaceAll (Pattern "COLOR") (Replacement color)
+    """mb-3 inline-flex items-center rounded-md
+       border border-transparent bg-COLOR-600 px-3 py-2
+       text-sm font-medium leading-4 text-white shadow-sm
+       hover:bg-COLOR-700 focus:outline-none focus:ring-2
+       focus:ring-COLOR-500 focus:ring-offset-2"""
 
--- field Types for String Fields
-textField :: Poll String -> String -> (String -> Effect Unit) -> Nut
-textField = fieldset
-
--- Form Rendering Function Using Fieldsets
-renderForm ::
-  { name :: Poll String
-  , setName :: String -> Effect Unit
-  , brand :: Poll String
-  , setBrand :: String -> Effect Unit
-  , price :: Poll String
-  , setPrice :: String -> Effect Unit
-  , quantity :: Poll String
-  , setQuantity :: String -> Effect Unit
-  , description :: Poll String
-  , setDescription :: String -> Effect Unit
-  , handleSubmit :: Aff Unit
-  } -> Nut
-renderForm { name, setName, brand, setBrand, price, setPrice, quantity, setQuantity, description, setDescription, handleSubmit } = D.div_
-  [ textField name "Name" setName
-  , textField brand "Brand" setBrand
-  , textField price "Price" setPrice
-  , textField quantity "Quantity" setQuantity
-  , textField description "Description" setDescription
-  , D.button
-      [ DA.klass_ "p-2 bg-green-500 text-white rounded-md"
-      , runOn_ DL.click (launchAff_ handleSubmit)
-      ]
-      [ text_ "Create Item" ]
-  ]
-
--- Main App Entry Point
+-- Main app with multiple fields
 app :: Effect Unit
-app = do
-  -- Initialize state for each input field as Poll String
-  setName /\ name <- useState ""
-  setBrand /\ brand <- useState ""
-  setPrice /\ price <- useState ""
-  setQuantity /\ quantity <- useState ""
-  setDescription /\ description <- useState ""
+app = void $ runInBody Deku.do
+  -- Initialize state for each input field
+  setSku /\ sku <- useState'
+  setBrand /\ brand <- useState'
+  setCategory /\ category <- useState'
+  setItem /\ item <- useState'
 
-  -- Result display state
-  setResult /\ result <- useState ""
+  -- Create references for each input field
+  skuRef <- useRef Nothing (Just <$> sku)
+  brandRef <- useRef Nothing (Just <$> brand)
+  categoryRef <- useRef Nothing (Just <$> category)
 
-  -- handleSubmit function with asynchronous logging and result update
-  let handleSubmit :: Aff Unit
-      handleSubmit = do
-        -- Extract the current values from each field (asynchronous Aff context)
-        currentName <- useRant name
-        currentBrand <- useRant brand
-        currentPrice <- useRant price
-        currentQuantity <- useRant quantity
-        currentDescription <- useRant description
+  -- Guard function to check if a field is empty
+  let guardAgainstEmpty e = do
+        v <- value e
+        if v == ""
+          then window >>= alert "All fields must be filled out!"
+          else setItem v
 
-        -- Log the submission values
-        let logMessage = "Submitted values: " <> intercalate ", " [currentName, currentBrand, currentPrice, currentQuantity, currentDescription]
-        liftEffect $ log logMessage
+      -- Handle button click to validate all fields
+      checkInputs :: Effect Unit
+      checkInputs = do
+        traverse_ (\ref -> ref >>= traverse_ guardAgainstEmpty) [skuRef, brandRef, categoryRef]
 
-        -- Update result state to confirm submission
-        liftEffect $ setResult "Item submission logged successfully!"
+      -- Top form with multiple input fields
+      top =
+        D.div_
+          [ D.input
+              [ DA.placeholder_ "SKU"
+              , DL.keyup_ \evt -> do
+                  when (code evt == "Enter") $
+                    for_
+                      ((target >=> fromEventTarget) (toEvent evt))
+                      guardAgainstEmpty
+              , Self.selfT_ setSku
+              , DA.klass_ inputKls
+              ]
+              []
+          , D.input
+              [ DA.placeholder_ "Brand"
+              , DL.keyup_ \evt -> do
+                  when (code evt == "Enter") $
+                    for_
+                      ((target >=> fromEventTarget) (toEvent evt))
+                      guardAgainstEmpty
+              , Self.selfT_ setBrand
+              , DA.klass_ inputKls
+              ]
+              []
+          , D.input
+              [ DA.placeholder_ "Category"
+              , DL.keyup_ \evt -> do
+                  when (code evt == "Enter") $
+                    for_
+                      ((target >=> fromEventTarget) (toEvent evt))
+                      guardAgainstEmpty
+              , Self.selfT_ setCategory
+              , DA.klass_ inputKls
+              ]
+              []
+          , D.button
+              [ DL.click_ \_ -> checkInputs
+              , DA.klass_ $ buttonClass "green"
+              ]
+              [ text_ "Add" ]
+          ]
 
-  -- Render form and result display
-  void $ runInBody $ Deku.do
-    resultDisplay <- useDynAtBeginning result \res ->
-      D.div_ [ text_ res ]
-
-    form <- renderForm
-      { name: name
-      , setName
-      , brand: brand
-      , setBrand
-      , price: price
-      , setPrice
-      , quantity: quantity
-      , setQuantity
-      , description: description
-      , setDescription
-      , handleSubmit
-      }
-
-    D.div_ [ form, resultDisplay ]
+  -- Display area
+  D.div_
+    [ top
+    , Deku.do
+        { value: t } <- useDynAtBeginning item
+        D.div_ [ text_ t ]
+    ]

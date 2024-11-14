@@ -1,6 +1,6 @@
 module Main where
 
-import Render (app)
+import AddItem (app)
 import Prelude
 
 import Effect (Effect)
