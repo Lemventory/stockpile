@@ -2,8 +2,9 @@ module AddItem where
 
 import Prelude
 
+import Data.Array (all, null)
 import Data.Foldable (for_, traverse_)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
@@ -12,9 +13,10 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.DOM.Self as Self
 import Deku.Do as Deku
-import Deku.Hooks (useDynAtBeginning, useRef, useState')
+import Deku.Hooks (guard, guardWith, useDyn, useDynAtBeginning, useRef, useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Class (liftEffect)
 import Web.Event.Event (target)
 import Web.HTML (window)
 import Web.HTML.HTMLInputElement (fromEventTarget, value)
@@ -42,75 +44,57 @@ buttonClass color =
 app :: Effect Unit
 app = void $ runInBody Deku.do
   -- Initialize state for each input field
-  setSku /\ sku <- useState'
-  setBrand /\ brand <- useState'
-  setCategory /\ category <- useState'
-  setItem /\ item <- useState'
+  setSku /\ sku <- useState ""
+  setBrand /\ brand <- useState ""
+  setCategory /\ category <- useState ""
+  setItem /\ item <- useState ""
 
-  -- Create references for each input field
+  -- Create references for each input field to get Poll (Maybe String) values
   skuRef <- useRef Nothing (Just <$> sku)
   brandRef <- useRef Nothing (Just <$> brand)
   categoryRef <- useRef Nothing (Just <$> category)
 
-  -- Guard function to check if a field is empty
-  let guardAgainstEmpty e = do
-        v <- value e
-        if v == ""
-          then window >>= alert "All fields must be filled out!"
-          else setItem v
+  -- Define Poll Boolean to track form validity by checking if all fields are non-empty
+  let isNonEmpty = map (\s -> s /= "") <<< map (fromMaybe "")
+  let skuValid = isNonEmpty skuRef
+  let brandValid = isNonEmpty brandRef
+  let categoryValid = isNonEmpty categoryRef
+  let isFormValid = pure (\a b c -> a && b && c) <*> skuValid <*> brandValid <*> categoryValid
 
-      -- Handle button click to validate all fields
-      checkInputs :: Effect Unit
-      checkInputs = do
-        traverse_ (\ref -> ref >>= traverse_ guardAgainstEmpty) [skuRef, brandRef, categoryRef]
-
-      -- Top form with multiple input fields
-      top =
+  -- Define the top-level form with multiple input fields
+  let top =
         D.div_
           [ D.input
               [ DA.placeholder_ "SKU"
-              , DL.keyup_ \evt -> do
-                  when (code evt == "Enter") $
-                    for_
-                      ((target >=> fromEventTarget) (toEvent evt))
-                      guardAgainstEmpty
               , Self.selfT_ setSku
               , DA.klass_ inputKls
               ]
               []
           , D.input
               [ DA.placeholder_ "Brand"
-              , DL.keyup_ \evt -> do
-                  when (code evt == "Enter") $
-                    for_
-                      ((target >=> fromEventTarget) (toEvent evt))
-                      guardAgainstEmpty
               , Self.selfT_ setBrand
               , DA.klass_ inputKls
               ]
               []
           , D.input
               [ DA.placeholder_ "Category"
-              , DL.keyup_ \evt -> do
-                  when (code evt == "Enter") $
-                    for_
-                      ((target >=> fromEventTarget) (toEvent evt))
-                      guardAgainstEmpty
               , Self.selfT_ setCategory
               , DA.klass_ inputKls
               ]
               []
-          , D.button
-              [ DL.click_ \_ -> checkInputs
-              , DA.klass_ $ buttonClass "green"
-              ]
-              [ text_ "Add" ]
+          , guard isFormValid $
+              D.button
+                [ DL.click_ \_ -> do
+                    traverse_ (\set -> set "") [setSku, setBrand, setCategory] -- Clear inputs after submission
+                , DA.klass_ $ buttonClass "green"
+                ]
+                [ text_ "Add" ]
           ]
 
-  -- Display area
+  -- Display area for the item added (if applicable)
   D.div_
     [ top
     , Deku.do
-        { value: t } <- useDynAtBeginning item
-        D.div_ [ text_ t ]
+        { value: itemVal } <- useDynAtBeginning item
+        D.div_ [ text_ itemVal ]
     ]
