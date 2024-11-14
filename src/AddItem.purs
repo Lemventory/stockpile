@@ -23,7 +23,6 @@ import Web.HTML.HTMLInputElement (fromEventTarget, value)
 import Web.HTML.Window (alert)
 import Web.UIEvent.KeyboardEvent (code, toEvent)
 
--- Input styling
 inputKls :: String
 inputKls =
   """rounded-md border-gray-300 shadow-sm
@@ -40,28 +39,23 @@ buttonClass color =
        hover:bg-COLOR-700 focus:outline-none focus:ring-2
        focus:ring-COLOR-500 focus:ring-offset-2"""
 
--- Main app with multiple fields
 app :: Effect Unit
 app = void $ runInBody Deku.do
-  -- Initialize state for each input field
   setSku /\ sku <- useState ""
   setBrand /\ brand <- useState ""
   setCategory /\ category <- useState ""
   setItem /\ item <- useState ""
 
-  -- Create references for each input field to get Poll (Maybe String) values
   skuRef <- useRef Nothing (Just <$> sku)
   brandRef <- useRef Nothing (Just <$> brand)
   categoryRef <- useRef Nothing (Just <$> category)
 
-  -- Define Poll Boolean to track form validity by checking if all fields are non-empty
   let isNonEmpty = map (\s -> s /= "") <<< map (fromMaybe "")
   let skuValid = isNonEmpty skuRef
   let brandValid = isNonEmpty brandRef
   let categoryValid = isNonEmpty categoryRef
   let isFormValid = pure (\a b c -> a && b && c) <*> skuValid <*> brandValid <*> categoryValid
 
-  -- Define the top-level form with multiple input fields
   let top =
         D.div_
           [ D.input
@@ -82,7 +76,7 @@ app = void $ runInBody Deku.do
               , DA.klass_ inputKls
               ]
               []
-          , guard isFormValid $
+          , guard isFormValid $ --Could not match type Effect with type Poll
               D.button
                 [ DL.click_ \_ -> do
                     traverse_ (\set -> set "") [setSku, setBrand, setCategory] -- Clear inputs after submission
@@ -91,7 +85,6 @@ app = void $ runInBody Deku.do
                 [ text_ "Add" ]
           ]
 
-  -- Display area for the item added (if applicable)
   D.div_
     [ top
     , Deku.do
