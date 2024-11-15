@@ -54,7 +54,7 @@ app = void $ runInBody Deku.do
   let skuValid = isNonEmpty skuRef
   let brandValid = isNonEmpty brandRef
   let categoryValid = isNonEmpty categoryRef
-  let isFormValid = pure (\a b c -> a && b && c) <*> skuValid <*> brandValid <*> categoryValid
+  let isFormValid = liftEffect $ pure (\a b c -> a && b && c) <*> skuValid <*> brandValid <*> categoryValid
 
   let top =
         D.div_
@@ -88,6 +88,6 @@ app = void $ runInBody Deku.do
   D.div_
     [ top
     , Deku.do
-        { value: itemVal } <- useRef Nothing item
-        D.div_ [ text_ (fromMaybe "" itemVal) ]
+        { value: itemVal } <- useDynAtBeginning item
+        D.div_ [ text_ itemVal ]
     ]
