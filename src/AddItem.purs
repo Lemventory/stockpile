@@ -2,26 +2,30 @@ module AddItem where
 
 import Prelude
 
-import Data.Array (all, null)
-import Data.Foldable (for_, traverse_)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Foldable (for_)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Tuple.Nested ((/\))
-import Deku.Control (text_)
+import Deku.Control (text, text_)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
-import Deku.DOM.Self as Self
 import Deku.Do as Deku
-import Deku.Hooks (guard, guardWith, useDyn, useDynAtBeginning, useRef, useState, useState')
+import Deku.Hooks (useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
-import Effect.Class (liftEffect)
 import Web.Event.Event (target)
-import Web.HTML (window)
 import Web.HTML.HTMLInputElement (fromEventTarget, value)
-import Web.HTML.Window (alert)
-import Web.UIEvent.KeyboardEvent (code, toEvent)
+import Web.UIEvent.KeyboardEvent (toEvent)
+
+type ValidationRule = String -> Boolean
+
+type FieldConfig = 
+  { label :: String
+  , placeholder :: String
+  , validation :: ValidationRule
+  , errorMessage :: String
+  }
 
 inputKls :: String
 inputKls =
@@ -39,55 +43,58 @@ buttonClass color =
        hover:bg-COLOR-700 focus:outline-none focus:ring-2
        focus:ring-COLOR-500 focus:ring-offset-2"""
 
+nonEmpty :: ValidationRule
+nonEmpty = (_ /= "")
+
 app :: Effect Unit
 app = void $ runInBody Deku.do
-  setSku /\ sku <- useState ""
-  setBrand /\ brand <- useState ""
-  setCategory /\ category <- useState ""
-  setItem /\ item <- useState ""
+  setField1 /\ field1Event <- useState'
+  setValid1 /\ valid1Event <- useState (Nothing :: Maybe Boolean)
 
-  skuRef <- useRef Nothing (Just <$> sku)
-  brandRef <- useRef Nothing (Just <$> brand)
-  categoryRef <- useRef Nothing (Just <$> category)
+  let
+    field1Config = 
+      { label: "Field 1"
+      , placeholder: "Enter text"
+      , validation: nonEmpty
+      , errorMessage: "Field cannot be empty"
+      }
 
-  let isNonEmpty = map (\s -> s /= "") <<< map (fromMaybe "")
-  let skuValid = isNonEmpty skuRef
-  let brandValid = isNonEmpty brandRef
-  let categoryValid = isNonEmpty categoryRef
-  let isFormValid = liftEffect $ pure (\a b c -> a && b && c) <*> skuValid <*> brandValid <*> categoryValid
+    makeField config setValue setValid validEvent = 
+      D.div_
+        [ D.input
+            [ DA.placeholder_ config.placeholder
+            , DL.keyup_ \evt -> do
+                for_ 
+                  ((target >=> fromEventTarget) (toEvent evt))
+                  \inputElement -> do
+                    v <- value inputElement
+                    setValue v
+                    setValid (Just (config.validation v))
+            , DA.value_ ""
+            , DA.klass_ inputKls
+            ]
+            []
+        , D.div
+            [ DA.klass_ "text-red-500 text-sm mt-1" ]
+            [ text $ map 
+                (maybe "" \isValid -> if isValid then "" else config.errorMessage) 
+                validEvent
+            ]
+        ]
 
-  let top =
-        D.div_
-          [ D.input
-              [ DA.placeholder_ "SKU"
-              , Self.selfT_ setSku
-              , DA.klass_ inputKls
-              ]
-              []
-          , D.input
-              [ DA.placeholder_ "Brand"
-              , Self.selfT_ setBrand
-              , DA.klass_ inputKls
-              ]
-              []
-          , D.input
-              [ DA.placeholder_ "Category"
-              , Self.selfT_ setCategory
-              , DA.klass_ inputKls
-              ]
-              []
-          , guard isFormValid $ --Could not match type Effect with type Poll
-              D.button
-                [ DL.click_ \_ -> do
-                    traverse_ (\set -> set "") [setSku, setBrand, setCategory] -- Clear inputs after submission
-                , DA.klass_ $ buttonClass "green"
-                ]
-                [ text_ "Add" ]
-          ]
+    -- Convert Maybe Boolean to "true"/"false" string for disabled attribute
+    isButtonDisabled = map (fromMaybe true >>> (\b -> if b then "false" else "true")) valid1Event
 
   D.div_
-    [ top
-    , Deku.do
-        { value: itemVal } <- useDynAtBeginning item
-        D.div_ [ text_ itemVal ]
+    [ makeField field1Config setField1 setValid1 valid1Event
+    , D.button
+        [ DA.klass_ $ buttonClass "green"
+        , DA.disabled isButtonDisabled
+        , DL.click_ \_ -> do
+            setField1 ""
+            setValid1 Nothing
+        ]
+        [ text_ "Submit" ]
+    , D.div_ 
+        [ text $ map (\val -> "Current value: " <> val) field1Event ]
     ]
