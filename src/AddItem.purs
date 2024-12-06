@@ -13,6 +13,7 @@ import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
+import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
@@ -21,7 +22,8 @@ import Deku.Hooks (useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Web.Event.Event (target)
-import Web.HTML.HTMLInputElement (fromEventTarget, value)
+import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
+import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 
 -- Validation Rules
@@ -63,7 +65,14 @@ type FieldConfig =
   , placeholder :: String
   , validation :: ValidationRule
   , errorMessage :: String
-  , formatInput :: String -> String  -- New: format input as user types
+  , formatInput :: String -> String
+  }
+
+-- Dropdown Configuration
+type DropdownConfig = 
+  { label :: String
+  , options :: Array { value :: String, label :: String }
+  , defaultValue :: String
   }
 
 -- Styling
@@ -95,8 +104,12 @@ app = void $ runInBody Deku.do
   setField3 /\ field3Event <- useState'
   setValid3 /\ valid3Event <- useState (Nothing :: Maybe Boolean)
 
+  -- New: State for dropdown
+  setDropdown /\ dropdownEvent <- useState'
+
   let
     -- Text only field with max length
+    field1Config :: FieldConfig
     field1Config = 
       { label: "Name"
       , placeholder: "Enter name (letters only)"
@@ -106,8 +119,9 @@ app = void $ runInBody Deku.do
       }
 
     -- Positive integer field
+    field2Config :: FieldConfig
     field2Config = 
-      { label: "Amount "
+      { label: "Amount"
       , placeholder: "Enter a positive number"
       , validation: allOf [nonEmpty, positiveInteger]
       , errorMessage: "whole numbers only!"
@@ -115,12 +129,24 @@ app = void $ runInBody Deku.do
       }
 
     -- Dollar amount field
+    field3Config :: FieldConfig
     field3Config = 
       { label: "Price"
       , placeholder: "0.00"
       , validation: allOf [nonEmpty, dollarAmount]
       , errorMessage: "valid dollar amounts only (e.g. 1.99)"
       , formatInput: identity
+      }
+
+    -- New: Dropdown configuration
+    dropdownConfig :: DropdownConfig
+    dropdownConfig = 
+      { label: "Category"
+      , options: 
+          [ { value: "sativa", label: "Sativa" }
+          , { value: "indica", label: "Indica" }
+          ]
+      , defaultValue: "sativa"
       }
 
     makeField config setValue setValid validEvent = 
@@ -133,9 +159,9 @@ app = void $ runInBody Deku.do
                 [ DA.placeholder_ config.placeholder
                 , DL.keyup_ \evt -> do
                     for_ 
-                      ((target >=> fromEventTarget) (toEvent evt))
+                      ((target >=> Input.fromEventTarget) (toEvent evt))
                       \inputElement -> do
-                        v <- value inputElement
+                        v <- Input.value inputElement
                         let formatted = config.formatInput v
                         setValue formatted
                         setValid (Just (config.validation formatted))
@@ -152,13 +178,36 @@ app = void $ runInBody Deku.do
             ]
         ]
 
+    makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> Nut
+    makeDropdown config setValue = 
+      D.div_
+        [ D.div 
+            [ DA.klass_ "flex items-center gap-2" ]
+            [ D.label_
+                [ text_ config.label ]
+            , D.select
+                [ DA.klass_ inputKls
+                , DL.change_ \evt -> do
+                    for_ 
+                      (target evt >>= Select.fromEventTarget)
+                      \selectElement -> do
+                        v <- Select.value selectElement
+                        setValue v
+                ]
+                (config.options <#> \opt ->
+                  D.option
+                    [ DA.value_ opt.value ]
+                    [ text_ opt.label ]
+                )
+            ]
+        ]
+
     isFormValid = ado
       v1 <- valid1Event
       v2 <- valid2Event
       v3 <- valid3Event
       in (fromMaybe false v1) && (fromMaybe false v2) && (fromMaybe false v3)
 
-    -- Convert Boolean to "true"/"false" string for disabled attribute
     isButtonDisabled = map (not >>> show) isFormValid
 
   D.div_
@@ -167,6 +216,7 @@ app = void $ runInBody Deku.do
         [ makeField field1Config setField1 setValid1 valid1Event
         , makeField field2Config setField2 setValid2 valid2Event
         , makeField field3Config setField3 setValid3 valid3Event
+        , makeDropdown dropdownConfig setDropdown
         ]
     , D.button
         [ DA.klass_ $ buttonClass "green"
@@ -178,6 +228,7 @@ app = void $ runInBody Deku.do
             setValid2 Nothing
             setField3 ""
             setValid3 Nothing
+            setDropdown dropdownConfig.defaultValue
         ]
         [ text_ "Submit" ]
     , D.div_ 
@@ -186,5 +237,7 @@ app = void $ runInBody Deku.do
         , text $ map (\val -> "Amount: " <> val) field2Event
         , D.br_ []
         , text $ map (\val -> "Price: $" <> val) field3Event
+        , D.br_ []
+        , text $ map (\val -> "Category: " <> val) dropdownEvent
         ]
     ]
