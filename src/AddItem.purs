@@ -2,12 +2,14 @@ module AddItem where
 
 import Prelude
 
+import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
 import Data.Array (all)
 import Data.Array (length) as Array
 import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.Int (fromString)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString) as Num
 import Data.String (Pattern(..), Replacement(..), replaceAll, length, split)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
@@ -21,6 +23,8 @@ import Deku.Do as Deku
 import Deku.Hooks (useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Class (liftEffect)
+import FRP.Poll (Poll)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -92,6 +96,92 @@ buttonClass color =
        hover:bg-COLOR-700 focus:outline-none focus:ring-2
        focus:ring-COLOR-500 focus:ring-offset-2"""
 
+makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeField config setValue setValid validEvent = 
+  D.div_
+    [ D.div 
+        [ DA.klass_ "flex items-center gap-2" ]
+        [ D.label_
+            [ text_ config.label ]
+        , D.input
+            [ DA.placeholder_ config.placeholder
+            , DL.keyup_ \evt -> do
+                for_ 
+                  ((target >=> Input.fromEventTarget) (toEvent evt))
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (config.validation formatted))
+            , DA.value_ ""
+            , DA.klass_ inputKls
+            ]
+            []
+        , D.span
+            [ DA.klass_ "text-red-500 text-xs" ]
+            [ text (map (\mValid -> case mValid of 
+                Just false -> config.errorMessage
+                _ -> "") validEvent)
+            ]
+        ]
+    ]
+
+createMenuItem :: String -> String -> String -> String -> MenuItem
+createMenuItem name amount price category = 
+  MenuItem
+    { sort: 0
+    , sku: "SKU-" <> name
+    , brand: "DefaultBrand"
+    , name: name
+    , price: fromMaybe 0.0 $ Num.fromString price
+    , measure_unit: "units"
+    , per_package: amount
+    , quantity: fromMaybe 0 $ fromString amount
+    , category: case category of
+        "sativa" -> Flower
+        "indica" -> Flower
+        _ -> Accessories
+    , subcategory: category
+    , description: "New item: " <> name
+    , tags: []
+    , strain_lineage: StrainLineage
+        { thc: "0%"
+        , cbg: "0%"
+        , strain: ""
+        , creator: ""
+        , species: ""
+        , dominant_tarpene: ""
+        , tarpenes: []
+        , lineage: []
+        , leafly_url: ""
+        , img: ""
+        }
+    }
+
+makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> Nut
+makeDropdown config setValue = 
+  D.div_
+    [ D.div 
+        [ DA.klass_ "flex items-center gap-2" ]
+        [ D.label_
+            [ text_ config.label ]
+        , D.select
+            [ DA.klass_ inputKls
+            , DL.change_ \evt -> do
+                for_ 
+                  (target evt >>= Select.fromEventTarget)
+                  \selectElement -> do
+                    v <- Select.value selectElement
+                    setValue v
+            ]
+            (config.options <#> \opt ->
+              D.option
+                [ DA.value_ opt.value ]
+                [ text_ opt.label ]
+            )
+        ]
+    ]
+
 app :: Effect Unit
 app = void $ runInBody Deku.do
   -- States for each field
@@ -104,11 +194,9 @@ app = void $ runInBody Deku.do
   setField3 /\ field3Event <- useState'
   setValid3 /\ valid3Event <- useState (Nothing :: Maybe Boolean)
 
-  -- New: State for dropdown
   setDropdown /\ dropdownEvent <- useState'
 
   let
-    -- Text only field with max length
     field1Config :: FieldConfig
     field1Config = 
       { label: "Name"
@@ -118,7 +206,6 @@ app = void $ runInBody Deku.do
       , formatInput: identity
       }
 
-    -- Positive integer field
     field2Config :: FieldConfig
     field2Config = 
       { label: "Amount"
@@ -128,7 +215,6 @@ app = void $ runInBody Deku.do
       , formatInput: \str -> fromMaybe str $ map show $ fromString str
       }
 
-    -- Dollar amount field
     field3Config :: FieldConfig
     field3Config = 
       { label: "Price"
@@ -138,7 +224,6 @@ app = void $ runInBody Deku.do
       , formatInput: identity
       }
 
-    -- New: Dropdown configuration
     dropdownConfig :: DropdownConfig
     dropdownConfig = 
       { label: "Category"
@@ -149,58 +234,14 @@ app = void $ runInBody Deku.do
       , defaultValue: "sativa"
       }
 
-    makeField config setValue setValid validEvent = 
-      D.div_
-        [ D.div 
-            [ DA.klass_ "flex items-center gap-2" ]
-            [ D.label_
-                [ text_ config.label ]
-            , D.input
-                [ DA.placeholder_ config.placeholder
-                , DL.keyup_ \evt -> do
-                    for_ 
-                      ((target >=> Input.fromEventTarget) (toEvent evt))
-                      \inputElement -> do
-                        v <- Input.value inputElement
-                        let formatted = config.formatInput v
-                        setValue formatted
-                        setValid (Just (config.validation formatted))
-                , DA.value_ ""
-                , DA.klass_ inputKls
-                ]
-                []
-            , D.span
-                [ DA.klass_ "text-red-500 text-xs" ]
-                [ text $ map 
-                    (maybe "" \isValid -> if isValid then "" else config.errorMessage) 
-                    validEvent
-                ]
-            ]
-        ]
-
-    makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> Nut
-    makeDropdown config setValue = 
-      D.div_
-        [ D.div 
-            [ DA.klass_ "flex items-center gap-2" ]
-            [ D.label_
-                [ text_ config.label ]
-            , D.select
-                [ DA.klass_ inputKls
-                , DL.change_ \evt -> do
-                    for_ 
-                      (target evt >>= Select.fromEventTarget)
-                      \selectElement -> do
-                        v <- Select.value selectElement
-                        setValue v
-                ]
-                (config.options <#> \opt ->
-                  D.option
-                    [ DA.value_ opt.value ]
-                    [ text_ opt.label ]
-                )
-            ]
-        ]
+    resetForm = do
+      setField1 ""
+      setValid1 Nothing
+      setField2 ""
+      setValid2 Nothing
+      setField3 ""
+      setValid3 Nothing
+      setDropdown dropdownConfig.defaultValue
 
     isFormValid = ado
       v1 <- valid1Event
@@ -221,14 +262,7 @@ app = void $ runInBody Deku.do
     , D.button
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled isButtonDisabled
-        , DL.click_ \_ -> do
-            setField1 ""
-            setValid1 Nothing
-            setField2 ""
-            setValid2 Nothing
-            setField3 ""
-            setValid3 Nothing
-            setDropdown dropdownConfig.defaultValue
+        , DL.click_ \_ -> liftEffect resetForm
         ]
         [ text_ "Submit" ]
     , D.div_ 
