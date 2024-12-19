@@ -44,19 +44,6 @@ data MenuItem = MenuItem
 
 data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
 
--- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
-itemCategoryToString :: ItemCategory -> String
-itemCategoryToString category = case category of
-  Flower -> "Flower"
-  PreRolls -> "PreRolls"
-  Vaporizers -> "Vaporizers"
-  Edibles -> "Edibles"
-  Drinks -> "Drinks"
-  Concentrates -> "Concentrates"
-  Topicals -> "Topicals"
-  Tinctures -> "Tinctures"
-  Accessories -> "Accessories"
-
 data StrainLineage = StrainLineage
   { thc :: String
   , cbg :: String
@@ -69,6 +56,19 @@ data StrainLineage = StrainLineage
   , leafly_url :: String
   , img :: String
   }
+
+-- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
+itemCategoryToString :: ItemCategory -> String
+itemCategoryToString category = case category of
+  Flower -> "Flower"
+  PreRolls -> "PreRolls"
+  Vaporizers -> "Vaporizers"
+  Edibles -> "Edibles"
+  Drinks -> "Drinks"
+  Concentrates -> "Concentrates"
+  Topicals -> "Topicals"
+  Tinctures -> "Tinctures"
+  Accessories -> "Accessories"
 
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
