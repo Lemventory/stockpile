@@ -2,13 +2,13 @@ module AddItem where
 
 import Prelude
 
-import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
+import BudView (MenuItem(..), ItemCategory(..), StrainLineage(..), postInventoryToJson)
 import Data.Array (all)
 import Data.Array (length) as Array
 import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.Int (fromString)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (fromString) as Num
 import Data.String (Pattern(..), Replacement(..), replaceAll, length, split)
 import Data.String.Regex (regex, test)
@@ -23,8 +23,11 @@ import Deku.Do as Deku
 import Deku.Hooks (useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import FRP.Poll (Poll)
+import Effect.Class.Console (log)
+import FRP.Event (subscribe)
+import FRP.Poll (Poll, create)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -184,7 +187,7 @@ makeDropdown config setValue =
 
 app :: Effect Unit
 app = void $ runInBody Deku.do
-  -- States for each field
+  -- States for fields
   setField1 /\ field1Event <- useState'
   setValid1 /\ valid1Event <- useState (Nothing :: Maybe Boolean)
   
@@ -195,6 +198,9 @@ app = void $ runInBody Deku.do
   setValid3 /\ valid3Event <- useState (Nothing :: Maybe Boolean)
 
   setDropdown /\ dropdownEvent <- useState'
+  
+  -- State for submission status
+  setSubmitStatus /\ submitStatusEvent <- useState ""
 
   let
     field1Config :: FieldConfig
@@ -234,14 +240,62 @@ app = void $ runInBody Deku.do
       , defaultValue: "sativa"
       }
 
-    resetForm = do
-      setField1 ""
-      setValid1 Nothing
-      setField2 ""
-      setValid2 Nothing
-      setField3 ""
-      setValid3 Nothing
-      setDropdown dropdownConfig.defaultValue
+    createMenuItem name amount price category =
+      MenuItem
+        { sort: 0
+        , sku: "SKU-" <> name
+        , brand: "DefaultBrand"
+        , name: name
+        , price: fromMaybe 0.0 $ Num.fromString price
+        , measure_unit: "units"
+        , per_package: amount
+        , quantity: fromMaybe 0 $ fromString amount
+        , category: case category of
+            "sativa" -> Flower
+            "indica" -> Flower
+            _ -> Accessories
+        , subcategory: category
+        , description: "New item: " <> name
+        , tags: []
+        , strain_lineage: StrainLineage
+            { thc: "0%"
+            , cbg: "0%"
+            , strain: ""
+            , creator: ""
+            , species: ""
+            , dominant_tarpene: ""
+            , tarpenes: []
+            , lineage: []
+            , leafly_url: ""
+            , img: ""
+            }
+        }
+
+    handleSubmit :: Effect Unit
+    handleSubmit = do
+      name <- field1Event
+      amount <- field2Event
+      price <- field3Event
+      category <- dropdownEvent
+      let menuItem = createMenuItem name amount price category
+      
+      launchAff_ do
+        result <- postInventoryToJson menuItem
+        liftEffect case result of
+          Left err -> do
+            log ("Error: " <> err)
+            setSubmitStatus ("Failed to submit: " <> err)
+          Right _ -> do
+            log "Successfully submitted item"
+            setSubmitStatus "Item submitted successfully!"
+            -- Reset form
+            setField1 ""
+            setValid1 Nothing
+            setField2 ""
+            setValid2 Nothing
+            setField3 ""
+            setValid3 Nothing
+            setDropdown dropdownConfig.defaultValue
 
     isFormValid = ado
       v1 <- valid1Event
@@ -251,6 +305,7 @@ app = void $ runInBody Deku.do
 
     isButtonDisabled = map (not >>> show) isFormValid
 
+  -- Component render
   D.div_
     [ D.div
         [ DA.klass_ "space-y-4" ]
@@ -262,7 +317,8 @@ app = void $ runInBody Deku.do
     , D.button
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled isButtonDisabled
-        , DL.click_ \_ -> liftEffect resetForm
+        , DL.click_ \_ -> hook do
+            liftEffect handleSubmit
         ]
         [ text_ "Submit" ]
     , D.div_ 
@@ -274,4 +330,7 @@ app = void $ runInBody Deku.do
         , D.br_ []
         , text $ map (\val -> "Category: " <> val) dropdownEvent
         ]
+    , D.div 
+        [ DA.klass_ "mt-4 text-sm" ]
+        [ text submitStatusEvent ]
     ]
