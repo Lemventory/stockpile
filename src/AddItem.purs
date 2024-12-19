@@ -2,7 +2,7 @@ module AddItem where
 
 import Prelude
 
-import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..))
+import BudView (InventoryResponse(..), ItemCategory(..), MenuItem(..), StrainLineage(..), postInventoryToJson)
 import Data.Array (all, (!!))
 import Data.Array (length) as Array
 import Data.Either (Either(..))
@@ -14,9 +14,10 @@ import Data.String (Pattern(..), Replacement(..), replaceAll, split, take, trim)
 import Data.String (length) as String
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
-import Deku.Core (Nut)
+import Deku.Core (Nut, Hook)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
@@ -24,8 +25,11 @@ import Deku.Do as Deku
 import Deku.Hooks (useState, useState')
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
+import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import FRP.Poll (Poll)
+import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
+import FRP.Poll (Poll, sample)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -165,7 +169,10 @@ makeArrayField label setValue =
                   ((target >=> Input.fromEventTarget) (toEvent evt))
                   \inputElement -> do
                     v <- Input.value inputElement
-                    setValue (map trim (split (Pattern ",") v))
+                    -- Convert empty string to empty array, otherwise split and trim
+                    setValue (if v == "" 
+                            then []
+                            else map trim (split (Pattern ",") v))
             , DA.klass_ inputKls
             ]
             []
@@ -383,6 +390,7 @@ buttonClass color =
        
 app :: Effect Unit
 app = void $ runInBody Deku.do
+  setStatusMessage /\ statusMessageEvent <- useState ""
   -- Basic MenuItem fields
   setName /\ nameEvent <- useState'
   setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
@@ -406,7 +414,8 @@ app = void $ runInBody Deku.do
   setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
   
   setTags /\ tagsEvent <- useState ([] :: Array String)
-
+  setTarpenes /\ tarpenesEvent <- useState ([] :: Array String)
+  setLineage /\ lineageEvent <- useState ([] :: Array String)
   -- StrainLineage fields
   setThc /\ thcEvent <- useState'
   setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
@@ -425,11 +434,8 @@ app = void $ runInBody Deku.do
   
   setDominantTarpene /\ dominantTarpeneEvent <- useState'
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
-  
-  setTarpenes /\ tarpenesEvent <- useState ([] :: Array String)
-  setLineage /\ lineageEvent <- useState ([] :: Array String)
-  
-  let
+
+  let  
     resetForm = do
       setName ""
       setValidName Nothing
@@ -508,9 +514,82 @@ app = void $ runInBody Deku.do
     , D.button
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled isButtonDisabled
-        , DL.click_ \_ -> liftEffect resetForm
+        , DL.click_ \_ -> void $ launchAff_ do
+            values <- liftEffect do
+              name <- sample nameEvent
+              sku <- sample skuEvent
+              brand <- sample brandEvent
+              price <- sample priceEvent
+              quantity <- sample quantityEvent
+              category <- sample categoryEvent
+              description <- sample descriptionEvent
+              tags' <- sample tagsEvent
+              thc <- sample thcEvent
+              cbg <- sample cbgEvent
+              strain <- sample strainEvent
+              creator <- sample creatorEvent
+              species <- sample speciesEvent
+              dominant_tarpene <- sample dominantTarpeneEvent
+              tarpenes' <- sample tarpenesEvent
+              lineage' <- sample lineageEvent
+              pure { name
+                  , sku
+                  , brand
+                  , price
+                  , quantity
+                  , category
+                  , description
+                  , tags: tags'
+                  , thc
+                  , cbg
+                  , strain
+                  , creator
+                  , species
+                  , dominant_tarpene
+                  , tarpenes: tarpenes'
+                  , lineage: lineage'
+                  }
+              
+            let menuItem = createMenuItem
+                  { name: values.name
+                  , sku: values.sku
+                  , brand: values.brand
+                  , price: values.price
+                  , quantity: values.quantity
+                  , category: values.category
+                  , description: values.description
+                  , tags: values.tags
+                  , strainLineage:
+                      { thc: values.thc
+                      , cbg: values.cbg
+                      , strain: values.strain
+                      , creator: values.creator
+                      , species: values.species
+                      , dominant_tarpene: values.dominant_tarpene
+                      , tarpenes: values.tarpenes
+                      , lineage: values.lineage
+                      , leafly_url: ""
+                      , img: ""
+                      }
+                  }
+            
+            result <- postInventoryToJson menuItem
+            liftEffect $ case result of
+              Right (Message msg) -> do
+                log $ "Success: " <> msg
+                setStatusMessage "Item successfully submitted!"
+                resetForm
+              Right (InventoryData _) -> do
+                log "Received inventory data instead of confirmation message"
+                setStatusMessage "Unexpected response type"
+              Left err -> do
+                log $ "Error: " <> err
+                setStatusMessage $ "Error submitting item: " <> err
         ]
         [ text_ "Submit" ]
+    , D.div
+        [ DA.klass_ "mt-4 text-center" ]
+        [ text statusMessageEvent ]
     , D.div_
         [ text $ map (\val -> "Name: " <> val) nameEvent
         , D.br_ []
