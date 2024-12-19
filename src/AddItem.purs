@@ -80,7 +80,7 @@ app = void $ runInBody Deku.do
   setDescription /\ descriptionEvent <- useState'
   setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
 
-  -- initialized as empty arrays
+  -- Array fields
   setTags /\ tagsEvent <- useState ([] :: Array String)
   setTarpenes /\ tarpenesEvent <- useState ([] :: Array String)
   setLineage /\ lineageEvent <- useState ([] :: Array String)
@@ -184,7 +184,7 @@ app = void $ runInBody Deku.do
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled isButtonDisabled
         , DL.click_ \_ -> void $ launchAff_ do
-            values <- liftEffect do
+            formInput <- liftEffect do
               name <- sample nameEvent
               sku <- sample skuEvent
               brand <- sample brandEvent
@@ -192,108 +192,59 @@ app = void $ runInBody Deku.do
               quantity <- sample quantityEvent
               category <- sample categoryEvent
               description <- sample descriptionEvent
-              tags <- sample tagsEvent -- Could not match type String with type Array String
+              tags <- sample tagsEvent
               thc <- sample thcEvent
               cbg <- sample cbgEvent
               strain <- sample strainEvent
               creator <- sample creatorEvent
               species <- sample speciesEvent
               dominant_tarpene <- sample dominantTarpeneEvent
-              tarpenes <- sample tarpenesEvent  -- Could not match type String with type Array String
-              lineage <- sample lineageEvent -- Could not match type String with type Array String 
-              pure { name
-                  , sku
-                  , brand
-                  , price
-                  , quantity
-                  , category
-                  , description
-                  , tags
-                  , strainLineage:
-                      { thc
-                      , cbg
-                      , strain
-                      , creator
-                      , species
-                      , dominant_tarpene
-                      , tarpenes
-                      , lineage
-                      , leafly_url: ""
-                      , img: ""
-                      }
-                  }
+              tarpenes <- sample tarpenesEvent
+              lineage <- sample lineageEvent
+              pure $ 
+                { name
+                , sku
+                , brand
+                , price
+                , quantity
+                , category
+                , description
+                , tags: show tags
+                , strainLineage:
+                    { thc
+                    , cbg
+                    , strain
+                    , creator
+                    , species
+                    , dominant_tarpene
+                    , tarpenes: show tarpenes
+                    , lineage: show lineage
+                    , leafly_url: ""
+                    , img: ""
+                    }
+                }
               
-            let menuItem = createValidatedMenuItem
-                  { name: values.name
-                  , sku: values.sku
-                  , brand: values.brand
-                  , price: values.price
-                  , quantity: values.quantity
-                  , category: values.category
-                  , description: values.description
-                  , tags: values.tags
-                  , strainLineage:
-                      { thc: values.thc
-                      , cbg: values.cbg
-                      , strain: values.strain
-                      , creator: values.creator
-                      , species: values.species
-                      , dominant_tarpene: values.dominant_tarpene
-                      , tarpenes: values.tarpenes
-                      , lineage: values.lineage
-                      , leafly_url: ""
-                      , img: ""
-                      }
-                  }
-            
-            result <- postInventoryToJson menuItem
-            liftEffect $ case result of
-              Right (Message msg) -> do
-                log $ "Success: " <> msg
-                setStatusMessage "Item successfully submitted!"
-                resetForm
-              Right (InventoryData _) -> do
-                log "Received inventory data instead of confirmation message"
-                setStatusMessage "Unexpected response type"
-              Left err -> do
-                log $ "Error: " <> err
-                setStatusMessage $ "Error submitting item: " <> err
+            case validateForm formInput of
+              Right menuItem -> do
+                result <- postInventoryToJson menuItem
+                liftEffect $ case result of
+                  Right (Message msg) -> do
+                    log $ "Success: " <> msg
+                    setStatusMessage "Item successfully submitted!"
+                    resetForm
+                  Right (InventoryData _) -> do
+                    log "Received inventory data instead of confirmation message"
+                    setStatusMessage "Unexpected response type"
+                  Left err -> do
+                    log $ "Error: " <> err
+                    setStatusMessage $ "Error submitting item: " <> err
+              Left validationError -> do
+                liftEffect do
+                  log $ "Validation error: " <> validationError
+                  setStatusMessage $ "Validation error: " <> validationError
         ]
         [ text_ "Submit" ]
     , D.div
         [ DA.klass_ "mt-4 text-center" ]
         [ text statusMessageEvent ]
-    , D.div_
-        [ text $ map (\val -> "Name: " <> val) nameEvent
-        , D.br_ []
-        , text $ map (\val -> "SKU: " <> val) skuEvent
-        , D.br_ []
-        , text $ map (\val -> "Brand: " <> val) brandEvent
-        , D.br_ []
-        , text $ map (\val -> "Price: $" <> val) priceEvent
-        , D.br_ []
-        , text $ map (\val -> "Quantity: " <> val) quantityEvent
-        , D.br_ []
-        , text $ map (\val -> "Category: " <> val) categoryEvent
-        , D.br_ []
-        , text $ map (\val -> "Description: " <> val) descriptionEvent
-        , D.br_ []
-        , text $ map (\arr -> "Tags: " <> show arr) tagsEvent
-        , D.br_ []
-        , text $ map (\val -> "THC: " <> val) thcEvent
-        , D.br_ []
-        , text $ map (\val -> "CBG: " <> val) cbgEvent
-        , D.br_ []
-        , text $ map (\val -> "Strain: " <> val) strainEvent
-        , D.br_ []
-        , text $ map (\val -> "Creator: " <> val) creatorEvent
-        , D.br_ []
-        , text $ map (\val -> "Species: " <> val) speciesEvent
-        , D.br_ []
-        , text $ map (\val -> "Dominant Terpene: " <> val) dominantTarpeneEvent
-        , D.br_ []
-        , text $ map (\arr -> "Terpenes: " <> show arr) tarpenesEvent
-        , D.br_ []
-        , text $ map (\arr -> "Lineage: " <> show arr) lineageEvent
-        ]
     ]
