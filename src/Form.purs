@@ -82,6 +82,29 @@ type ValidatedStrainLineageInput =
   , img :: String
   }
 
+type MenuItemInput = 
+  { name :: String
+  , sku :: String
+  , brand :: String
+  , price :: String
+  , quantity :: String
+  , category :: String
+  , description :: String
+  , tags :: String
+  , strainLineage :: 
+      { thc :: String
+      , cbg :: String
+      , strain :: String
+      , creator :: String
+      , species :: String
+      , dominant_tarpene :: String
+      , tarpenes :: String
+      , lineage :: String
+      , leafly_url :: String
+      , img :: String
+      }
+  }
+
 -- Function to validate and convert form input
 validateMenuItemInput :: MenuItemInput -> ValidatedMenuItemInput
 validateMenuItemInput input = 

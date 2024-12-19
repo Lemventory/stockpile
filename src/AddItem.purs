@@ -2,7 +2,8 @@ module AddItem where
 
 import Prelude
 
-import BudView (InventoryResponse(..), ItemCategory(..), MenuItem(..), StrainLineage(..), postInventoryToJson)
+import BudView (InventoryResponse(..), ItemCategory(..), MenuItem(..), StrainLineage(..), postInventoryToJson, itemCategoryToString)
+import Form
 import Data.Array (all, filter, (!!))
 import Data.Array (length) as Array
 import Data.Either (Either(..))
@@ -35,342 +36,6 @@ import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 
--- Enhanced Validation Rules
-type ValidationRule = String -> Boolean
-
-nonEmpty :: ValidationRule
-nonEmpty = (_ /= "")
-
-positiveInteger :: ValidationRule
-positiveInteger str = case fromString str of
-  Just n -> n > 0
-  Nothing -> false
-
-textOnly :: ValidationRule
-textOnly str = case regex "^[A-Za-z\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-alphanumeric :: ValidationRule
-alphanumeric str = case regex "^[A-Za-z0-9-\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-url :: ValidationRule
-url str = case regex "^(https?:\\/\\/)?[\\w\\-]+(\\.[\\w\\-]+)+[/#?]?.*$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-percentage :: ValidationRule
-percentage str = case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-dollarAmount :: ValidationRule 
-dollarAmount str = case Num.fromString str of
-  Just n -> n >= 0.0
-  Nothing -> false
-
-maxLength :: Int -> ValidationRule
-maxLength n str = String.length str <= n
-
--- Combine multiple validation rules
-allOf :: Array ValidationRule -> ValidationRule
-allOf rules str = all (\rule -> rule str) rules
-
--- Field Configuration Types
-type FieldConfig = 
-  { label :: String
-  , placeholder :: String
-  , validation :: ValidationRule
-  , errorMessage :: String
-  , formatInput :: String -> String
-  }
-
-type DropdownConfig = 
-  { label :: String
-  , options :: Array { value :: String, label :: String }
-  , defaultValue :: String
-  }
-
--- UI Components
-makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
-makeField config setValue setValid validEvent = 
-  D.div_
-    [ D.div 
-        [ DA.klass_ "flex items-center gap-2" ]
-        [ D.label_
-            [ text_ config.label ]
-        , D.input
-            [ DA.placeholder_ config.placeholder
-            , DL.keyup_ \evt -> do
-                for_ 
-                  ((target >=> Input.fromEventTarget) (toEvent evt))
-                  \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (config.validation formatted))
-            , DA.value_ ""
-            , DA.klass_ inputKls
-            ]
-            []
-        , D.span
-            [ DA.klass_ "text-red-500 text-xs" ]
-            [ text (map (\mValid -> case mValid of 
-                Just false -> config.errorMessage
-                _ -> "") validEvent)
-            ]
-        ]
-    ]
-
-makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
-makeDropdown config setValue setValid validEvent = 
-  D.div_
-    [ D.div 
-        [ DA.klass_ "flex items-center gap-2" ]
-        [ D.label_
-            [ text_ config.label ]
-        , D.select
-            [ DA.klass_ inputKls
-            , DL.change_ \evt -> do
-                for_ 
-                  (target evt >>= Select.fromEventTarget)
-                  \selectElement -> do
-                    v <- Select.value selectElement
-                    setValue v
-                    setValid (Just (v /= ""))
-            ]
-            (config.options <#> \opt ->
-              D.option
-                [ DA.value_ opt.value ]
-                [ text_ opt.label ]
-            )
-        , D.span
-            [ DA.klass_ "text-red-500 text-xs" ]
-            [ text (map (\mValid -> case mValid of 
-                Just false -> "Please select an option"
-                _ -> "") validEvent)
-            ]
-        ]
-    ]
-
-makeArrayField :: String -> (Array String -> Effect Unit) -> Nut
-makeArrayField label setValue = 
-  D.div_
-    [ D.div 
-        [ DA.klass_ "flex items-center gap-2" ]
-        [ D.label_
-            [ text_ label ]
-        , D.input
-            [ DA.placeholder_ "Add items (comma-separated)"
-            , DL.keyup_ \evt -> do
-                for_ 
-                  ((target >=> Input.fromEventTarget) (toEvent evt))
-                  \inputElement -> do
-                    v <- Input.value inputElement
-                    -- Convert the input string to an array and update state
-                    setValue $ 
-                      if v == "" 
-                        then []
-                        else map trim $ split (Pattern ",") v
-            , DA.klass_ inputKls
-            ]
-            []
-        ]
-    ]
-
--- Validation Presets
-type ValidationPreset = 
-  { validation :: ValidationRule
-  , errorMessage :: String
-  , formatInput :: String -> String
-  }
-
--- Standard validation presets
-requiredText :: ValidationPreset
-requiredText =
-  { validation: allOf [nonEmpty, alphanumeric]
-  , errorMessage: "Required, text only"
-  , formatInput: trim
-  }
-
-requiredTextWithLimit :: Int -> ValidationPreset
-requiredTextWithLimit limit =
-  { validation: allOf [nonEmpty, alphanumeric, maxLength limit]
-  , errorMessage: "Required, text only (max " <> show limit <> " chars)"
-  , formatInput: trim
-  }
-
-percentageField :: ValidationPreset
-percentageField = 
-  { validation: percentage
-  , errorMessage: "Required format: XX.XX%"
-  , formatInput: trim
-  }
-
-moneyField :: ValidationPreset
-moneyField =
-  { validation: allOf [nonEmpty, dollarAmount]
-  , errorMessage: "Required, valid dollar amount"
-  , formatInput: formatDollarAmount
-  }
-
-numberField :: ValidationPreset
-numberField =
-  { validation: allOf [nonEmpty, positiveInteger]
-  , errorMessage: "Required, positive whole number"
-  , formatInput: \str -> fromMaybe str $ map show $ fromString str
-  }
-
--- Field Configuration Generator
-makeFieldConfig :: String -> String -> ValidationPreset -> FieldConfig
-makeFieldConfig label placeholder preset =
-  { label
-  , placeholder
-  , validation: preset.validation
-  , errorMessage: preset.errorMessage
-  , formatInput: preset.formatInput
-  }
-
--- Helper Functions
-formatDollarAmount :: String -> String
-formatDollarAmount str = 
-  if str == "" then ""
-  else case Num.fromString str of
-    Just n -> 
-      let 
-        fixed = show n
-        parts = split (Pattern ".") fixed
-      in case Array.length parts of
-        1 -> fixed <> ".00"
-        2 -> 
-          let decimals = fromMaybe "" $ parts !! 1
-          in if String.length decimals >= 2 
-             then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
-             else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
-        _ -> str
-    Nothing -> str
-
--- Category dropdown configuration
-categoryConfig :: DropdownConfig
-categoryConfig = 
-  { label: "Category"
-  , options: 
-      [ { value: "", label: "Select..." }
-      , { value: "Flower", label: "Flower" }
-      , { value: "PreRolls", label: "Pre-Rolls" }
-      , { value: "Vaporizers", label: "Vaporizers" }
-      , { value: "Edibles", label: "Edibles" }
-      , { value: "Drinks", label: "Drinks" }
-      , { value: "Concentrates", label: "Concentrates" }
-      , { value: "Topicals", label: "Topicals" }
-      , { value: "Tinctures", label: "Tinctures" }
-      , { value: "Accessories", label: "Accessories" }
-      ]
-  , defaultValue: ""
-  }
-
--- Field Configurations using the new system
-nameConfig :: FieldConfig
-nameConfig = makeFieldConfig "Name" "Enter product name" (requiredTextWithLimit 50)
-
-skuConfig :: FieldConfig
-skuConfig = makeFieldConfig "SKU" "Enter SKU" (requiredTextWithLimit 20)
-
-brandConfig :: FieldConfig
-brandConfig = makeFieldConfig "Brand" "Enter brand name" (requiredTextWithLimit 30)
-
-priceConfig :: FieldConfig
-priceConfig = makeFieldConfig "Price" "Enter price" moneyField
-
-quantityConfig :: FieldConfig
-quantityConfig = makeFieldConfig "Quantity" "Enter quantity" numberField
-
-thcConfig :: FieldConfig
-thcConfig = makeFieldConfig "THC %" "Enter THC percentage" percentageField
-
-cbgConfig :: FieldConfig
-cbgConfig = makeFieldConfig "CBG %" "Enter CBG percentage" percentageField
-
-strainConfig :: FieldConfig
-strainConfig = makeFieldConfig "Strain" "Enter strain name" requiredText
-
-creatorConfig :: FieldConfig
-creatorConfig = makeFieldConfig "Creator" "Enter creator name" requiredText
-
-speciesConfig :: FieldConfig
-speciesConfig = makeFieldConfig "Species" "Enter species" requiredText
-
-descriptionConfig :: FieldConfig
-descriptionConfig = makeFieldConfig "Description" "Enter description" requiredText
-
-dominantTarpeneConfig :: FieldConfig
-dominantTarpeneConfig = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" requiredText
-
-type MenuItemInput = 
-  { name :: String
-  , sku :: String
-  , brand :: String
-  , price :: String
-  , quantity :: String
-  , category :: String
-  , description :: String
-  , tags :: Array String
-  , strainLineage :: 
-      { thc :: String
-      , cbg :: String
-      , strain :: String
-      , creator :: String
-      , species :: String
-      , dominant_tarpene :: String
-      , tarpenes :: Array String
-      , lineage :: Array String
-      , leafly_url :: String
-      , img :: String
-      }
-  }
-
-createMenuItem :: MenuItemInput -> MenuItem
-createMenuItem input = 
-  MenuItem
-    { sort: 0
-    , sku: input.sku
-    , brand: input.brand
-    , name: input.name
-    , price: fromMaybe 0.0 $ Num.fromString input.price
-    , measure_unit: "units"
-    , per_package: input.quantity
-    , quantity: fromMaybe 0 $ fromString input.quantity
-    , category: stringToItemCategory input.category
-    , subcategory: input.category
-    , description: input.description
-    , tags: input.tags
-    , strain_lineage: StrainLineage
-        { thc: input.strainLineage.thc
-        , cbg: input.strainLineage.cbg
-        , strain: input.strainLineage.strain
-        , creator: input.strainLineage.creator
-        , species: input.strainLineage.species
-        , dominant_tarpene: input.strainLineage.dominant_tarpene
-        , tarpenes: input.strainLineage.tarpenes
-        , lineage: input.strainLineage.lineage
-        , leafly_url: input.strainLineage.leafly_url
-        , img: input.strainLineage.img
-        }
-    }
-
-stringToItemCategory :: String -> ItemCategory
-stringToItemCategory = case _ of
-  "Flower" -> Flower
-  "PreRolls" -> PreRolls
-  "Vaporizers" -> Vaporizers
-  "Edibles" -> Edibles
-  "Drinks" -> Drinks
-  "Concentrates" -> Concentrates
-  "Topicals" -> Topicals
-  "Tinctures" -> Tinctures
-  _ -> Accessories
 
 -- Styling
 inputKls :: String
@@ -527,15 +192,15 @@ app = void $ runInBody Deku.do
               quantity <- sample quantityEvent
               category <- sample categoryEvent
               description <- sample descriptionEvent
-              tags <- sample tagsEvent
+              tags <- sample tagsEvent -- Could not match type String with type Array String
               thc <- sample thcEvent
               cbg <- sample cbgEvent
               strain <- sample strainEvent
               creator <- sample creatorEvent
               species <- sample speciesEvent
               dominant_tarpene <- sample dominantTarpeneEvent
-              tarpenes <- sample tarpenesEvent
-              lineage <- sample lineageEvent 
+              tarpenes <- sample tarpenesEvent  -- Could not match type String with type Array String
+              lineage <- sample lineageEvent -- Could not match type String with type Array String 
               pure { name
                   , sku
                   , brand
@@ -558,7 +223,7 @@ app = void $ runInBody Deku.do
                       }
                   }
               
-            let menuItem = createMenuItem
+            let menuItem = createValidatedMenuItem
                   { name: values.name
                   , sku: values.sku
                   , brand: values.brand
