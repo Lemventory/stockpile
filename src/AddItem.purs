@@ -3,7 +3,7 @@ module AddItem where
 import Prelude
 
 import BudView (InventoryResponse(..), ItemCategory(..), MenuItem(..), StrainLineage(..), postInventoryToJson)
-import Data.Array (all, (!!))
+import Data.Array (all, filter, (!!))
 import Data.Array (length) as Array
 import Data.Either (Either(..))
 import Data.Foldable (for_)
@@ -169,10 +169,11 @@ makeArrayField label setValue =
                   ((target >=> Input.fromEventTarget) (toEvent evt))
                   \inputElement -> do
                     v <- Input.value inputElement
-                    -- Convert empty string to empty array, otherwise split and trim
-                    setValue (if v == "" 
-                            then []
-                            else map trim (split (Pattern ",") v))
+                    -- Convert the input string to an array and update state
+                    setValue $ 
+                      if v == "" 
+                        then []
+                        else map trim $ split (Pattern ",") v
             , DA.klass_ inputKls
             ]
             []
@@ -391,47 +392,50 @@ buttonClass color =
 app :: Effect Unit
 app = void $ runInBody Deku.do
   setStatusMessage /\ statusMessageEvent <- useState ""
+  
   -- Basic MenuItem fields
   setName /\ nameEvent <- useState'
   setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setSku /\ skuEvent <- useState'
   setValidSku /\ validSkuEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setBrand /\ brandEvent <- useState'
   setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setPrice /\ priceEvent <- useState'
   setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setQuantity /\ quantityEvent <- useState'
   setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setCategory /\ categoryEvent <- useState categoryConfig.defaultValue
   setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setDescription /\ descriptionEvent <- useState'
   setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
-  
+
+  -- initialized as empty arrays
   setTags /\ tagsEvent <- useState ([] :: Array String)
   setTarpenes /\ tarpenesEvent <- useState ([] :: Array String)
   setLineage /\ lineageEvent <- useState ([] :: Array String)
+
   -- StrainLineage fields
   setThc /\ thcEvent <- useState'
   setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setCbg /\ cbgEvent <- useState'
   setValidCbg /\ validCbgEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setStrain /\ strainEvent <- useState'
   setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setCreator /\ creatorEvent <- useState'
   setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setSpecies /\ speciesEvent <- useState'
   setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
-  
+
   setDominantTarpene /\ dominantTarpeneEvent <- useState'
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
 
@@ -523,15 +527,15 @@ app = void $ runInBody Deku.do
               quantity <- sample quantityEvent
               category <- sample categoryEvent
               description <- sample descriptionEvent
-              tags' <- sample tagsEvent
+              tags <- sample tagsEvent
               thc <- sample thcEvent
               cbg <- sample cbgEvent
               strain <- sample strainEvent
               creator <- sample creatorEvent
               species <- sample speciesEvent
               dominant_tarpene <- sample dominantTarpeneEvent
-              tarpenes' <- sample tarpenesEvent
-              lineage' <- sample lineageEvent
+              tarpenes <- sample tarpenesEvent
+              lineage <- sample lineageEvent 
               pure { name
                   , sku
                   , brand
@@ -539,15 +543,19 @@ app = void $ runInBody Deku.do
                   , quantity
                   , category
                   , description
-                  , tags: tags'
-                  , thc
-                  , cbg
-                  , strain
-                  , creator
-                  , species
-                  , dominant_tarpene
-                  , tarpenes: tarpenes'
-                  , lineage: lineage'
+                  , tags
+                  , strainLineage:
+                      { thc
+                      , cbg
+                      , strain
+                      , creator
+                      , species
+                      , dominant_tarpene
+                      , tarpenes
+                      , lineage
+                      , leafly_url: ""
+                      , img: ""
+                      }
                   }
               
             let menuItem = createMenuItem
