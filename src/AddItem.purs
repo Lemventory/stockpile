@@ -171,6 +171,7 @@ app = void $ runInBody Deku.do
         , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
         , makeField descriptionConfig setDescription setValidDescription validDescriptionEvent
         , makeArrayField "Tags" setTags
+        -- , makeField tagsConfig setTags (const $ pure unit) (pure $ Just true)
         , makeField thcConfig setThc setValidThc validThcEvent
         , makeField cbgConfig setCbg setValidCbg validCbgEvent
         , makeField strainConfig setStrain setValidStrain validStrainEvent
