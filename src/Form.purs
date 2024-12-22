@@ -406,6 +406,26 @@ descriptionConfig = makeFieldConfig "Description" "Enter description" requiredTe
 dominantTarpeneConfig :: FieldConfig
 dominantTarpeneConfig = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" requiredText
 
+tagsConfig :: FieldConfig
+tagsConfig = makeFieldConfig "Tags" "Enter tags (comma-separated)" 
+  { validation: const true 
+  , errorMessage: ""
+  , formatInput: trim
+  }
+
+tarpenesConfig :: FieldConfig
+tarpenesConfig = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)"
+  { validation: const true
+  , errorMessage: ""
+  , formatInput: trim
+  }
+
+lineageConfig :: FieldConfig
+lineageConfig = makeFieldConfig "Lineage" "Enter lineage (comma-separated)"
+  { validation: const true
+  , errorMessage: ""
+  , formatInput: trim
+  }
 -- Styling
 inputKls :: String
 inputKls =
