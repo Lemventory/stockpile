@@ -65,6 +65,16 @@ alphanumeric str = case regex "^[A-Za-z0-9-\\s]+$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
+vowels :: ValidationRule
+vowels str = case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+consonants :: ValidationRule
+consonants str = case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
 percentage :: ValidationRule
 percentage str = case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
   Left _ -> false
@@ -426,6 +436,7 @@ lineageConfig = makeFieldConfig "Lineage" "Enter lineage (comma-separated)"
   , errorMessage: ""
   , formatInput: trim
   }
+
 -- Styling
 inputKls :: String
 inputKls =
