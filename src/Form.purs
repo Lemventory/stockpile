@@ -2,7 +2,7 @@ module Form where
 
 import Prelude
 
-import BudView (ItemCategory(..), MenuItem(..), StrainLineage(..), itemCategoryToString)
+import Types (ItemCategory(..), MenuItem(..), StrainLineage(..), itemCategoryToString)
 import Data.Array (all, (!!))
 import Data.Array (length) as Array
 import Data.Either (Either(..))

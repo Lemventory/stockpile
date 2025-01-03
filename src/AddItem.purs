@@ -2,7 +2,8 @@ module AddItem where
 
 import Prelude
 
-import BudView (InventoryResponse(..), ItemCategory(..), itemCategoryToString, postInventoryToJson)
+import Types (InventoryResponse(..), ItemCategory(..), itemCategoryToString)
+import API (postInventoryToJson)
 import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
 import Control.Monad.ST.Class (liftST)
 import Data.Array (all)

@@ -4,7 +4,8 @@ module Render
 
 import Prelude
 
-import BudView (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), fetchInventory, itemCategoryToString)
+import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), itemCategoryToString)
+import API (fetchInventory)
 import Data.Array (filter, sortBy)
 import Data.Array as Array
 import Data.Either (Either(..))
