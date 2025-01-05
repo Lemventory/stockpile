@@ -4,8 +4,9 @@ import Prelude
 
 import API (postInventoryToJson)
 import Control.Monad.ST.Class (liftST)
-import Data.Array (all, (:))
+import Data.Array (all, catMaybes, range, (:))
 import Data.Either (Either(..))
+import Data.Enum (fromEnum, toEnum)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number as Num
@@ -25,8 +26,8 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
-import Form (MenuItemFormInput, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
-import Types (InventoryResponse(..), ItemCategory(..))
+import Form (MenuItemFormInput, DropdownConfig, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
+import Types (InventoryResponse(..), ItemCategory)
 
 createItem :: Effect Unit
 createItem = void $ runInBody Deku.do
@@ -82,6 +83,28 @@ createItem = void $ runInBody Deku.do
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
 
   let
+    -- Helper function to get all enum values using BoundedEnum instance
+    getAllCategories :: Array ItemCategory
+    getAllCategories = 
+      let
+        enumValues = map toEnum $ range 0 (fromEnum (top :: ItemCategory))
+      in
+        catMaybes enumValues
+
+    -- Helper to create dropdown options
+    categoryOptions :: Array { value :: String, label :: String }
+    categoryOptions = 
+      { value: "", label: "Select..." } :
+      map (\cat -> { value: show cat, label: show cat }) getAllCategories
+
+    -- Updated category config using dynamic categories
+    categoryConfig' :: DropdownConfig
+    categoryConfig' = 
+      { label: "Category"
+      , options: categoryOptions
+      , defaultValue: ""
+      }
+
     resetForm = do
       setName ""
       setValidName Nothing
@@ -124,21 +147,6 @@ createItem = void $ runInBody Deku.do
       if String.contains (Pattern "%") str
         then trim str
         else trim str <> "%"
-
-    allCategories = 
-      [ Flower, PreRolls, Vaporizers, Edibles, Drinks
-      , Concentrates, Topicals, Tinctures, Accessories
-      ]
-
-    categoryOptions = 
-      { value: "", label: "Select..." } :
-      map (\cat -> { value: show cat, label: show cat }) allCategories
-
-    categoryConfig' = 
-      { label: "Category"
-      , options: categoryOptions
-      , defaultValue: ""
-      }
 
     isFormValid = ado
       vName <- validNameEvent
