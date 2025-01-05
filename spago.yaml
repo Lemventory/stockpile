@@ -12,6 +12,7 @@ package:
     - deku-dom
     - effect
     - either
+    - enums
     - fetch
     - fetch-yoga-json
     - lists

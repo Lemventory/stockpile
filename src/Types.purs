@@ -3,8 +3,10 @@ module Types where
 import Prelude
 
 import Control.Monad.Except (ExceptT)
+import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
 import Data.Identity (Identity)
 import Data.List.NonEmpty (NonEmptyList)
+import Data.Maybe (Maybe(..))
 import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
@@ -35,7 +37,40 @@ data MenuItem = MenuItem
   , strain_lineage :: StrainLineage
   }
 
-data ItemCategory = Flower | PreRolls | Vaporizers | Edibles | Drinks | Concentrates | Topicals | Tinctures | Accessories
+data ItemCategory 
+  = Flower 
+  | PreRolls 
+  | Vaporizers 
+  | Edibles 
+  | Drinks 
+  | Concentrates 
+  | Topicals 
+  | Tinctures 
+  | Accessories
+
+derive instance eqItemCategory :: Eq ItemCategory
+derive instance ordItemCategory :: Ord ItemCategory
+
+instance Enum ItemCategory where
+  succ Flower = Just PreRolls
+  succ PreRolls = Just Vaporizers
+  succ Vaporizers = Just Edibles
+  succ Edibles = Just Drinks
+  succ Drinks = Just Concentrates
+  succ Concentrates = Just Topicals
+  succ Topicals = Just Tinctures
+  succ Tinctures = Just Accessories
+  succ Accessories = Nothing
+  
+  pred PreRolls = Just Flower
+  pred Vaporizers = Just PreRolls
+  pred Edibles = Just Vaporizers
+  pred Drinks = Just Edibles
+  pred Concentrates = Just Drinks
+  pred Topicals = Just Concentrates
+  pred Tinctures = Just Topicals
+  pred Accessories = Just Tinctures
+  pred Flower = Nothing
 
 data StrainLineage = StrainLineage
   { thc :: String
@@ -50,18 +85,43 @@ data StrainLineage = StrainLineage
   , img :: String
   }
 
--- convert ItemCategory to a specific string like some kind of animal compared to the Haskell Generic derivations technique
-itemCategoryToString :: ItemCategory -> String
-itemCategoryToString category = case category of
-  Flower -> "Flower"
-  PreRolls -> "PreRolls"
-  Vaporizers -> "Vaporizers"
-  Edibles -> "Edibles"
-  Drinks -> "Drinks"
-  Concentrates -> "Concentrates"
-  Topicals -> "Topicals"
-  Tinctures -> "Tinctures"
-  Accessories -> "Accessories"
+instance Bounded ItemCategory where
+  bottom = Flower
+  top = Accessories
+
+instance BoundedEnum ItemCategory where
+  cardinality = Cardinality 9
+  fromEnum Flower = 0
+  fromEnum PreRolls = 1
+  fromEnum Vaporizers = 2
+  fromEnum Edibles = 3
+  fromEnum Drinks = 4
+  fromEnum Concentrates = 5
+  fromEnum Topicals = 6
+  fromEnum Tinctures = 7
+  fromEnum Accessories = 8
+  
+  toEnum 0 = Just Flower
+  toEnum 1 = Just PreRolls
+  toEnum 2 = Just Vaporizers
+  toEnum 3 = Just Edibles
+  toEnum 4 = Just Drinks
+  toEnum 5 = Just Concentrates
+  toEnum 6 = Just Topicals
+  toEnum 7 = Just Tinctures
+  toEnum 8 = Just Accessories
+  toEnum _ = Nothing
+
+instance Show ItemCategory where
+  show Flower = "Flower"
+  show PreRolls = "PreRolls"
+  show Vaporizers = "Vaporizers"
+  show Edibles = "Edibles"
+  show Drinks = "Drinks"
+  show Concentrates = "Concentrates"
+  show Topicals = "Topicals"
+  show Tinctures = "Tinctures"
+  show Accessories = "Accessories"
 
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
@@ -73,11 +133,11 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , measure_unit: item.measure_unit
     , per_package: item.per_package
     , quantity: item.quantity
-    , category: itemCategoryToString item.category
+    , category: show item.category
     , subcategory: item.subcategory
     , description: item.description
     , tags: item.tags
-    , strain_lineage: writeImpl item.strain_lineage
+    , strain_lineage: item.strain_lineage
     }
 
 instance readForeignMenuItem :: ReadForeign MenuItem where
@@ -117,18 +177,7 @@ instance readForeignInventory :: ReadForeign Inventory where
     pure $ Inventory items
 
 instance writeForeignStrainLineage :: WriteForeign StrainLineage where
-  writeImpl (StrainLineage lineage) = writeImpl
-    { thc: lineage.thc
-    , cbg: lineage.cbg
-    , strain: lineage.strain
-    , creator: lineage.creator
-    , species: lineage.species
-    , dominant_tarpene: lineage.dominant_tarpene
-    , tarpenes: lineage.tarpenes
-    , lineage: lineage.lineage
-    , leafly_url: lineage.leafly_url
-    , img: lineage.img
-    }
+  writeImpl (StrainLineage lineage) = writeImpl lineage
 
 instance readForeignStrainLineage :: ReadForeign StrainLineage where
   readImpl json = do
@@ -144,44 +193,10 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     img <- readProp "img" json >>= readImpl
     pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
 
--- Assuming that ItemCategory and StrainLineage have show instances, if not define them similarly
-instance showItemCategory :: Show ItemCategory where
-  show category = case category of
-    Flower -> "Flower"
-    PreRolls -> "PreRolls"
-    Vaporizers -> "Vaporizers"
-    Edibles -> "Edibles"
-    Drinks -> "Drinks"
-    Concentrates -> "Concentrates"
-    Topicals -> "Topicals"
-    Tinctures -> "Tinctures"
-    Accessories -> "Accessories"
-
 instance showStrainLineage :: Show StrainLineage where
-  show (StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }) =
-    "{ thc: " <> thc <>
-    ", cbg: " <> cbg <>
-    ", strain: " <> strain <>
-    ", creator: " <> creator <>
-    ", species: " <> species <>
-    ", dominant_tarpene: " <> dominant_tarpene <>
-    ", tarpenes: " <> show tarpenes <>
-    ", lineage: " <> show lineage <>
-    ", leafly_url: " <> leafly_url <>
-    ", img: " <> img <> " }"
+  show (StrainLineage lineage) = 
+    "StrainLineage " <> show lineage
     
 instance showMenuItem :: Show MenuItem where
-  show (MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }) =
-    "{ sort: " <> show sort <>
-    ", sku: " <> sku <>
-    ", brand: " <> brand <>
-    ", name: " <> name <>
-    ", price: " <> show price <>
-    ", measure_unit: " <> measure_unit <>
-    ", per_package: " <> per_package <>
-    ", quantity: " <> show quantity <>
-    ", category: " <> show category <>
-    ", subcategory: " <> subcategory <>
-    ", description: " <> description <>
-    ", tags: " <> show tags <>
-    ", strain_lineage: " <> show strain_lineage <> " }"
+  show (MenuItem item) = 
+    "MenuItem " <> show item
