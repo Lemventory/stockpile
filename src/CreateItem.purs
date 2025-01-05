@@ -1,4 +1,4 @@
-module AddItem where
+module CreateItem where
 
 import Prelude
 

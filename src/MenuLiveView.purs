@@ -1,4 +1,4 @@
-module Render
+module MenuLiveView
   ( app)
   where
 

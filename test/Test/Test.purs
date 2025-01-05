@@ -1,6 +1,6 @@
-module Main where
+module Test.Main where
 
-import CreateItem (app)
+import MenuLiveView (app)
 import Prelude
 
 import Effect (Effect)
