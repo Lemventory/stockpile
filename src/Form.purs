@@ -22,7 +22,7 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
-import Types (ItemCategory(..), MenuItem(..), StrainLineage(..))
+import Types (ItemCategory(..), MenuItem(..), Species(..), StrainLineage(..))
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -156,6 +156,18 @@ instance formValueItemCategory :: FormValue ItemCategory where
       case fromString str >>= toEnum of
         Just category -> ValidationSuccess category
         Nothing -> ValidationError "Invalid category value"
+
+instance formValueSpecies :: FormValue Species where
+  fromFormValue str = case str of
+    "Indica" -> ValidationSuccess Indica
+    "IndicaDominant" -> ValidationSuccess IndicaDominantHybrid
+    "Hybrid" -> ValidationSuccess Hybrid
+    "SativaDominant" -> ValidationSuccess SativaDominantHybrid
+    "Sativa" -> ValidationSuccess Sativa
+    _ -> 
+      case fromString str >>= toEnum of
+        Just species -> ValidationSuccess species
+        Nothing -> ValidationError "Invalid species value"
 
 -- Validation functions
 validateCategory :: String -> ValidationResult ItemCategory
@@ -378,6 +390,16 @@ categoryConfig =
   , defaultValue: ""
   }
 
+speciesConfig :: DropdownConfig
+speciesConfig = 
+  { label: "Species"
+  , options: 
+      { value: "", label: "Select..." } :
+      map (\species -> { value: show species, label: show species })
+          [Indica, IndicaDominantHybrid, Hybrid, SativaDominantHybrid, Sativa]
+  , defaultValue: ""
+  }
+
 nameConfig :: FieldConfig
 nameConfig = makeFieldConfig "Name" "Enter product name" (requiredTextWithLimit 50)
 
@@ -404,9 +426,6 @@ strainConfig = makeFieldConfig "Strain" "Enter strain name" requiredText
 
 creatorConfig :: FieldConfig
 creatorConfig = makeFieldConfig "Creator" "Enter creator name" requiredText
-
-speciesConfig :: FieldConfig
-speciesConfig = makeFieldConfig "Species" "Enter species" requiredText
 
 descriptionConfig :: FieldConfig
 descriptionConfig = makeFieldConfig "Description" "Enter description" requiredText

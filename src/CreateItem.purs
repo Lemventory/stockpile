@@ -185,7 +185,7 @@ createItem = void $ runInBody Deku.do
         , makeField cbgConfig setCbg setValidCbg validCbgEvent
         , makeField strainConfig setStrain setValidStrain validStrainEvent
         , makeField creatorConfig setCreator setValidCreator validCreatorEvent
-        , makeField speciesConfig setSpecies setValidSpecies validSpeciesEvent
+        , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
         , makeField dominantTarpeneConfig setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
         , makeField tarpenesConfig setTarpenes (const $ pure unit) (pure $ Just true)
         , makeField lineageConfig setLineage (const $ pure unit) (pure $ Just true)

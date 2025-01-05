@@ -72,19 +72,6 @@ instance Enum ItemCategory where
   pred Accessories = Just Tinctures
   pred Flower = Nothing
 
-data StrainLineage = StrainLineage
-  { thc :: String
-  , cbg :: String
-  , strain :: String
-  , creator :: String
-  , species :: String
-  , dominant_tarpene :: String
-  , tarpenes :: Array String
-  , lineage :: Array String
-  , leafly_url :: String
-  , img :: String
-  }
-
 instance Bounded ItemCategory where
   bottom = Flower
   top = Accessories
@@ -122,6 +109,68 @@ instance Show ItemCategory where
   show Topicals = "Topicals"
   show Tinctures = "Tinctures"
   show Accessories = "Accessories"
+
+data StrainLineage = StrainLineage
+  { thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: Species
+  , dominant_tarpene :: String
+  , tarpenes :: Array String
+  , lineage :: Array String
+  , leafly_url :: String
+  , img :: String
+  }
+
+data Species 
+  = Indica 
+  | IndicaDominantHybrid 
+  | Hybrid 
+  | SativaDominantHybrid 
+  | Sativa 
+
+derive instance eqItemSpecies :: Eq Species
+derive instance ordItemSpecies :: Ord Species
+
+instance Enum Species where
+  succ Indica = Just IndicaDominantHybrid
+  succ IndicaDominantHybrid = Just Hybrid
+  succ Hybrid = Just SativaDominantHybrid
+  succ SativaDominantHybrid = Just Sativa
+  succ Sativa = Nothing
+  
+  pred IndicaDominantHybrid = Just Indica
+  pred Hybrid = Just IndicaDominantHybrid
+  pred SativaDominantHybrid = Just Hybrid
+  pred Sativa = Just SativaDominantHybrid
+  pred Indica = Nothing
+
+instance Bounded Species where
+  bottom = Indica
+  top = Sativa
+
+instance BoundedEnum Species where
+  cardinality = Cardinality 9
+  fromEnum Indica = 0
+  fromEnum IndicaDominantHybrid = 1
+  fromEnum Hybrid = 2
+  fromEnum SativaDominantHybrid = 3
+  fromEnum Sativa = 4
+  
+  toEnum 0 = Just Indica
+  toEnum 1 = Just IndicaDominantHybrid
+  toEnum 2 = Just Hybrid
+  toEnum 3 = Just SativaDominantHybrid
+  toEnum 4 = Just Sativa
+  toEnum _ = Nothing
+
+instance Show Species where
+  show Indica = "Indica"
+  show IndicaDominantHybrid = "IndicaDominant"
+  show Hybrid = "Hybrid"
+  show SativaDominantHybrid = "SativaDominant"
+  show Sativa = "Sativa"
 
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
@@ -178,6 +227,20 @@ instance readForeignInventory :: ReadForeign Inventory where
 
 instance writeForeignStrainLineage :: WriteForeign StrainLineage where
   writeImpl (StrainLineage lineage) = writeImpl lineage
+
+instance writeForeignSpecies :: WriteForeign Species where 
+  writeImpl = writeImpl <<< show
+
+instance readForeignSpecies :: ReadForeign Species where
+  readImpl json = do
+    str <- readImpl json
+    case str of 
+      "Indica" -> pure Indica
+      "IndicaDominant" -> pure IndicaDominantHybrid
+      "Hybrid" -> pure Hybrid
+      "SativaDominant" -> pure SativaDominantHybrid
+      "Sativa" -> pure Sativa
+      _ -> fail (ForeignError "Invalid Species value")
 
 instance readForeignStrainLineage :: ReadForeign StrainLineage where
   readImpl json = do

@@ -4,7 +4,7 @@ module MenuLiveView
 
 import Prelude
 
-import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..))
+import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), Species)
 import API (fetchInventory)
 import Data.Array (filter, sortBy)
 import Data.Array as Array
@@ -65,9 +65,9 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
         fieldComparison = case sortField of
           SortByOrder -> compare item1.sort item2.sort
           SortByName -> compare item1.name item2.name
-          SortByCategory -> compare item1.category item2.category  -- Now uses derived Ord instance
+          SortByCategory -> compare item1.category item2.category
           SortBySubCategory -> compare item1.subcategory item2.subcategory
-          SortBySpecies -> compare meta1.species meta2.species
+          SortBySpecies -> compare meta1.species meta2.species  -- Uses derived Ord instance
           SortBySKU -> compare item1.sku item2.sku
           SortByPrice -> compare item1.price item2.price
           SortByQuantity -> compare item1.quantity item2.quantity
@@ -102,7 +102,12 @@ renderItem (MenuItem item) =
     StrainLineage meta = item.strain_lineage
   in
   D.div
-    [ klass_ ("inventory-item-card " <> generateClassName { category: item.category, subcategory: item.subcategory, species: meta.species }) ]
+    [ klass_ ("inventory-item-card " <> generateClassName 
+        { category: item.category
+        , subcategory: item.subcategory
+        , species: meta.species
+        }) 
+    ]
     [ D.div [ klass_ "item-header" ]
         [ D.div []
             [ D.div [ klass_ "item-brand" ] [ text_ item.brand ]
@@ -111,15 +116,15 @@ renderItem (MenuItem item) =
         , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
         ]
     , D.div [ klass_ "item-category" ] [ text_ (show item.category <> " - " <> item.subcategory) ]
-    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
+    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> show meta.species) ]  -- Uses Show instance
     , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
     , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
     , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
     ]
 
-generateClassName :: { category :: ItemCategory, subcategory :: String, species :: String } -> String
+generateClassName :: { category :: ItemCategory, subcategory :: String, species :: Species } -> String
 generateClassName item =
-  "species-" <> toClassName item.species <> 
+  "species-" <> toClassName (show item.species) <> 
   " category-" <> toClassName (show item.category) <> 
   " subcategory-" <> toClassName item.subcategory
 
