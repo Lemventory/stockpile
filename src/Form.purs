@@ -2,10 +2,10 @@ module Form where
 
 import Prelude
 
-import Types (ItemCategory(..), MenuItem(..), StrainLineage(..), itemCategoryToString)
-import Data.Array (all, (!!))
+import Data.Array (all, (!!), (:))
 import Data.Array (length) as Array
 import Data.Either (Either(..))
+import Data.Enum (toEnum)
 import Data.Foldable (for_)
 import Data.Int (fromString)
 import Data.Int as Int
@@ -22,6 +22,7 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
+import Types (ItemCategory(..), MenuItem(..), StrainLineage(..))
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -140,19 +141,25 @@ formatDollarAmount str =
         _ -> str
     Nothing -> str
 
+instance formValueItemCategory :: FormValue ItemCategory where
+  fromFormValue str = case str of
+    "Flower" -> ValidationSuccess Flower
+    "PreRolls" -> ValidationSuccess PreRolls
+    "Vaporizers" -> ValidationSuccess Vaporizers
+    "Edibles" -> ValidationSuccess Edibles
+    "Drinks" -> ValidationSuccess Drinks
+    "Concentrates" -> ValidationSuccess Concentrates
+    "Topicals" -> ValidationSuccess Topicals
+    "Tinctures" -> ValidationSuccess Tinctures
+    "Accessories" -> ValidationSuccess Accessories
+    _ -> 
+      case fromString str >>= toEnum of
+        Just category -> ValidationSuccess category
+        Nothing -> ValidationError "Invalid category value"
+
 -- Validation functions
 validateCategory :: String -> ValidationResult ItemCategory
-validateCategory = case _ of
-  "Flower" -> ValidationSuccess Flower
-  "PreRolls" -> ValidationSuccess PreRolls
-  "Vaporizers" -> ValidationSuccess Vaporizers
-  "Edibles" -> ValidationSuccess Edibles
-  "Drinks" -> ValidationSuccess Drinks
-  "Concentrates" -> ValidationSuccess Concentrates
-  "Topicals" -> ValidationSuccess Topicals
-  "Tinctures" -> ValidationSuccess Tinctures
-  "Accessories" -> ValidationSuccess Accessories
-  _ -> ValidationError "Invalid category"
+validateCategory = fromFormValue
 
 requireValid :: forall a. String -> ValidationResult a -> Either String a
 requireValid field = case _ of
@@ -161,16 +168,14 @@ requireValid field = case _ of
 
 validateForm :: MenuItemFormInput -> Either String MenuItem
 validateForm input = do
-  -- Validate all fields
   name <- requireValid "Name" $ fromFormValue input.name
   sku <- requireValid "SKU" $ fromFormValue input.sku
   brand <- requireValid "Brand" $ fromFormValue input.brand
   price <- requireValid "Price" $ fromFormValue input.price
   quantity <- requireValid "Quantity" $ fromFormValue input.quantity
-  category <- requireValid "Category" $ validateCategory input.category
+  category <- requireValid "Category" $ fromFormValue input.category
   description <- requireValid "Description" $ fromFormValue input.description
 
-  -- Validate strain lineage
   strainLineage <- validateStrainLineage input.strainLineage
 
   pure $ MenuItem
@@ -183,7 +188,7 @@ validateForm input = do
     , per_package: show quantity
     , quantity
     , category
-    , subcategory: itemCategoryToString category
+    , subcategory: show category 
     , description
     , tags: parseCommaList input.tags
     , strain_lineage: strainLineage
@@ -361,22 +366,15 @@ makeFieldConfig label placeholder preset =
   , formatInput: preset.formatInput
   }
 
--- Field Configurations
+-- Update category dropdown config to use Show instance
 categoryConfig :: DropdownConfig
 categoryConfig = 
   { label: "Category"
   , options: 
-      [ { value: "", label: "Select..." }
-      , { value: "Flower", label: "Flower" }
-      , { value: "PreRolls", label: "Pre-Rolls" }
-      , { value: "Vaporizers", label: "Vaporizers" }
-      , { value: "Edibles", label: "Edibles" }
-      , { value: "Drinks", label: "Drinks" }
-      , { value: "Concentrates", label: "Concentrates" }
-      , { value: "Topicals", label: "Topicals" }
-      , { value: "Tinctures", label: "Tinctures" }
-      , { value: "Accessories", label: "Accessories" }
-      ]
+      { value: "", label: "Select..." } :
+      map (\cat -> { value: show cat, label: show cat })
+          [Flower, PreRolls, Vaporizers, Edibles, Drinks, 
+           Concentrates, Topicals, Tinctures, Accessories]
   , defaultValue: ""
   }
 

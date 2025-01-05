@@ -4,7 +4,7 @@ import Prelude
 
 import API (postInventoryToJson)
 import Control.Monad.ST.Class (liftST)
-import Data.Array (all)
+import Data.Array (all, (:))
 import Data.Either (Either(..))
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -25,8 +25,8 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
-import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
-import Types (InventoryResponse(..), ItemCategory(..), itemCategoryToString)
+import Form (MenuItemFormInput, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
+import Types (InventoryResponse(..), ItemCategory(..))
 
 createItem :: Effect Unit
 createItem = void $ runInBody Deku.do
@@ -93,7 +93,7 @@ createItem = void $ runInBody Deku.do
       setValidPrice Nothing
       setQuantity ""
       setValidQuantity Nothing
-      setCategory categoryConfig.defaultValue
+      setCategory categoryConfig'.defaultValue
       setValidCategory Nothing
       setDescription ""
       setValidDescription Nothing
@@ -125,18 +125,14 @@ createItem = void $ runInBody Deku.do
         then trim str
         else trim str <> "%"
 
-    categoryOptions = 
-      [ { value: "", label: "Select..." }
-      , { value: itemCategoryToString Flower, label: itemCategoryToString Flower }
-      , { value: itemCategoryToString PreRolls, label: itemCategoryToString PreRolls }
-      , { value: itemCategoryToString Vaporizers, label: itemCategoryToString Vaporizers }
-      , { value: itemCategoryToString Edibles, label: itemCategoryToString Edibles }
-      , { value: itemCategoryToString Drinks, label: itemCategoryToString Drinks }
-      , { value: itemCategoryToString Concentrates, label: itemCategoryToString Concentrates }
-      , { value: itemCategoryToString Topicals, label: itemCategoryToString Topicals }
-      , { value: itemCategoryToString Tinctures, label: itemCategoryToString Tinctures }
-      , { value: itemCategoryToString Accessories, label: itemCategoryToString Accessories }
+    allCategories = 
+      [ Flower, PreRolls, Vaporizers, Edibles, Drinks
+      , Concentrates, Topicals, Tinctures, Accessories
       ]
+
+    categoryOptions = 
+      { value: "", label: "Select..." } :
+      map (\cat -> { value: show cat, label: show cat }) allCategories
 
     categoryConfig' = 
       { label: "Category"
