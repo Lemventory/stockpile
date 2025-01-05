@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2D5A27"/>
+      <stop offset="100%" style="stop-color:#1E3D1C"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main circle background -->
+  <circle cx="200" cy="100" r="80" fill="url(#bgGradient)"/>
+  
+  <!-- Stylized cannabis leaves -->
+  <g transform="translate(200 100) scale(0.8)">
+    <!-- Leaf 1 -->
+    <path d="M0,-60 C-15,-45 -30,-30 -20,-10 C-30,-20 -40,-10 -30,0 C-40,10 -30,20 -20,10 C-30,30 -15,45 0,60" 
+          fill="none" stroke="#90C685" stroke-width="3"/>
+    <!-- Leaf 2 -->
+    <path d="M0,-60 C15,-45 30,-30 20,-10 C30,-20 40,-10 30,0 C40,10 30,20 20,10 C30,30 15,45 0,60" 
+          fill="none" stroke="#90C685" stroke-width="3"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="200" y="110" 
+        font-family="Arial, sans-serif" 
+        font-size="42" 
+        font-weight="bold" 
+        text-anchor="middle" 
+        fill="#D4E6D1">
+    cheeblr
+  </text>
+  
+  <!-- Decorative circles representing buds -->
+  <circle cx="160" cy="85" r="6" fill="#90C685" opacity="0.8"/>
+  <circle cx="240" cy="85" r="6" fill="#90C685" opacity="0.8"/>
+</svg>
