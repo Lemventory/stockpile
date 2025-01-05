@@ -2,9 +2,7 @@ module CreateItem where
 
 import Prelude
 
-import Types (InventoryResponse(..), ItemCategory(..), itemCategoryToString)
 import API (postInventoryToJson)
-import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
 import Control.Monad.ST.Class (liftST)
 import Data.Array (all)
 import Data.Either (Either(..))
@@ -24,8 +22,11 @@ import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
+import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
+import Types (InventoryResponse(..), ItemCategory(..), itemCategoryToString)
 
 createItem :: Effect Unit
 createItem = void $ runInBody Deku.do
@@ -50,13 +51,13 @@ createItem = void $ runInBody Deku.do
   setQuantity /\ quantityEvent <- useState ""
   setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
 
-  setCategory /\ categoryEvent <- useState categoryConfig.defaultValue
+  setCategory /\ categoryEvent <- useState ""
   setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
 
   setDescription /\ descriptionEvent <- useState ""
   setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
 
-  -- Array fields (stored as comma-separated strings)
+  -- Array fields
   setTags /\ tagsEvent <- useState ""
   setTarpenes /\ tarpenesEvent <- useState ""
   setLineage /\ lineageEvent <- useState ""
@@ -80,7 +81,6 @@ createItem = void $ runInBody Deku.do
   setDominantTarpene /\ dominantTarpeneEvent <- useState ""
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
 
-  -- Helper: reset all fields
   let
     resetForm = do
       setName ""
@@ -113,7 +113,6 @@ createItem = void $ runInBody Deku.do
       setTarpenes ""
       setLineage ""
 
-    -- Helper functions for type conversions
     ensureNumber :: String -> String
     ensureNumber str = fromMaybe "0.0" $ map show $ Num.fromString $ trim str
 
@@ -126,7 +125,6 @@ createItem = void $ runInBody Deku.do
         then trim str
         else trim str <> "%"
 
-    -- Category options matching BudView's ItemCategory
     categoryOptions = 
       [ { value: "", label: "Select..." }
       , { value: itemCategoryToString Flower, label: itemCategoryToString Flower }
@@ -140,14 +138,12 @@ createItem = void $ runInBody Deku.do
       , { value: itemCategoryToString Accessories, label: itemCategoryToString Accessories }
       ]
 
-    -- Updated categoryConfig with exact values from ItemCategory
     categoryConfig' = 
       { label: "Category"
       , options: categoryOptions
       , defaultValue: ""
       }
 
-    -- Determine if the form is valid for enabling the button
     isFormValid = ado
       vName <- validNameEvent
       vSku <- validSkuEvent
@@ -167,7 +163,6 @@ createItem = void $ runInBody Deku.do
         , vDescription, vThc, vCbg, vStrain, vCreator, vSpecies
         , vDominantTarpene ]
 
-  -- The main UI
   D.div_
     [ D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
@@ -198,10 +193,8 @@ createItem = void $ runInBody Deku.do
             killFiber (error "Cancelling previous submission") f
             liftEffect $ setSubmitting true
 
-            -- Create an event for submission
             { push, event } <- liftEffect $ liftST create
 
-            -- Sample the form values into a proper MenuItemFormInput
             let 
               formDataPoll = 
                 (\name sku brand price quantity category description tags
@@ -211,7 +204,7 @@ createItem = void $ runInBody Deku.do
                   , brand
                   , price: ensureNumber price
                   , quantity: ensureInt quantity
-                  , category: trim category  -- Category string comes pre-formatted from dropdown
+                  , category: trim category
                   , description
                   , tags
                   , strainLineage:
@@ -244,26 +237,40 @@ createItem = void $ runInBody Deku.do
 
               formEvent = sample_ formDataPoll event
 
-            -- Subscribe to form event and handle validation
-            sub <- liftEffect $ subscribe formEvent \formInput -> do
+            void $ liftEffect $ subscribe formEvent \formInput -> launchAff_ do
+              liftEffect $ Console.group "Form Submission"
+              liftEffect $ Console.logShow formInput
+              liftEffect $ Console.info "Category value before validation:"
+              liftEffect $ Console.logShow formInput.category
+              
               case validateForm formInput of
-                Left err -> liftEffect do
-                  setStatusMessage $ "Validation error: " <> err
-                  setSubmitting false
+                Left err -> do
+                  liftEffect $ Console.error "Form validation failed:"
+                  liftEffect $ Console.errorShow err
+                  liftEffect $ Console.groupEnd
+                  liftEffect do
+                    setStatusMessage $ "Validation error: " <> err
+                    setSubmitting false
                 
-                Right menuItem -> launchAff_ do
+                Right menuItem -> do
+                  liftEffect $ Console.info "Form validated successfully:"
+                  liftEffect $ Console.logShow menuItem
                   result <- postInventoryToJson menuItem
                   liftEffect case result of
-                    Right (Message msg) -> do
+                    Right (Message _) -> do
+                      Console.info "Submission successful"
                       setStatusMessage "Item successfully submitted!"
                       resetForm
-                    Right (InventoryData _) -> 
+                    Right (InventoryData _) -> do
+                      Console.warn "Unexpected response type"
                       setStatusMessage "Unexpected response type"
-                    Left err -> 
+                    Left err -> do
+                      Console.error "API Error:"
+                      Console.errorShow err
                       setStatusMessage $ "Error submitting item: " <> err
+                  liftEffect $ Console.groupEnd
                   liftEffect $ setSubmitting false
 
-            -- Push to trigger form submission
             liftEffect $ push unit
         ]
         [ text $ map (\submitting -> 
