@@ -1,5 +1,5 @@
 package:
-  name: budview
+  name: cheeblr
   dependencies:
     - aff
     - affjax

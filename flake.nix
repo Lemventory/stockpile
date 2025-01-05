@@ -1,5 +1,5 @@
 {
-  description = "budview";
+  description = "cheeblr";
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -12,7 +12,7 @@
   };
 
   outputs = { self, nixpkgs, purescript-overlay, ... }: let
-    name = "budview";
+    name = "cheeblr";
     supportedSystems = [
       "aarch64-darwin"
       "x86_64-darwin"
