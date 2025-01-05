@@ -27,8 +27,8 @@ import Effect.Class (liftEffect)
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
 
-app :: Effect Unit
-app = void $ runInBody Deku.do
+createItem :: Effect Unit
+createItem = void $ runInBody Deku.do
   -- Status and loading state
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false

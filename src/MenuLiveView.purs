@@ -1,5 +1,5 @@
 module MenuLiveView
-  ( app)
+  ( runLiveView)
   where
 
 import Prelude
@@ -27,7 +27,7 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import FRP.Event (subscribe)
 import FRP.Event.Time (interval)
- 
+
 -- Sorting Configuration
 data SortField =  SortByOrder
                 | SortByName 
@@ -126,8 +126,8 @@ generateClassName item =
 toClassName :: String -> String
 toClassName str = toLower (replace (Pattern " ") (Replacement "-") str)
 
-app :: Effect Unit
-app = do
+liveView :: Effect Unit
+liveView = do
   setInventory /\ inventory <- useState (Inventory [])
   let
     config =
@@ -159,3 +159,8 @@ app = do
   -- Run Deku UI
   void $ runInBody $ Deku.do
     D.div [] [ inventory <#~> renderInventory config ]
+
+runLiveView :: Effect Unit
+runLiveView = do
+  log "Starting main"
+  liveView
