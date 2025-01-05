@@ -67,7 +67,7 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
           SortByName -> compare item1.name item2.name
           SortByCategory -> compare item1.category item2.category
           SortBySubCategory -> compare item1.subcategory item2.subcategory
-          SortBySpecies -> compare meta1.species meta2.species  -- Uses derived Ord instance
+          SortBySpecies -> compare meta1.species meta2.species
           SortBySKU -> compare item1.sku item2.sku
           SortByPrice -> compare item1.price item2.price
           SortByQuantity -> compare item1.quantity item2.quantity
@@ -116,7 +116,7 @@ renderItem (MenuItem item) =
         , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
         ]
     , D.div [ klass_ "item-category" ] [ text_ (show item.category <> " - " <> item.subcategory) ]
-    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> show meta.species) ]  -- Uses Show instance
+    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> show meta.species) ]
     , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
     , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
     , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
