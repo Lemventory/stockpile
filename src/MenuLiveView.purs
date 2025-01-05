@@ -4,7 +4,7 @@ module MenuLiveView
 
 import Prelude
 
-import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), itemCategoryToString)
+import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..))
 import API (fetchInventory)
 import Data.Array (filter, sortBy)
 import Data.Array as Array
@@ -65,7 +65,7 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
         fieldComparison = case sortField of
           SortByOrder -> compare item1.sort item2.sort
           SortByName -> compare item1.name item2.name
-          SortByCategory -> compare (itemCategoryToString item1.category) (itemCategoryToString item2.category)
+          SortByCategory -> compare item1.category item2.category  -- Now uses derived Ord instance
           SortBySubCategory -> compare item1.subcategory item2.subcategory
           SortBySpecies -> compare meta1.species meta2.species
           SortBySKU -> compare item1.sku item2.sku
@@ -110,7 +110,7 @@ renderItem (MenuItem item) =
             ]
         , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
         ]
-    , D.div [ klass_ "item-category" ] [ text_ (itemCategoryToString item.category <> " - " <> item.subcategory) ]
+    , D.div [ klass_ "item-category" ] [ text_ (show item.category <> " - " <> item.subcategory) ]
     , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> meta.species) ]
     , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
     , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
@@ -120,7 +120,7 @@ renderItem (MenuItem item) =
 generateClassName :: { category :: ItemCategory, subcategory :: String, species :: String } -> String
 generateClassName item =
   "species-" <> toClassName item.species <> 
-  " category-" <> toClassName (itemCategoryToString item.category) <> 
+  " category-" <> toClassName (show item.category) <> 
   " subcategory-" <> toClassName item.subcategory
 
 toClassName :: String -> String
