@@ -2,10 +2,10 @@ module Form where
 
 import Prelude
 
-import Data.Array (all, (!!), (:))
+import Data.Array (all, catMaybes, range, (!!), (:))
 import Data.Array (length) as Array
 import Data.Either (Either(..))
-import Data.Enum (toEnum)
+import Data.Enum (class BoundedEnum, fromEnum, toEnum)
 import Data.Foldable (for_)
 import Data.Int (fromString)
 import Data.Int as Int
@@ -347,6 +347,28 @@ makeDropdown config setValue setValid validEvent =
         ]
     ]
 
+-- Generic helper function to get all values of a bounded enum
+getAllEnumValues :: forall a. BoundedEnum a => Bounded a => Array a
+getAllEnumValues = 
+  let
+    enumValues = map toEnum $ range 0 (fromEnum (top :: a))
+  in
+    catMaybes enumValues
+
+-- Generic function to create dropdown config
+makeEnumDropdown :: forall a. BoundedEnum a => Bounded a => Show a => 
+  { label :: String, enumType :: a } -> DropdownConfig
+makeEnumDropdown { label } = 
+  { label
+  , options: 
+      { value: "", label: "Select..." } :
+      map (\val -> { value: show val, label: show val }) 
+          (getAllEnumValues :: Array a)
+  , defaultValue: ""
+  }
+
+
+
 makeArrayField :: String -> (Array String -> Effect Unit) -> Nut
 makeArrayField label setValue = 
   D.div_
@@ -376,28 +398,19 @@ makeFieldConfig label placeholder preset =
   , validation: preset.validation
   , errorMessage: preset.errorMessage
   , formatInput: preset.formatInput
-  }
+  }   
 
--- Update category dropdown config to use Show instance
+-- Configuration for specific types
 categoryConfig :: DropdownConfig
-categoryConfig = 
+categoryConfig = makeEnumDropdown 
   { label: "Category"
-  , options: 
-      { value: "", label: "Select..." } :
-      map (\cat -> { value: show cat, label: show cat })
-          [Flower, PreRolls, Vaporizers, Edibles, Drinks, 
-           Concentrates, Topicals, Tinctures, Accessories]
-  , defaultValue: ""
+  , enumType: (bottom :: ItemCategory)
   }
 
 speciesConfig :: DropdownConfig
-speciesConfig = 
+speciesConfig = makeEnumDropdown 
   { label: "Species"
-  , options: 
-      { value: "", label: "Select..." } :
-      map (\species -> { value: show species, label: show species })
-          [Indica, IndicaDominantHybrid, Hybrid, SativaDominantHybrid, Sativa]
-  , defaultValue: ""
+  , enumType: (bottom :: Species)
   }
 
 nameConfig :: FieldConfig
