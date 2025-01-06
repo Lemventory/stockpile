@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Monad.Except (ExceptT)
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
+import Data.Generic.Rep (class Generic)
 import Data.Identity (Identity)
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
@@ -36,6 +37,10 @@ data MenuItem = MenuItem
   , tags :: Array String
   , strain_lineage :: StrainLineage
   }
+
+-- Generic derivation
+derive instance genericMenuItem :: Generic MenuItem _
+derive instance genericStrainLineage :: Generic StrainLineage _
 
 data ItemCategory 
   = Flower 
