@@ -173,7 +173,7 @@ instance formValueSpecies :: FormValue Species where
 validateCategory :: String -> ValidationResult ItemCategory
 validateCategory = fromFormValue
 
-requireValid :: forall a. String -> ValidationResult a -> Either String a
+requireValid :: ∀ a. String -> ValidationResult a -> Either String a
 requireValid field = case _ of
   ValidationSuccess x -> Right x
   ValidationError err -> Left $ field <> ": " <> err
@@ -348,7 +348,7 @@ makeDropdown config setValue setValid validEvent =
     ]
 
 -- Generic helper function to get all values of a bounded enum
-getAllEnumValues :: forall a. BoundedEnum a => Bounded a => Array a
+getAllEnumValues :: ∀ a. BoundedEnum a => Bounded a => Array a
 getAllEnumValues = 
   let
     enumValues = map toEnum $ range 0 (fromEnum (top :: a))
@@ -356,7 +356,7 @@ getAllEnumValues =
     catMaybes enumValues
 
 -- Generic function to create dropdown config
-makeEnumDropdown :: forall a. BoundedEnum a => Bounded a => Show a => 
+makeEnumDropdown :: ∀ a. BoundedEnum a => Bounded a => Show a => 
   { label :: String, enumType :: a } -> DropdownConfig
 makeEnumDropdown { label } = 
   { label
