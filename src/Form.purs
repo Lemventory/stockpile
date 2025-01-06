@@ -367,8 +367,6 @@ makeEnumDropdown { label } =
   , defaultValue: ""
   }
 
-
-
 makeArrayField :: String -> (Array String -> Effect Unit) -> Nut
 makeArrayField label setValue = 
   D.div_
