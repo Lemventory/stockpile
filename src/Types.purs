@@ -38,9 +38,7 @@ data MenuItem = MenuItem
   , strain_lineage :: StrainLineage
   }
 
--- Generic derivation
 derive instance genericMenuItem :: Generic MenuItem _
-derive instance genericStrainLineage :: Generic StrainLineage _
 
 data ItemCategory 
   = Flower 
@@ -127,6 +125,8 @@ data StrainLineage = StrainLineage
   , leafly_url :: String
   , img :: String
   }
+
+derive instance genericStrainLineage :: Generic StrainLineage _
 
 data Species 
   = Indica 
