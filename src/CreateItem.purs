@@ -26,71 +26,125 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
-import Form (MenuItemFormInput, DropdownConfig, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
+import Form (DropdownConfig, MenuItemFormInput, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
 import Types (InventoryResponse(..), ItemCategory, genUUID)
+
+-- Type to hold initial form values
+type InitialFormValues = 
+  { name :: String
+  , sku :: String
+  , brand :: String
+  , price :: String
+  , quantity :: String
+  , category :: String
+  , description :: String
+  , tags :: String
+  , thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: String
+  , dominantTarpene :: String
+  , tarpenes :: String
+  , lineage :: String
+  }
+
+defaultFormValues :: Effect InitialFormValues
+defaultFormValues = do
+  initialId <- genUUID
+  pure
+    { name: ""
+    , sku: show initialId
+    , brand: ""
+    , price: ""
+    , quantity: ""
+    , category: ""
+    , description: ""
+    , tags: ""
+    , thc: "24.5%"
+    , cbg: "1.0%"
+    , strain: ""
+    , creator: ""
+    , species: ""
+    , dominantTarpene: ""
+    , tarpenes: ""
+    , lineage: ""
+    }
 
 
 createItem :: Effect Unit
 createItem = do
-  initialId <- genUUID
-  let initialSkuStr = show initialId
-  
+  -- Initialize form values before Deku.do
+  initialValues <- defaultFormValues
+
   void $ runInBody Deku.do
     -- Status and loading state
     setStatusMessage /\ statusMessageEvent <- useState ""
     setSubmitting /\ submittingEvent <- useState false
     setFiber /\ fiber <- useState (pure unit)
 
-    -- Basic MenuItem fields
-    setName /\ nameEvent <- useState ""
+    -- Basic MenuItem fields with initial values
+    setName /\ nameEvent <- useState initialValues.name
     setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
 
-    -- SKU field - initialized with UUID and valid state
-    setSku /\ skuEvent <- useState initialSkuStr
+    setSku /\ skuEvent <- useState initialValues.sku
     setValidSku /\ validSkuEvent <- useState (Just true)
 
-    setBrand /\ brandEvent <- useState ""
+    setBrand /\ brandEvent <- useState initialValues.brand
     setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
 
-    setPrice /\ priceEvent <- useState ""  
+    setPrice /\ priceEvent <- useState initialValues.price
     setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
 
-    setQuantity /\ quantityEvent <- useState ""
+    setQuantity /\ quantityEvent <- useState initialValues.quantity
     setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
 
-    setCategory /\ categoryEvent <- useState ""
+    setCategory /\ categoryEvent <- useState initialValues.category
     setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
 
-    setDescription /\ descriptionEvent <- useState ""
+    setDescription /\ descriptionEvent <- useState initialValues.description
     setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
 
-    -- Array fields
-    setTags /\ tagsEvent <- useState ""
-    setTarpenes /\ tarpenesEvent <- useState ""
-    setLineage /\ lineageEvent <- useState ""
+    -- Array fields with initial values
+    setTags /\ tagsEvent <- useState initialValues.tags
+    setTarpenes /\ tarpenesEvent <- useState initialValues.tarpenes
+    setLineage /\ lineageEvent <- useState initialValues.lineage
 
-    -- StrainLineage fields
-    setThc /\ thcEvent <- useState ""
-    setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
+    -- StrainLineage fields with initial values
+    setThc /\ thcEvent <- useState initialValues.thc
+    setValidThc /\ validThcEvent <- useState (Just true)
 
-    setCbg /\ cbgEvent <- useState ""
-    setValidCbg /\ validCbgEvent <- useState (Nothing :: Maybe Boolean)
+    setCbg /\ cbgEvent <- useState initialValues.cbg
+    setValidCbg /\ validCbgEvent <- useState (Just true)
 
-    setStrain /\ strainEvent <- useState ""
+    setStrain /\ strainEvent <- useState initialValues.strain
     setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
 
-    setCreator /\ creatorEvent <- useState ""
+    setCreator /\ creatorEvent <- useState initialValues.creator
     setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
 
-    setSpecies /\ speciesEvent <- useState ""
+    setSpecies /\ speciesEvent <- useState initialValues.species
     setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
 
-    setDominantTarpene /\ dominantTarpeneEvent <- useState ""
+    setDominantTarpene /\ dominantTarpeneEvent <- useState initialValues.dominantTarpene
     setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
 
     let
-      -- Configure SKU field
-      skuField = skuConfig initialSkuStr
+      -- Configure all fields with initial values
+      nameField = nameConfig initialValues.name
+      skuField = skuConfig initialValues.sku
+      brandField = brandConfig initialValues.brand
+      priceField = priceConfig initialValues.price
+      quantityField = quantityConfig initialValues.quantity
+      descriptionField = descriptionConfig initialValues.description
+      tagsField = tagsConfig initialValues.tags
+      thcField = thcConfig initialValues.thc
+      cbgField = cbgConfig initialValues.cbg
+      strainField = strainConfig initialValues.strain
+      creatorField = creatorConfig initialValues.creator
+      dominantTarpeneField = dominantTarpeneConfig initialValues.dominantTarpene
+      tarpenesField = tarpenesConfig initialValues.tarpenes
+      lineageField = lineageConfig initialValues.lineage
 
       getAllCategories :: Array ItemCategory
       getAllCategories = 
@@ -108,8 +162,18 @@ createItem = do
       categoryConfig' = 
         { label: "Category"
         , options: categoryOptions
-        , defaultValue: ""
+        , defaultValue: initialValues.category
         }
+
+      -- speciesConfig' :: DropdownConfig
+      -- speciesConfig' = 
+      --   { label: "Species"
+      --   , options: 
+      --       { value: "", label: "Select..." } :
+      --       map (\val -> { value: show val, label: show val }) 
+      --           (getAllEnumValues :: Array Species)
+      --   , defaultValue: initialValues.species
+      --   }
 
       resetForm = do
         newId <- genUUID
@@ -181,22 +245,22 @@ createItem = do
           [ D.h2 
               [ DA.klass_ "text-2xl font-bold mb-6" ]
               [ text_ "Add New Menu Item" ]
-          , makeField nameConfig setName setValidName validNameEvent
+          , makeField nameField setName setValidName validNameEvent
           , makeField skuField setSku setValidSku validSkuEvent
-          , makeField brandConfig setBrand setValidBrand validBrandEvent
-          , makeField priceConfig setPrice setValidPrice validPriceEvent
-          , makeField quantityConfig setQuantity setValidQuantity validQuantityEvent
+          , makeField brandField setBrand setValidBrand validBrandEvent
+          , makeField priceField setPrice setValidPrice validPriceEvent
+          , makeField quantityField setQuantity setValidQuantity validQuantityEvent
           , makeDropdown categoryConfig' setCategory setValidCategory validCategoryEvent
-          , makeField descriptionConfig setDescription setValidDescription validDescriptionEvent
-          , makeField tagsConfig setTags (const $ pure unit) (pure $ Just true)
-          , makeField thcConfig setThc setValidThc validThcEvent
-          , makeField cbgConfig setCbg setValidCbg validCbgEvent
-          , makeField strainConfig setStrain setValidStrain validStrainEvent
-          , makeField creatorConfig setCreator setValidCreator validCreatorEvent
+          , makeField descriptionField setDescription setValidDescription validDescriptionEvent
+          , makeField tagsField setTags (const $ pure unit) (pure $ Just true)
+          , makeField thcField setThc setValidThc validThcEvent
+          , makeField cbgField setCbg setValidCbg validCbgEvent
+          , makeField strainField setStrain setValidStrain validStrainEvent
+          , makeField creatorField setCreator setValidCreator validCreatorEvent
           , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
-          , makeField dominantTarpeneConfig setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
-          , makeField tarpenesConfig setTarpenes (const $ pure unit) (pure $ Just true)
-          , makeField lineageConfig setLineage (const $ pure unit) (pure $ Just true)
+          , makeField dominantTarpeneField setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
+          , makeField tarpenesField setTarpenes (const $ pure unit) (pure $ Just true)
+          , makeField lineageField setLineage (const $ pure unit) (pure $ Just true)
           ]
       , D.button
           [ DA.klass_ $ buttonClass "green"

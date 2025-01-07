@@ -29,76 +29,6 @@ import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 
--- Core validation types
-data ValidationResult a = 
-  ValidationSuccess a 
-  | ValidationError String
-
--- Type conversion type class
-class FormValue a where
-  fromFormValue :: String -> ValidationResult a
-
-instance formValueString :: FormValue String where
-  fromFormValue = ValidationSuccess <<< trim
-
-instance formValueNumber :: FormValue Number where
-  fromFormValue str = case Number.fromString (trim str) of
-    Just n -> ValidationSuccess n
-    Nothing -> ValidationError "Invalid number format"
-
-instance formValueInt :: FormValue Int where
-  fromFormValue str = case Int.fromString (trim str) of
-    Just n -> ValidationSuccess n
-    Nothing -> ValidationError "Invalid integer format"
-
--- Basic validation rules
-type ValidationRule = String -> Boolean
-
-nonEmpty :: ValidationRule
-nonEmpty = (_ /= "")
-
-positiveInteger :: ValidationRule
-positiveInteger str = case fromString str of
-  Just n -> n > 0
-  Nothing -> false
-
-alphanumeric :: ValidationRule
-alphanumeric str = case regex "^[A-Za-z0-9-\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-vowels :: ValidationRule
-vowels str = case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-consonants :: ValidationRule
-consonants str = case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-percentage :: ValidationRule
-percentage str = case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-dollarAmount :: ValidationRule 
-dollarAmount str = case Number.fromString str of
-  Just n -> n >= 0.0
-  Nothing -> false
-
-maxLength :: Int -> ValidationRule
-maxLength n str = String.length str <= n
-
-validUUID :: ValidationRule
-validUUID str = case parseUUID (trim str) of
-  Just _ -> true
-  Nothing -> false
-
-
-allOf :: Array ValidationRule -> ValidationRule
-allOf rules str = all (\rule -> rule str) rules
-
 -- Form input types (raw form data)
 type MenuItemFormInput = 
   { name :: String
@@ -122,31 +52,6 @@ type StrainLineageFormInput =
   , tarpenes :: String
   , lineage :: String
   }
-
--- Helper functions
-parseCommaList :: String -> Array String
-parseCommaList str = 
-  if str == "" 
-    then []
-    else map trim $ split (Pattern ",") str
-
-formatDollarAmount :: String -> String
-formatDollarAmount str = 
-  if str == "" then ""
-  else case Number.fromString str of
-    Just n -> 
-      let 
-        fixed = show n
-        parts = split (Pattern ".") fixed
-      in case Array.length parts of
-        1 -> fixed <> ".00"
-        2 -> 
-          let decimals = fromMaybe "" $ parts !! 1
-          in if String.length decimals >= 2 
-             then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
-             else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
-        _ -> str
-    Nothing -> str
 
 instance formValueItemCategory :: FormValue ItemCategory where
   fromFormValue str = case str of
@@ -181,16 +86,23 @@ instance formValueUUID :: FormValue UUID where
     Just uuid -> ValidationSuccess uuid
     Nothing -> ValidationError "Invalid UUID format"
 
--- Validation functions
-validateCategory :: String -> ValidationResult ItemCategory
-validateCategory = fromFormValue
+-- Type conversion type class
+class FormValue a where
+  fromFormValue :: String -> ValidationResult a
 
-requireValid :: ∀ a. String -> ValidationResult a -> Either String a
-requireValid field = case _ of
-  ValidationSuccess x -> Right x
-  ValidationError err -> Left $ field <> ": " <> err
+instance formValueString :: FormValue String where
+  fromFormValue = ValidationSuccess <<< trim
 
--- The validateForm function needs to be updated to handle UUID parsing
+instance formValueNumber :: FormValue Number where
+  fromFormValue str = case Number.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid number format"
+
+instance formValueInt :: FormValue Int where
+  fromFormValue str = case Int.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid integer format"
+
 validateForm :: MenuItemFormInput -> Either String MenuItem
 validateForm input = do
   name <- requireValid "Name" $ fromFormValue input.name
@@ -245,78 +157,19 @@ validateStrainLineage input = do
     }
 
 -- Field Configuration Types
-type ValidationPreset = 
-  { validation :: ValidationRule
-  , errorMessage :: String
-  , formatInput :: String -> String
-  }
-
 type FieldConfig = 
   { label :: String
   , placeholder :: String
-  , defaultValue :: String  -- Add defaultValue to config
+  , defaultValue :: String
   , validation :: ValidationRule
   , errorMessage :: String
   , formatInput :: String -> String
   }
 
--- Update the specific field configs to include defaultValue
-skuConfig :: String -> FieldConfig
-skuConfig defaultValue = makeFieldConfig "SKU" "Enter UUID" defaultValue
-  { validation: allOf [nonEmpty, validUUID]
-  , errorMessage: "Required, must be a valid UUID"
-  , formatInput: trim
-  }
-
--- Update other configs similarly...
-nameConfig :: FieldConfig
-nameConfig = makeFieldConfig "Name" "Enter product name" ""
-  (requiredTextWithLimit 50)
-
-brandConfig :: FieldConfig
-brandConfig = makeFieldConfig "Brand" "Enter brand name" ""
-  (requiredTextWithLimit 30)
-
 type DropdownConfig = 
   { label :: String
   , options :: Array { value :: String, label :: String }
   , defaultValue :: String
-  }
-
--- Standard validation presets
-requiredText :: ValidationPreset
-requiredText =
-  { validation: allOf [nonEmpty, alphanumeric]
-  , errorMessage: "Required, text only"
-  , formatInput: trim
-  }
-
-requiredTextWithLimit :: Int -> ValidationPreset
-requiredTextWithLimit limit =
-  { validation: allOf [nonEmpty, alphanumeric, maxLength limit]
-  , errorMessage: "Required, text only (max " <> show limit <> " chars)"
-  , formatInput: trim
-  }
-
-percentageField :: ValidationPreset
-percentageField = 
-  { validation: percentage
-  , errorMessage: "Required format: XX.XX%"
-  , formatInput: trim
-  }
-
-moneyField :: ValidationPreset
-moneyField =
-  { validation: allOf [nonEmpty, dollarAmount]
-  , errorMessage: "Required, valid dollar amount"
-  , formatInput: formatDollarAmount
-  }
-
-numberField :: ValidationPreset
-numberField =
-  { validation: allOf [nonEmpty, positiveInteger]
-  , errorMessage: "Required, positive whole number"
-  , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
@@ -454,46 +307,69 @@ speciesConfig = makeEnumDropdown
   , enumType: (bottom :: Species)
   }
 
-priceConfig :: FieldConfig
-priceConfig = makeFieldConfig "Price" "Enter price" "" moneyField
+skuConfig :: String -> FieldConfig
+skuConfig defaultValue = makeFieldConfig "SKU" "Enter UUID" defaultValue
+  { validation: allOf [nonEmpty, validUUID]
+  , errorMessage: "Required, must be a valid UUID"
+  , formatInput: trim
+  }
 
-quantityConfig :: FieldConfig
-quantityConfig = makeFieldConfig "Quantity" "Enter quantity" "" numberField
+nameConfig :: String -> FieldConfig
+nameConfig defaultValue = makeFieldConfig "Name" "Enter product name" defaultValue
+  (requiredTextWithLimit 50)
 
-thcConfig :: FieldConfig
-thcConfig = makeFieldConfig "THC %" "Enter THC percentage" "" percentageField
+brandConfig :: String -> FieldConfig
+brandConfig defaultValue = makeFieldConfig "Brand" "Enter brand name" defaultValue
+  (requiredTextWithLimit 30)
 
-cbgConfig :: FieldConfig
-cbgConfig = makeFieldConfig "CBG %" "Enter CBG percentage" "" percentageField
+priceConfig :: String -> FieldConfig
+priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue 
+  moneyField
 
-strainConfig :: FieldConfig
-strainConfig = makeFieldConfig "Strain" "Enter strain name" "" requiredText
+quantityConfig :: String -> FieldConfig
+quantityConfig defaultValue = makeFieldConfig "Quantity" "Enter quantity" defaultValue 
+  numberField
 
-creatorConfig :: FieldConfig
-creatorConfig = makeFieldConfig "Creator" "Enter creator name" "" requiredText
+thcConfig :: String -> FieldConfig
+thcConfig defaultValue = makeFieldConfig "THC %" "Enter THC percentage" defaultValue 
+  percentageField
 
-descriptionConfig :: FieldConfig
-descriptionConfig = makeFieldConfig "Description" "Enter description" "" requiredText
+cbgConfig :: String -> FieldConfig
+cbgConfig defaultValue = makeFieldConfig "CBG %" "Enter CBG percentage" defaultValue 
+  percentageField
 
-dominantTarpeneConfig :: FieldConfig
-dominantTarpeneConfig = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" "" requiredText
+strainConfig :: String -> FieldConfig
+strainConfig defaultValue = makeFieldConfig "Strain" "Enter strain name" defaultValue 
+  requiredText
 
-tagsConfig :: FieldConfig
-tagsConfig = makeFieldConfig "Tags" "Enter tags (comma-separated)" "" 
+creatorConfig :: String -> FieldConfig
+creatorConfig defaultValue = makeFieldConfig "Creator" "Enter creator name" defaultValue 
+  requiredText
+
+descriptionConfig :: String -> FieldConfig
+descriptionConfig defaultValue = makeFieldConfig "Description" "Enter description" defaultValue 
+  requiredText
+
+dominantTarpeneConfig :: String -> FieldConfig
+dominantTarpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue 
+  requiredText
+
+tagsConfig :: String -> FieldConfig
+tagsConfig defaultValue = makeFieldConfig "Tags" "Enter tags (comma-separated)" defaultValue 
   { validation: const true
   , errorMessage: ""
   , formatInput: trim
   }
 
-tarpenesConfig :: FieldConfig
-tarpenesConfig = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" ""
+tarpenesConfig :: String -> FieldConfig
+tarpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" defaultValue 
   { validation: const true
   , errorMessage: ""
   , formatInput: trim
   }
 
-lineageConfig :: FieldConfig
-lineageConfig = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" ""
+lineageConfig :: String -> FieldConfig
+lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue 
   { validation: const true
   , errorMessage: ""
   , formatInput: trim
@@ -515,3 +391,133 @@ buttonClass color =
        text-sm font-medium leading-4 text-white shadow-sm
        hover:bg-COLOR-700 focus:outline-none focus:ring-2
        focus:ring-COLOR-500 focus:ring-offset-2"""
+
+
+-- Core validation types
+data ValidationResult a = 
+  ValidationSuccess a 
+  | ValidationError String
+
+-- Basic validation rules
+type ValidationRule = String -> Boolean
+
+nonEmpty :: ValidationRule
+nonEmpty = (_ /= "")
+
+positiveInteger :: ValidationRule
+positiveInteger str = case fromString str of
+  Just n -> n > 0
+  Nothing -> false
+
+alphanumeric :: ValidationRule
+alphanumeric str = case regex "^[A-Za-z0-9-\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+vowels :: ValidationRule
+vowels str = case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+consonants :: ValidationRule
+consonants str = case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+percentage :: ValidationRule
+percentage str = case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+dollarAmount :: ValidationRule 
+dollarAmount str = case Number.fromString str of
+  Just n -> n >= 0.0
+  Nothing -> false
+
+maxLength :: Int -> ValidationRule
+maxLength n str = String.length str <= n
+
+validUUID :: ValidationRule
+validUUID str = case parseUUID (trim str) of
+  Just _ -> true
+  Nothing -> false
+
+allOf :: Array ValidationRule -> ValidationRule
+allOf rules str = all (\rule -> rule str) rules
+
+-- Helper functions
+parseCommaList :: String -> Array String
+parseCommaList str = 
+  if str == "" 
+    then []
+    else map trim $ split (Pattern ",") str
+
+formatDollarAmount :: String -> String
+formatDollarAmount str = 
+  if str == "" then ""
+  else case Number.fromString str of
+    Just n -> 
+      let 
+        fixed = show n
+        parts = split (Pattern ".") fixed
+      in case Array.length parts of
+        1 -> fixed <> ".00"
+        2 -> 
+          let decimals = fromMaybe "" $ parts !! 1
+          in if String.length decimals >= 2 
+             then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
+             else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
+        _ -> str
+    Nothing -> str
+
+-- Validation functions
+validateCategory :: String -> ValidationResult ItemCategory
+validateCategory = fromFormValue
+
+requireValid :: ∀ a. String -> ValidationResult a -> Either String a
+requireValid field = case _ of
+  ValidationSuccess x -> Right x
+  ValidationError err -> Left $ field <> ": " <> err
+
+-- Field Configuration Types
+type ValidationPreset = 
+  { validation :: ValidationRule
+  , errorMessage :: String
+  , formatInput :: String -> String
+  }
+
+-- Standard validation presets
+requiredText :: ValidationPreset
+requiredText =
+  { validation: allOf [nonEmpty, alphanumeric]
+  , errorMessage: "Required, text only"
+  , formatInput: trim
+  }
+
+requiredTextWithLimit :: Int -> ValidationPreset
+requiredTextWithLimit limit =
+  { validation: allOf [nonEmpty, alphanumeric, maxLength limit]
+  , errorMessage: "Required, text only (max " <> show limit <> " chars)"
+  , formatInput: trim
+  }
+
+percentageField :: ValidationPreset
+percentageField = 
+  { validation: percentage
+  , errorMessage: "Required format: XX.XX%"
+  , formatInput: trim
+  }
+
+moneyField :: ValidationPreset
+moneyField =
+  { validation: allOf [nonEmpty, dollarAmount]
+  , errorMessage: "Required, valid dollar amount"
+  , formatInput: formatDollarAmount
+  }
+
+numberField :: ValidationPreset
+numberField =
+  { validation: allOf [nonEmpty, positiveInteger]
+  , errorMessage: "Required, positive whole number"
+  , formatInput: \str -> fromMaybe str $ map show $ fromString str
+  }
