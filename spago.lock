@@ -25,6 +25,7 @@
             "prelude",
             "transformers",
             "tuples",
+            "uuid",
             "validation",
             "web-html",
             "yoga-json"
@@ -33,6 +34,7 @@
             "aff",
             "affjax",
             "affjax-web",
+            "ansi",
             "argonaut-core",
             "arraybuffer-types",
             "arrays",
@@ -62,6 +64,7 @@
             "foldable-traversable",
             "foreign",
             "foreign-object",
+            "fork",
             "form-urlencoded",
             "free",
             "functions",
@@ -85,6 +88,7 @@
             "literals",
             "maybe",
             "media-types",
+            "mmorph",
             "newtype",
             "nonempty",
             "now",
@@ -95,6 +99,7 @@
             "parallel",
             "parsing",
             "partial",
+            "pipes",
             "prelude",
             "profunctor",
             "psci-support",
@@ -104,6 +109,7 @@
             "record",
             "refs",
             "safe-coerce",
+            "spec",
             "st",
             "strings",
             "tailrec",
@@ -117,6 +123,7 @@
             "unsafe-coerce",
             "unsafe-reference",
             "untagged-union",
+            "uuid",
             "validation",
             "variant",
             "web-dom",
@@ -853,6 +860,16 @@
         "prelude"
       ]
     },
+    "ansi": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-ZMB6HD+q9CXvn9fRCmJ8dvuDrOVHcjombL3oNOerVnE=",
+      "dependencies": [
+        "foldable-traversable",
+        "lists",
+        "strings"
+      ]
+    },
     "argonaut-core": {
       "type": "registry",
       "version": "7.0.0",
@@ -1245,6 +1262,14 @@
         "unfoldable"
       ]
     },
+    "fork": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-X7u0SuCvFbLbzuNEKLBNuWjmcroqMqit4xEzpQwAP7E=",
+      "dependencies": [
+        "aff"
+      ]
+    },
     "form-urlencoded": {
       "type": "registry",
       "version": "7.0.0",
@@ -1546,6 +1571,16 @@
         "prelude"
       ]
     },
+    "mmorph": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-urZlZNNqGeQFe5D/ClHlR8QgGBNHTMFPtJ5S5IpflTQ=",
+      "dependencies": [
+        "free",
+        "functors",
+        "transformers"
+      ]
+    },
     "newtype": {
       "type": "registry",
       "version": "5.0.0",
@@ -1679,6 +1714,20 @@
       "integrity": "sha256-fwXerld6Xw1VkReh8yeQsdtLVrjfGiVuC5bA1Wyo/J4=",
       "dependencies": []
     },
+    "pipes": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-kvfqGM4cPA/wCcBHbp5psouFw5dZGvku2462x7ZBwSY=",
+      "dependencies": [
+        "aff",
+        "lists",
+        "mmorph",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
     "prelude": {
       "type": "registry",
       "version": "6.0.1",
@@ -1787,6 +1836,40 @@
       "integrity": "sha256-a1ibQkiUcbODbLE/WAq7Ttbbh9ex+x33VCQ7GngKudU=",
       "dependencies": [
         "unsafe-coerce"
+      ]
+    },
+    "spec": {
+      "type": "registry",
+      "version": "7.6.1",
+      "integrity": "sha256-VycY2SgN8rHZGqcMqZEiTh9OdCw40CUMX2pCoSUJ/zY=",
+      "dependencies": [
+        "aff",
+        "ansi",
+        "arrays",
+        "avar",
+        "bifunctors",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "fork",
+        "identity",
+        "integers",
+        "lists",
+        "maybe",
+        "newtype",
+        "now",
+        "ordered-collections",
+        "parallel",
+        "pipes",
+        "prelude",
+        "refs",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples"
       ]
     },
     "st": {
@@ -1950,6 +2033,20 @@
         "psci-support",
         "tuples",
         "unsafe-coerce"
+      ]
+    },
+    "uuid": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-DcLGdOzdMsqtENDLQ0tPpd8f/gU9AfwmMzGwSs6EGas=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "maybe",
+        "partial",
+        "prelude",
+        "spec",
+        "strings"
       ]
     },
     "validation": {

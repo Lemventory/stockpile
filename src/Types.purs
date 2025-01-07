@@ -3,11 +3,20 @@ module Types where
 import Prelude
 
 import Control.Monad.Except (ExceptT)
+import Data.Array (replicate)
+import Data.Either (Either(..))
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
 import Data.Generic.Rep (class Generic)
 import Data.Identity (Identity)
+import Data.Int (floor, hexadecimal, toNumber, toStringAs)
+import Data.Int.Bits ((.|.))
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
+import Data.String (joinWith, length)
+import Data.String.Regex (regex, test)
+import Data.String.Regex.Flags (noFlags)
+import Effect (Effect)
+import Effect.Random (random)
 import Foreign (Foreign, ForeignError(..), fail)
 import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
@@ -24,7 +33,7 @@ newtype Inventory = Inventory (Array MenuItem)
 
 data MenuItem = MenuItem
   { sort :: Int
-  , sku :: String
+  , sku :: UUID
   , brand :: String
   , name :: String
   , price :: Number
@@ -38,8 +47,6 @@ data MenuItem = MenuItem
   , strain_lineage :: StrainLineage
   }
 
-derive instance genericMenuItem :: Generic MenuItem _
-
 data ItemCategory 
   = Flower 
   | PreRolls 
@@ -50,9 +57,13 @@ data ItemCategory
   | Topicals 
   | Tinctures 
   | Accessories
+newtype UUID = UUID String
 
+derive instance genericMenuItem :: Generic MenuItem _
 derive instance eqItemCategory :: Eq ItemCategory
 derive instance ordItemCategory :: Ord ItemCategory
+derive instance eqUUID :: Eq UUID
+derive instance ordUUID :: Ord UUID
 
 instance Enum ItemCategory where
   succ Flower = Just PreRolls
@@ -128,6 +139,19 @@ data StrainLineage = StrainLineage
 
 derive instance genericStrainLineage :: Generic StrainLineage _
 
+-- | Validate and parse a string into a UUID
+parseUUID :: String -> Maybe UUID
+parseUUID str = 
+  case regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" noFlags of
+    Left _ -> Nothing
+    Right r -> if test r str
+               then Just $ UUID str
+               else Nothing
+
+-- | Convert UUID to String
+uuidToString :: UUID -> String
+uuidToString (UUID uuid) = uuid
+
 data Species 
   = Indica 
   | IndicaDominantHybrid 
@@ -156,7 +180,7 @@ instance Bounded Species where
   top = Sativa
 
 instance BoundedEnum Species where
-  cardinality = Cardinality 9
+  cardinality = Cardinality 5
   fromEnum Indica = 0
   fromEnum IndicaDominantHybrid = 1
   fromEnum Hybrid = 2
@@ -172,15 +196,64 @@ instance BoundedEnum Species where
 
 instance Show Species where
   show Indica = "Indica"
-  show IndicaDominantHybrid = "IndicaDominant"
+  show IndicaDominantHybrid = "IndicaDominantHybrid"
   show Hybrid = "Hybrid"
-  show SativaDominantHybrid = "SativaDominant"
+  show SativaDominantHybrid = "SativaDominantHybrid"
   show Sativa = "Sativa"
+
+instance showUUID :: Show UUID where
+  show (UUID uuid) = uuid
+
+-- | Empty UUID (all zeros)
+emptyUUID :: UUID
+emptyUUID = UUID "00000000-0000-0000-0000-000000000000"
+
+-- | Generate a UUID v4
+genUUID :: Effect UUID
+genUUID = do
+  -- Generate random 16-bit integers for smaller chunks
+  r1 <- randomInt 0 0xFFFF  -- First half of time_low
+  r2 <- randomInt 0 0xFFFF  -- Second half of time_low
+  r3 <- randomInt 0 0xFFFF  -- time_mid
+  r4 <- randomInt 0 0x0FFF  -- time_hi (12 bits for randomness)
+  r5 <- randomInt 0 0x3FFF  -- clock_seq (14 bits for randomness)
+  r6 <- randomInt 0 0xFFFF  -- First part of node
+  r7 <- randomInt 0 0xFFFF  -- Second part of node
+  r8 <- randomInt 0 0xFFFF  -- Third part of node
+
+  -- Set the version (4) and variant (10)
+  let versioned = r4 .|. 0x4000  -- Set version to 4 (binary OR with 0100 0000 0000 0000)
+      variant = r5 .|. 0x8000    -- Set variant to 10xx (binary OR with 1000 0000 0000 0000)
+
+  -- Convert to hex and pad as needed
+  let hex1 = padStart 4 (toHex r1) <> padStart 4 (toHex r2)  -- time_low
+      hex2 = padStart 4 (toHex r3)                           -- time_mid
+      hex3 = padStart 4 (toHex versioned)                    -- time_hi_and_version
+      hex4 = padStart 4 (toHex variant)                      -- clock_seq
+      hex5 = padStart 4 (toHex r6) <> padStart 4 (toHex r7) <> padStart 4 (toHex r8) -- node
+      uuid = joinWith "-" [hex1, hex2, hex3, hex4, hex5]
+
+  pure $ UUID uuid
+  where
+    toHex = toStringAs hexadecimal
+
+-- | Generate a random integer in a given range (inclusive)
+randomInt :: Int -> Int -> Effect Int
+randomInt min max = do
+  r <- random
+  pure $ floor $ r * toNumber (max - min + 1) + toNumber min
+
+padStart :: Int -> String -> String
+padStart targetLength str =
+  let
+    paddingLength = max 0 (targetLength - length str) -- Ensure no negative padding
+    padding = replicate paddingLength "0" -- Create an Array String
+  in joinWith "" padding <> str
 
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
-    , sku: item.sku
+    , sku: show item.sku
     , brand: item.brand
     , name: item.name
     , price: item.price
@@ -197,7 +270,10 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
     sort <- readProp "sort" json >>= readImpl
-    sku <- readProp "sku" json >>= readImpl
+    skuStr <- readProp "sku" json >>= readImpl
+    sku <- case parseUUID skuStr of
+      Just uuid -> pure uuid
+      Nothing -> fail $ ForeignError "Invalid UUID format for sku"
     brand <- readProp "brand" json >>= readImpl
     name <- readProp "name" json >>= readImpl
     price <- readProp "price" json >>= readImpl
@@ -241,9 +317,9 @@ instance readForeignSpecies :: ReadForeign Species where
     str <- readImpl json
     case str of 
       "Indica" -> pure Indica
-      "IndicaDominant" -> pure IndicaDominantHybrid
+      "IndicaDominantHybrid" -> pure IndicaDominantHybrid
       "Hybrid" -> pure Hybrid
-      "SativaDominant" -> pure SativaDominantHybrid
+      "SativaDominantHybrid" -> pure SativaDominantHybrid
       "Sativa" -> pure Sativa
       _ -> fail (ForeignError "Invalid Species value")
 

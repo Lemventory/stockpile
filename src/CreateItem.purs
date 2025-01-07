@@ -27,261 +27,269 @@ import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
 import Form (MenuItemFormInput, DropdownConfig, brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
-import Types (InventoryResponse(..), ItemCategory)
+import Types (InventoryResponse(..), ItemCategory, genUUID)
+
 
 createItem :: Effect Unit
-createItem = void $ runInBody Deku.do
-  -- Status and loading state
-  setStatusMessage /\ statusMessageEvent <- useState ""
-  setSubmitting /\ submittingEvent <- useState false
-  setFiber /\ fiber <- useState (pure unit)
+createItem = do
+  initialId <- genUUID
+  let initialSkuStr = show initialId
+  
+  void $ runInBody Deku.do
+    -- Status and loading state
+    setStatusMessage /\ statusMessageEvent <- useState ""
+    setSubmitting /\ submittingEvent <- useState false
+    setFiber /\ fiber <- useState (pure unit)
 
-  -- Basic MenuItem fields
-  setName /\ nameEvent <- useState ""
-  setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
+    -- Basic MenuItem fields
+    setName /\ nameEvent <- useState ""
+    setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
 
-  setSku /\ skuEvent <- useState ""
-  setValidSku /\ validSkuEvent <- useState (Nothing :: Maybe Boolean)
+    -- SKU field - initialized with UUID and valid state
+    setSku /\ skuEvent <- useState initialSkuStr
+    setValidSku /\ validSkuEvent <- useState (Just true)
 
-  setBrand /\ brandEvent <- useState ""
-  setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
+    setBrand /\ brandEvent <- useState ""
+    setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
 
-  setPrice /\ priceEvent <- useState ""  
-  setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
+    setPrice /\ priceEvent <- useState ""  
+    setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
 
-  setQuantity /\ quantityEvent <- useState ""
-  setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
+    setQuantity /\ quantityEvent <- useState ""
+    setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
 
-  setCategory /\ categoryEvent <- useState ""
-  setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
+    setCategory /\ categoryEvent <- useState ""
+    setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
 
-  setDescription /\ descriptionEvent <- useState ""
-  setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
+    setDescription /\ descriptionEvent <- useState ""
+    setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
 
-  -- Array fields
-  setTags /\ tagsEvent <- useState ""
-  setTarpenes /\ tarpenesEvent <- useState ""
-  setLineage /\ lineageEvent <- useState ""
+    -- Array fields
+    setTags /\ tagsEvent <- useState ""
+    setTarpenes /\ tarpenesEvent <- useState ""
+    setLineage /\ lineageEvent <- useState ""
 
-  -- StrainLineage fields
-  setThc /\ thcEvent <- useState ""
-  setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
+    -- StrainLineage fields
+    setThc /\ thcEvent <- useState ""
+    setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
 
-  setCbg /\ cbgEvent <- useState ""
-  setValidCbg /\ validCbgEvent <- useState (Nothing :: Maybe Boolean)
+    setCbg /\ cbgEvent <- useState ""
+    setValidCbg /\ validCbgEvent <- useState (Nothing :: Maybe Boolean)
 
-  setStrain /\ strainEvent <- useState ""
-  setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
+    setStrain /\ strainEvent <- useState ""
+    setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
 
-  setCreator /\ creatorEvent <- useState ""
-  setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
+    setCreator /\ creatorEvent <- useState ""
+    setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
 
-  setSpecies /\ speciesEvent <- useState ""
-  setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
+    setSpecies /\ speciesEvent <- useState ""
+    setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
 
-  setDominantTarpene /\ dominantTarpeneEvent <- useState ""
-  setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
+    setDominantTarpene /\ dominantTarpeneEvent <- useState ""
+    setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
 
-  let
-    -- Helper function to get all enum values using BoundedEnum instance
-    getAllCategories :: Array ItemCategory
-    getAllCategories = 
-      let
-        enumValues = map toEnum $ range 0 (fromEnum (top :: ItemCategory))
-      in
-        catMaybes enumValues
+    let
+      -- Configure SKU field
+      skuField = skuConfig initialSkuStr
 
-    -- Helper to create dropdown options
-    categoryOptions :: Array { value :: String, label :: String }
-    categoryOptions = 
-      { value: "", label: "Select..." } :
-      map (\cat -> { value: show cat, label: show cat }) getAllCategories
+      getAllCategories :: Array ItemCategory
+      getAllCategories = 
+        let
+          enumValues = map toEnum $ range 0 (fromEnum (top :: ItemCategory))
+        in
+          catMaybes enumValues
 
-    -- Updated category config using dynamic categories
-    categoryConfig' :: DropdownConfig
-    categoryConfig' = 
-      { label: "Category"
-      , options: categoryOptions
-      , defaultValue: ""
-      }
+      categoryOptions :: Array { value :: String, label :: String }
+      categoryOptions = 
+        { value: "", label: "Select..." } :
+        map (\cat -> { value: show cat, label: show cat }) getAllCategories
 
-    resetForm = do
-      setName ""
-      setValidName Nothing
-      setSku ""
-      setValidSku Nothing
-      setBrand ""
-      setValidBrand Nothing
-      setPrice ""
-      setValidPrice Nothing
-      setQuantity ""
-      setValidQuantity Nothing
-      setCategory categoryConfig'.defaultValue
-      setValidCategory Nothing
-      setDescription ""
-      setValidDescription Nothing
-      setTags ""
-      setThc ""
-      setValidThc Nothing
-      setCbg ""
-      setValidCbg Nothing
-      setStrain ""
-      setValidStrain Nothing
-      setCreator ""
-      setValidCreator Nothing
-      setSpecies ""
-      setValidSpecies Nothing
-      setDominantTarpene ""
-      setValidDominantTarpene Nothing
-      setTarpenes ""
-      setLineage ""
+      categoryConfig' :: DropdownConfig
+      categoryConfig' = 
+        { label: "Category"
+        , options: categoryOptions
+        , defaultValue: ""
+        }
 
-    ensureNumber :: String -> String
-    ensureNumber str = fromMaybe "0.0" $ map show $ Num.fromString $ trim str
+      resetForm = do
+        newId <- genUUID
+        setName ""
+        setValidName Nothing
+        setSku (show newId)
+        setValidSku (Just true)
+        setBrand ""
+        setValidBrand Nothing
+        setPrice ""
+        setValidPrice Nothing
+        setQuantity ""
+        setValidQuantity Nothing
+        setCategory categoryConfig'.defaultValue
+        setValidCategory Nothing
+        setDescription ""
+        setValidDescription Nothing
+        setTags ""
+        setThc ""
+        setValidThc Nothing
+        setCbg ""
+        setValidCbg Nothing
+        setStrain ""
+        setValidStrain Nothing
+        setCreator ""
+        setValidCreator Nothing
+        setSpecies ""
+        setValidSpecies Nothing
+        setDominantTarpene ""
+        setValidDominantTarpene Nothing
+        setTarpenes ""
+        setLineage ""
 
-    ensureInt :: String -> String
-    ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
+      ensureNumber :: String -> String
+      ensureNumber str = fromMaybe "0.0" $ map show $ Num.fromString $ trim str
 
-    ensurePercentage :: String -> String
-    ensurePercentage str = 
-      if String.contains (Pattern "%") str
-        then trim str
-        else trim str <> "%"
+      ensureInt :: String -> String
+      ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
 
-    isFormValid = ado
-      vName <- validNameEvent
-      vSku <- validSkuEvent
-      vBrand <- validBrandEvent
-      vPrice <- validPriceEvent
-      vQuantity <- validQuantityEvent
-      vCategory <- validCategoryEvent
-      vDescription <- validDescriptionEvent
-      vThc <- validThcEvent
-      vCbg <- validCbgEvent
-      vStrain <- validStrainEvent
-      vCreator <- validCreatorEvent
-      vSpecies <- validSpeciesEvent
-      vDominantTarpene <- validDominantTarpeneEvent
-      in all (fromMaybe false)
-        [ vName, vSku, vBrand, vPrice, vQuantity, vCategory
-        , vDescription, vThc, vCbg, vStrain, vCreator, vSpecies
-        , vDominantTarpene ]
+      ensurePercentage :: String -> String
+      ensurePercentage str = 
+        if String.contains (Pattern "%") str
+          then trim str
+          else trim str <> "%"
 
-  D.div_
-    [ D.div
-        [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
-        [ D.h2 
-            [ DA.klass_ "text-2xl font-bold mb-6" ]
-            [ text_ "Add New Menu Item" ]
-        , makeField nameConfig setName setValidName validNameEvent
-        , makeField skuConfig setSku setValidSku validSkuEvent  
-        , makeField brandConfig setBrand setValidBrand validBrandEvent
-        , makeField priceConfig setPrice setValidPrice validPriceEvent
-        , makeField quantityConfig setQuantity setValidQuantity validQuantityEvent
-        , makeDropdown categoryConfig' setCategory setValidCategory validCategoryEvent
-        , makeField descriptionConfig setDescription setValidDescription validDescriptionEvent
-        , makeField tagsConfig setTags (const $ pure unit) (pure $ Just true)
-        , makeField thcConfig setThc setValidThc validThcEvent
-        , makeField cbgConfig setCbg setValidCbg validCbgEvent
-        , makeField strainConfig setStrain setValidStrain validStrainEvent
-        , makeField creatorConfig setCreator setValidCreator validCreatorEvent
-        , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
-        , makeField dominantTarpeneConfig setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
-        , makeField tarpenesConfig setTarpenes (const $ pure unit) (pure $ Just true)
-        , makeField lineageConfig setLineage (const $ pure unit) (pure $ Just true)
-        ]
-    , D.button
-        [ DA.klass_ $ buttonClass "green"
-        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
-        , DL.runOn DL.click $ fiber <#> \f -> setFiber =<< launchAff do
-            killFiber (error "Cancelling previous submission") f
-            liftEffect $ setSubmitting true
+      isFormValid = ado
+        vName <- validNameEvent
+        vSku <- validSkuEvent
+        vBrand <- validBrandEvent
+        vPrice <- validPriceEvent
+        vQuantity <- validQuantityEvent
+        vCategory <- validCategoryEvent
+        vDescription <- validDescriptionEvent
+        vThc <- validThcEvent
+        vCbg <- validCbgEvent
+        vStrain <- validStrainEvent
+        vCreator <- validCreatorEvent
+        vSpecies <- validSpeciesEvent
+        vDominantTarpene <- validDominantTarpeneEvent
+        in all (fromMaybe false)
+          [ vName, vSku, vBrand, vPrice, vQuantity, vCategory
+          , vDescription, vThc, vCbg, vStrain, vCreator, vSpecies
+          , vDominantTarpene ]
 
-            { push, event } <- liftEffect $ liftST create
+    -- Render form
+    D.div_
+      [ D.div
+          [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
+          [ D.h2 
+              [ DA.klass_ "text-2xl font-bold mb-6" ]
+              [ text_ "Add New Menu Item" ]
+          , makeField nameConfig setName setValidName validNameEvent
+          , makeField skuField setSku setValidSku validSkuEvent
+          , makeField brandConfig setBrand setValidBrand validBrandEvent
+          , makeField priceConfig setPrice setValidPrice validPriceEvent
+          , makeField quantityConfig setQuantity setValidQuantity validQuantityEvent
+          , makeDropdown categoryConfig' setCategory setValidCategory validCategoryEvent
+          , makeField descriptionConfig setDescription setValidDescription validDescriptionEvent
+          , makeField tagsConfig setTags (const $ pure unit) (pure $ Just true)
+          , makeField thcConfig setThc setValidThc validThcEvent
+          , makeField cbgConfig setCbg setValidCbg validCbgEvent
+          , makeField strainConfig setStrain setValidStrain validStrainEvent
+          , makeField creatorConfig setCreator setValidCreator validCreatorEvent
+          , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
+          , makeField dominantTarpeneConfig setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
+          , makeField tarpenesConfig setTarpenes (const $ pure unit) (pure $ Just true)
+          , makeField lineageConfig setLineage (const $ pure unit) (pure $ Just true)
+          ]
+      , D.button
+          [ DA.klass_ $ buttonClass "green"
+          , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+          , DL.runOn DL.click $ fiber <#> \f -> setFiber =<< launchAff do
+              killFiber (error "Cancelling previous submission") f
+              liftEffect $ setSubmitting true
 
-            let 
-              formDataPoll = 
-                (\name sku brand price quantity category description tags
-                   thc cbg strain creator species dominant_tarpene tarpenes lineage -> 
-                  { name
-                  , sku
-                  , brand
-                  , price: ensureNumber price
-                  , quantity: ensureInt quantity
-                  , category: trim category
-                  , description
-                  , tags
-                  , strainLineage:
-                      { thc: ensurePercentage thc
-                      , cbg: ensurePercentage cbg
-                      , strain
-                      , creator
-                      , species
-                      , dominant_tarpene
-                      , tarpenes
-                      , lineage
-                      }
-                  } :: MenuItemFormInput
-                ) <$> nameEvent
-                  <*> skuEvent
-                  <*> brandEvent
-                  <*> priceEvent
-                  <*> quantityEvent
-                  <*> categoryEvent
-                  <*> descriptionEvent
-                  <*> tagsEvent
-                  <*> thcEvent
-                  <*> cbgEvent
-                  <*> strainEvent
-                  <*> creatorEvent 
-                  <*> speciesEvent 
-                  <*> dominantTarpeneEvent
-                  <*> tarpenesEvent
-                  <*> lineageEvent
+              { push, event } <- liftEffect $ liftST create
 
-              formEvent = sample_ formDataPoll event
+              let 
+                formDataPoll = 
+                  (\name sku brand price quantity category description tags
+                     thc cbg strain creator species dominant_tarpene tarpenes lineage -> 
+                    { name
+                    , sku  -- sku is already a String in the form input
+                    , brand
+                    , price: ensureNumber price
+                    , quantity: ensureInt quantity
+                    , category: trim category
+                    , description
+                    , tags
+                    , strainLineage:
+                        { thc: ensurePercentage thc
+                        , cbg: ensurePercentage cbg
+                        , strain
+                        , creator
+                        , species
+                        , dominant_tarpene
+                        , tarpenes
+                        , lineage
+                        }
+                    } :: MenuItemFormInput
+                  ) <$> nameEvent
+                    <*> skuEvent
+                    <*> brandEvent
+                    <*> priceEvent
+                    <*> quantityEvent
+                    <*> categoryEvent
+                    <*> descriptionEvent
+                    <*> tagsEvent
+                    <*> thcEvent
+                    <*> cbgEvent
+                    <*> strainEvent
+                    <*> creatorEvent 
+                    <*> speciesEvent 
+                    <*> dominantTarpeneEvent
+                    <*> tarpenesEvent
+                    <*> lineageEvent
 
-            void $ liftEffect $ subscribe formEvent \formInput -> launchAff_ do
-              liftEffect $ Console.group "Form Submission"
-              liftEffect $ Console.logShow formInput
-              liftEffect $ Console.info "Category value before validation:"
-              liftEffect $ Console.logShow formInput.category
-              
-              case validateForm formInput of
-                Left err -> do
-                  liftEffect $ Console.error "Form validation failed:"
-                  liftEffect $ Console.errorShow err
-                  liftEffect $ Console.groupEnd
-                  liftEffect do
-                    setStatusMessage $ "Validation error: " <> err
-                    setSubmitting false
+                formEvent = sample_ formDataPoll event
+
+              void $ liftEffect $ subscribe formEvent \formInput -> launchAff_ do
+                liftEffect $ Console.group "Form Submission"
+                liftEffect $ Console.logShow formInput
+                liftEffect $ Console.info "Category value before validation:"
+                liftEffect $ Console.logShow formInput.category
                 
-                Right menuItem -> do
-                  liftEffect $ Console.info "Form validated successfully:"
-                  liftEffect $ Console.logShow menuItem
-                  result <- postInventoryToJson menuItem
-                  liftEffect case result of
-                    Right (Message _) -> do
-                      Console.info "Submission successful"
-                      setStatusMessage "Item successfully submitted!"
-                      resetForm
-                    Right (InventoryData _) -> do
-                      Console.warn "Unexpected response type"
-                      setStatusMessage "Unexpected response type"
-                    Left err -> do
-                      Console.error "API Error:"
-                      Console.errorShow err
-                      setStatusMessage $ "Error submitting item: " <> err
-                  liftEffect $ Console.groupEnd
-                  liftEffect $ setSubmitting false
+                case validateForm formInput of
+                  Left err -> do
+                    liftEffect $ Console.error "Form validation failed:"
+                    liftEffect $ Console.errorShow err
+                    liftEffect $ Console.groupEnd
+                    liftEffect do
+                      setStatusMessage $ "Validation error: " <> err
+                      setSubmitting false
+                  
+                  Right menuItem -> do
+                    liftEffect $ Console.info "Form validated successfully:"
+                    liftEffect $ Console.logShow menuItem
+                    result <- postInventoryToJson menuItem
+                    liftEffect case result of
+                      Right (Message _) -> do
+                        Console.info "Submission successful"
+                        setStatusMessage "Item successfully submitted!"
+                        resetForm
+                      Right (InventoryData _) -> do
+                        Console.warn "Unexpected response type"
+                        setStatusMessage "Unexpected response type"
+                      Left err -> do
+                        Console.error "API Error:"
+                        Console.errorShow err
+                        setStatusMessage $ "Error submitting item: " <> err
+                    liftEffect $ Console.groupEnd
+                    liftEffect $ setSubmitting false
 
-            liftEffect $ push unit
-        ]
-        [ text $ map (\submitting -> 
-            if submitting then "Submitting..." else "Submit"
-          ) submittingEvent 
-        ]
-    , D.div
-        [ DA.klass_ "mt-4 text-center" ]
-        [ text statusMessageEvent ]
-    ]
+              liftEffect $ push unit
+          ]
+          [ text $ map (\submitting -> 
+              if submitting then "Submitting..." else "Submit"
+            ) submittingEvent 
+          ]
+      , D.div
+          [ DA.klass_ "mt-4 text-center" ]
+          [ text statusMessageEvent ]
+      ]

@@ -1,4 +1,5 @@
-module Form where
+module Form
+  where
 
 import Prelude
 
@@ -22,7 +23,7 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
-import Types (ItemCategory(..), MenuItem(..), Species(..), StrainLineage(..))
+import Types (ItemCategory(..), MenuItem(..), Species(..), StrainLineage(..), UUID, parseUUID)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -88,6 +89,12 @@ dollarAmount str = case Number.fromString str of
 
 maxLength :: Int -> ValidationRule
 maxLength n str = String.length str <= n
+
+validUUID :: ValidationRule
+validUUID str = case parseUUID (trim str) of
+  Just _ -> true
+  Nothing -> false
+
 
 allOf :: Array ValidationRule -> ValidationRule
 allOf rules str = all (\rule -> rule str) rules
@@ -169,6 +176,11 @@ instance formValueSpecies :: FormValue Species where
         Just species -> ValidationSuccess species
         Nothing -> ValidationError "Invalid species value"
 
+instance formValueUUID :: FormValue UUID where
+  fromFormValue str = case parseUUID (trim str) of
+    Just uuid -> ValidationSuccess uuid
+    Nothing -> ValidationError "Invalid UUID format"
+
 -- Validation functions
 validateCategory :: String -> ValidationResult ItemCategory
 validateCategory = fromFormValue
@@ -178,10 +190,14 @@ requireValid field = case _ of
   ValidationSuccess x -> Right x
   ValidationError err -> Left $ field <> ": " <> err
 
+-- The validateForm function needs to be updated to handle UUID parsing
 validateForm :: MenuItemFormInput -> Either String MenuItem
 validateForm input = do
   name <- requireValid "Name" $ fromFormValue input.name
-  sku <- requireValid "SKU" $ fromFormValue input.sku
+  sku <- requireValid "SKU" $ 
+    case parseUUID input.sku of
+      Just uuid -> ValidationSuccess uuid
+      Nothing -> ValidationError "Invalid UUID format"
   brand <- requireValid "Brand" $ fromFormValue input.brand
   price <- requireValid "Price" $ fromFormValue input.price
   quantity <- requireValid "Quantity" $ fromFormValue input.quantity
@@ -238,10 +254,28 @@ type ValidationPreset =
 type FieldConfig = 
   { label :: String
   , placeholder :: String
+  , defaultValue :: String  -- Add defaultValue to config
   , validation :: ValidationRule
   , errorMessage :: String
   , formatInput :: String -> String
   }
+
+-- Update the specific field configs to include defaultValue
+skuConfig :: String -> FieldConfig
+skuConfig defaultValue = makeFieldConfig "SKU" "Enter UUID" defaultValue
+  { validation: allOf [nonEmpty, validUUID]
+  , errorMessage: "Required, must be a valid UUID"
+  , formatInput: trim
+  }
+
+-- Update other configs similarly...
+nameConfig :: FieldConfig
+nameConfig = makeFieldConfig "Name" "Enter product name" ""
+  (requiredTextWithLimit 50)
+
+brandConfig :: FieldConfig
+brandConfig = makeFieldConfig "Brand" "Enter brand name" ""
+  (requiredTextWithLimit 30)
 
 type DropdownConfig = 
   { label :: String
@@ -285,7 +319,6 @@ numberField =
   , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
--- UI Components
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
 makeField config setValue setValid validEvent = 
   D.div_
@@ -295,15 +328,24 @@ makeField config setValue setValid validEvent =
             [ text_ config.label ]
         , D.input
             [ DA.placeholder_ config.placeholder
+            , DA.value_ config.defaultValue
             , DL.keyup_ \evt -> do
+                let targetEvent = toEvent evt
                 for_ 
-                  ((target >=> Input.fromEventTarget) (toEvent evt))
+                  (target targetEvent >>= Input.fromEventTarget)
                   \inputElement -> do
                     v <- Input.value inputElement
                     let formatted = config.formatInput v
                     setValue formatted
                     setValid (Just (config.validation formatted))
-            , DA.value_ ""
+            , DL.input_ \evt -> do
+                for_ 
+                  (target evt >>= Input.fromEventTarget)
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (config.validation formatted))
             , DA.klass_ inputKls
             ]
             []
@@ -315,6 +357,17 @@ makeField config setValue setValid validEvent =
             ]
         ]
     ]
+
+-- And let's fix skuConfig to use proper function application
+makeFieldConfig :: String -> String -> String -> ValidationPreset -> FieldConfig
+makeFieldConfig label placeholder defaultValue preset =
+  { label
+  , placeholder
+  , defaultValue
+  , validation: preset.validation
+  , errorMessage: preset.errorMessage
+  , formatInput: preset.formatInput
+  }   
 
 makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
 makeDropdown config setValue setValid validEvent = 
@@ -388,16 +441,6 @@ makeArrayField label setValue =
         ]
     ]
 
--- Field Configuration Helpers
-makeFieldConfig :: String -> String -> ValidationPreset -> FieldConfig
-makeFieldConfig label placeholder preset =
-  { label
-  , placeholder
-  , validation: preset.validation
-  , errorMessage: preset.errorMessage
-  , formatInput: preset.formatInput
-  }   
-
 -- Configuration for specific types
 categoryConfig :: DropdownConfig
 categoryConfig = makeEnumDropdown 
@@ -411,55 +454,46 @@ speciesConfig = makeEnumDropdown
   , enumType: (bottom :: Species)
   }
 
-nameConfig :: FieldConfig
-nameConfig = makeFieldConfig "Name" "Enter product name" (requiredTextWithLimit 50)
-
-skuConfig :: FieldConfig
-skuConfig = makeFieldConfig "SKU" "Enter SKU" (requiredTextWithLimit 20)
-
-brandConfig :: FieldConfig
-brandConfig = makeFieldConfig "Brand" "Enter brand name" (requiredTextWithLimit 30)
-
 priceConfig :: FieldConfig
-priceConfig = makeFieldConfig "Price" "Enter price" moneyField
+priceConfig = makeFieldConfig "Price" "Enter price" "" moneyField
 
 quantityConfig :: FieldConfig
-quantityConfig = makeFieldConfig "Quantity" "Enter quantity" numberField
+quantityConfig = makeFieldConfig "Quantity" "Enter quantity" "" numberField
 
 thcConfig :: FieldConfig
-thcConfig = makeFieldConfig "THC %" "Enter THC percentage" percentageField
+thcConfig = makeFieldConfig "THC %" "Enter THC percentage" "" percentageField
 
 cbgConfig :: FieldConfig
-cbgConfig = makeFieldConfig "CBG %" "Enter CBG percentage" percentageField
+cbgConfig = makeFieldConfig "CBG %" "Enter CBG percentage" "" percentageField
 
 strainConfig :: FieldConfig
-strainConfig = makeFieldConfig "Strain" "Enter strain name" requiredText
+strainConfig = makeFieldConfig "Strain" "Enter strain name" "" requiredText
 
 creatorConfig :: FieldConfig
-creatorConfig = makeFieldConfig "Creator" "Enter creator name" requiredText
+creatorConfig = makeFieldConfig "Creator" "Enter creator name" "" requiredText
 
 descriptionConfig :: FieldConfig
-descriptionConfig = makeFieldConfig "Description" "Enter description" requiredText
+descriptionConfig = makeFieldConfig "Description" "Enter description" "" requiredText
 
 dominantTarpeneConfig :: FieldConfig
-dominantTarpeneConfig = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" requiredText
+dominantTarpeneConfig = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" "" requiredText
 
 tagsConfig :: FieldConfig
-tagsConfig = makeFieldConfig "Tags" "Enter tags (comma-separated)" 
-  { validation: const true 
+tagsConfig = makeFieldConfig "Tags" "Enter tags (comma-separated)" "" 
+  { validation: const true
   , errorMessage: ""
   , formatInput: trim
   }
 
 tarpenesConfig :: FieldConfig
-tarpenesConfig = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)"
+tarpenesConfig = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" ""
   { validation: const true
   , errorMessage: ""
   , formatInput: trim
   }
 
 lineageConfig :: FieldConfig
-lineageConfig = makeFieldConfig "Lineage" "Enter lineage (comma-separated)"
+lineageConfig = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" ""
   { validation: const true
   , errorMessage: ""
   , formatInput: trim

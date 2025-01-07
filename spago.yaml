@@ -21,6 +21,7 @@ package:
     - prelude
     - transformers
     - tuples
+    - uuid
     - validation
     - web-html
     - yoga-json
