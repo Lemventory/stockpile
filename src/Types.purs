@@ -44,6 +44,7 @@ data MenuItem = MenuItem
   , subcategory :: String
   , description :: String
   , tags :: Array String
+  , effects :: Array String
   , strain_lineage :: StrainLineage
   }
 
@@ -57,6 +58,7 @@ data ItemCategory
   | Topicals 
   | Tinctures 
   | Accessories
+
 newtype UUID = UUID String
 
 derive instance genericMenuItem :: Generic MenuItem _
@@ -295,8 +297,24 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
     subcategory <- readProp "subcategory" json >>= readImpl
     description <- readProp "description" json >>= readImpl
     tags <- readProp "tags" json >>= readImpl
+    effects <- readProp "effects" json >>= readImpl
     strain_lineage <- readProp "strain_lineage" json >>= readImpl
-    pure $ MenuItem { sort, sku, brand, name, price, measure_unit, per_package, quantity, category, subcategory, description, tags, strain_lineage }
+    pure $ MenuItem
+      { sort
+      , sku
+      , brand
+      , name
+      , price
+      , measure_unit
+      , per_package
+      , quantity
+      , category
+      , subcategory
+      , description
+      , tags
+      , effects
+      , strain_lineage
+      }
 
 instance writeForeignInventory :: WriteForeign Inventory where
   writeImpl (Inventory items) = writeImpl items
@@ -335,8 +353,19 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     lineage <- readProp "lineage" json >>= readImpl
     leafly_url <- readProp "leafly_url" json >>= readImpl
     img <- readProp "img" json >>= readImpl
-    pure $ StrainLineage { thc, cbg, strain, creator, species, dominant_tarpene, tarpenes, lineage, leafly_url, img }
-
+    pure $ StrainLineage
+      { thc
+      , cbg
+      , strain
+      , creator
+      , species
+      , dominant_tarpene
+      , tarpenes
+      , lineage
+      , leafly_url
+      , img
+      }
+      
 instance showStrainLineage :: Show StrainLineage where
   show (StrainLineage lineage) = 
     "StrainLineage " <> show lineage

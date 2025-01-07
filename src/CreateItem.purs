@@ -25,7 +25,7 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Event (create, subscribe)
 import FRP.Poll (sample_)
-import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
+import Form (MenuItemFormInput, brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
 import Types (InventoryResponse(..), genUUID)
 
 -- Type to hold initial form values
@@ -38,6 +38,7 @@ type InitialFormValues =
   , category :: String
   , description :: String
   , tags :: String
+  , effects :: String
   , thc :: String
   , cbg :: String
   , strain :: String
@@ -52,22 +53,23 @@ defaultFormValues :: Effect InitialFormValues
 defaultFormValues = do
   initialId <- genUUID
   pure
-    { name: ""
+    { name: "scapula"
     , sku: show initialId
-    , brand: ""
-    , price: ""
-    , quantity: ""
-    , category: ""
-    , description: ""
-    , tags: ""
+    , brand: "scapula"
+    , price: "3.33"
+    , quantity: "3"
+    , category: "Flower"
+    , description: "scapula"
+    , tags: "here, are, your, tags"
+    , effects: "relaxed, happy, sleepy"
     , thc: "24.5%"
     , cbg: "1.0%"
-    , strain: ""
-    , creator: ""
-    , species: ""
-    , dominantTarpene: ""
-    , tarpenes: ""
-    , lineage: ""
+    , strain: "you know"
+    , creator: "fuckers"
+    , species: "Indica"
+    , dominantTarpene: "scapula"
+    , tarpenes: "scapula, rapula, dignity"
+    , lineage: "dunno, yo"
     }
 
 createItem :: Effect Unit
@@ -82,28 +84,29 @@ createItem = do
 
     -- Form fields
     setName /\ nameEvent <- useState initialValues.name
-    setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
+    setValidName /\ validNameEvent <- useState (Just true)
 
     setSku /\ skuEvent <- useState initialValues.sku
     setValidSku /\ validSkuEvent <- useState (Just true)
 
     setBrand /\ brandEvent <- useState initialValues.brand
-    setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
+    setValidBrand /\ validBrandEvent <- useState (Just true)
 
     setPrice /\ priceEvent <- useState initialValues.price
-    setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
+    setValidPrice /\ validPriceEvent <- useState (Just true)
 
     setQuantity /\ quantityEvent <- useState initialValues.quantity
-    setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
+    setValidQuantity /\ validQuantityEvent <- useState (Just true)
 
     setCategory /\ categoryEvent <- useState initialValues.category
-    setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
+    setValidCategory /\ validCategoryEvent <- useState (Just true)
 
     setDescription /\ descriptionEvent <- useState initialValues.description
-    setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
+    setValidDescription /\ validDescriptionEvent <- useState (Just true)
 
     -- Array fields
     setTags /\ tagsEvent <- useState initialValues.tags
+    setEffects /\ effectsEvent <- useState initialValues.effects
     setTarpenes /\ tarpenesEvent <- useState initialValues.tarpenes
     setLineage /\ lineageEvent <- useState initialValues.lineage
 
@@ -115,16 +118,16 @@ createItem = do
     setValidCbg /\ validCbgEvent <- useState (Just true)
 
     setStrain /\ strainEvent <- useState initialValues.strain
-    setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
+    setValidStrain /\ validStrainEvent <- useState (Just true)
 
     setCreator /\ creatorEvent <- useState initialValues.creator
-    setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
+    setValidCreator /\ validCreatorEvent <- useState (Just true)
 
     setSpecies /\ speciesEvent <- useState initialValues.species
-    setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
+    setValidSpecies /\ validSpeciesEvent <- useState (Just true)
 
     setDominantTarpene /\ dominantTarpeneEvent <- useState initialValues.dominantTarpene
-    setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
+    setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just true)
 
     let
       -- Field configurations
@@ -135,6 +138,7 @@ createItem = do
       quantityField = quantityConfig initialValues.quantity
       descriptionField = descriptionConfig initialValues.description
       tagsField = tagsConfig initialValues.tags
+      effectsField = effectsConfig initialValues.effects
       thcField = thcConfig initialValues.thc
       cbgField = cbgConfig initialValues.cbg
       strainField = strainConfig initialValues.strain
@@ -150,28 +154,29 @@ createItem = do
         setSku (show newId)
         setValidSku (Just true)
         setBrand ""
-        setValidBrand Nothing
+        setValidBrand (Just true)
         setPrice ""
-        setValidPrice Nothing
+        setValidPrice (Just true)
         setQuantity ""
-        setValidQuantity Nothing
+        setValidQuantity (Just true)
         setCategory ""
-        setValidCategory Nothing
+        setValidCategory (Just true)
         setDescription ""
-        setValidDescription Nothing
+        setValidDescription (Just true)
         setTags ""
+        setEffects ""
         setThc "24.5%"
         setValidThc (Just true)
         setCbg "1.0%"
         setValidCbg (Just true)
         setStrain ""
-        setValidStrain Nothing
+        setValidStrain (Just true)
         setCreator ""
-        setValidCreator Nothing
+        setValidCreator (Just true)
         setSpecies ""
-        setValidSpecies Nothing
+        setValidSpecies (Just true)
         setDominantTarpene ""
-        setValidDominantTarpene Nothing
+        setValidDominantTarpene (Just true)
         setTarpenes ""
         setLineage ""
 
@@ -226,6 +231,7 @@ createItem = do
             ]
           , makeField descriptionField setDescription setValidDescription validDescriptionEvent
           , makeField tagsField setTags (const $ pure unit) (pure $ Just true)
+          , makeField effectsField setEffects (const $ pure unit) (pure $ Just true)
           , makeField thcField setThc setValidThc validThcEvent
           , makeField cbgField setCbg setValidCbg validCbgEvent
           , makeField strainField setStrain setValidStrain validStrainEvent
@@ -240,12 +246,12 @@ createItem = do
           , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
           , DL.runOn DL.click $ fiber <#> \f -> setFiber =<< launchAff do
               killFiber (error "Cancelling previous submission") f
-              liftEffect $                 setSubmitting true
+              liftEffect $ setSubmitting true
               { push, event } <- liftEffect $ liftST create
 
               let 
                 formDataPoll = 
-                  (\name sku brand price quantity category description tags
+                  (\name sku brand price quantity category description tags effects
                      thc cbg strain creator species dominant_tarpene tarpenes lineage -> 
                     { name
                     , sku
@@ -255,6 +261,7 @@ createItem = do
                     , category: trim category
                     , description
                     , tags
+                    , effects
                     , strainLineage:
                         { thc: ensurePercentage thc
                         , cbg: ensurePercentage cbg
@@ -274,6 +281,7 @@ createItem = do
                     <*> categoryEvent
                     <*> descriptionEvent
                     <*> tagsEvent
+                    <*> effectsEvent
                     <*> thcEvent
                     <*> cbgEvent
                     <*> strainEvent
@@ -289,40 +297,6 @@ createItem = do
                 liftEffect $ Console.group "Form Submission"
                 liftEffect $ Console.log "Full form data:"
                 liftEffect $ Console.logShow formInput
-                liftEffect $ Console.log "Category value:"
-                liftEffect $ Console.logShow formInput.category
-                
-                case validateForm formInput of
-                  Left err -> do
-                    liftEffect $ Console.error "Form validation failed:"
-                    liftEffect $ Console.errorShow err
-                    liftEffect $ Console.groupEnd
-                    liftEffect do
-                      setStatusMessage $ "Validation error: " <> err
-                      setSubmitting false
-                  
-                  Right menuItem -> do
-                    liftEffect $ Console.info "Form validated successfully:"
-                    liftEffect $ Console.logShow menuItem
-                    result <- postInventoryToJson menuItem
-                    liftEffect case result of
-                      Right (Message _) -> do
-                        Console.info "Submission successful"
-                        setStatusMessage "Item successfully submitted!"
-                        resetForm
-                      Right (InventoryData _) -> do
-                        Console.warn "Unexpected response type"
-                        setStatusMessage "Unexpected response type"
-                      Left err -> do
-                        Console.error "API Error:"
-                        Console.errorShow err
-                        setStatusMessage $ "Error submitting item: " <> err
-                    liftEffect $ Console.groupEnd
-                    liftEffect $ setSubmitting false
-                liftEffect $ Console.group "Form Submission"
-                liftEffect $ Console.logShow formInput
-                liftEffect $ Console.info "Category value before validation:"
-                liftEffect $ Console.logShow formInput.category
                 
                 case validateForm formInput of
                   Left err -> do
