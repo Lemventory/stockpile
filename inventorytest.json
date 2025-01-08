@@ -1,0 +1,83 @@
+[
+    { 
+        "sort": 1,
+        "sku": "8eacb499-76e6-42cb-aa05-103713dd2bd6",
+        "brand": "Green Leaf",
+        "name": "Chronic",
+        "price": 30.00,
+        "measure_unit": "oz",
+        "per_package": "1/8",
+        "quantity": 405,
+        "category": "Flower",
+        "subcategory": "Buds",
+        "description": "Chronic is a hybrid marijuana strain made by crossing Northern Lights with Skunk and AK-47. This balanced strain produces energizing and uplifting effects. Chronic features a flavor profile of sweet honey, flower, and spice. Medical marijuana patients choose this strain to help relieve symptoms associated with stress and depression.",
+        "tags": ["Indica", "Flower", "1g", "Live Resin"],
+        "effects": ["giggly", "happy", "talkative"], 
+        "strain_lineage": {
+            "thc": "13.0%",
+            "cbg": "1.0%",
+            "strain": "Chronic",
+            "creator": "Serious Seeds",
+            "species": "IndicaDominantHybrid", 
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Terpinolene"],
+            "lineage": ["Northern Lights", "Skunk #1", "AK-47"],
+            "leafly_url": "https://www.leafly.com/strains/chronic",
+            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-29.png"
+        }
+    },
+    { 
+        "sort": 2,
+        "sku": "1ef71137-37cd-4e8c-91aa-7fada016a7cc",
+        "brand": "Green Gold Group",
+        "name": "Sour Joker",
+        "price": 45.00,
+        "measure_unit": "oz",
+        "per_package": "1/8",
+        "quantity": 1,
+        "category": "Flower",
+        "subcategory": "Buds",
+        "description": "Sour Joker, also known as Joker is the stimulating sativa marijuana strain made from a blend of Amnesia Haze and East Coast Sour Diesel (ECSD). Sour Joker offers consumers a vigorous body buzz effect that is clear-headed and motivating, encouraging physical activity in or outside. Harness the mental clarity of this strain at lower doses and the fueled-up stimulation with continued use.",
+        "tags": ["Sativa", "Flower", "1/8 oz", "Buds"],
+        "effects": ["energetic", "focused", "uplifted"], 
+        "strain_lineage": {
+            "thc": "28.0%",
+            "cbg": "2.0%",
+            "strain": "Sour Joker",
+            "creator": "Unknown",
+            "species": "Sativa", 
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Limonene", "Pinene"],
+            "lineage": ["Amnesia Haze", "East Coast Sour Diesel"],
+            "leafly_url": "https://www.leafly.com/strains/sour-joker",
+            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-30.png"
+        }
+    },
+    { 
+        "sort": 3,
+        "sku": "56b0d1f7-fa3b-4cd4-9e58-79e4724295b0",
+        "brand": "Root & Bloom",
+        "name": "Lemon OG Haze",
+        "price": 30.00,
+        "measure_unit": "oz",
+        "per_package": "1/8",
+        "quantity": 3,
+        "category": "Flower",
+        "subcategory": "Buds",
+        "description": "Lemon OG Haze by Nirvana is the sensible combination of its titular elements: Lemon OG and Haze. While Lemon OG contains weighty Kush elements that are kind on the body, the excess limonene and alpha-pinene lead the consumer into a state of mental alertness and euphoria. In the right measure, this strain can be a one-way ticket to productivity, hazing the mind into a content lull while wrapping the body in a calm focus. Enjoy this strain as a means to crush anxiety, depression, lethargy, and fatigue.",
+        "tags": ["Hybrid", "Vaporizers", "Live Rosin", "1g"],
+        "effects": ["focused", "energetic", "creative"],
+        "strain_lineage": {
+            "thc": "21.0%",
+            "cbg": "1.0%",
+            "strain": "Lemon OG Haze",
+            "creator": "Nirvana",
+            "species": "SativaDominantHybrid", 
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
+            "lineage": ["Lemon OG", "Haze"],
+            "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
+            "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
+        }
+    }
+]

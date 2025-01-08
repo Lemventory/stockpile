@@ -2,8 +2,8 @@ module API where
 
 import Prelude
 
-import Types (Inventory, InventoryResponse(..), MenuItem, QueryMode(..))
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff, attempt)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
@@ -11,7 +11,8 @@ import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
 import Foreign (Foreign)
-import Yoga.JSON (unsafeStringify, writeImpl)
+import Types (Inventory, InventoryResponse(..), MenuItem, QueryMode(..))
+import Yoga.JSON (readJSON_, unsafeStringify, writeImpl, writeJSON)
 
 
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
@@ -54,29 +55,36 @@ fetchInventoryFromHttp = do
 postInventoryToJson :: MenuItem -> Aff (Either String InventoryResponse)
 postInventoryToJson menuItem = do
   result <- attempt do
-    let
-      requestBody = unsafeStringify (writeImpl menuItem)
+    let 
+      requestBody = writeJSON menuItem
       requestHeaders = { "Content-Type": "application/json" }
-      url = "/submit-menu-item.json" -- saves data to this dummy file for now
+      url = "/inventorytest.json"
+    liftEffect do
+      log ("Submitting item to JSON file at: " <> url)
+      log ("Request body: " <> requestBody)
 
-    liftEffect $ log ("Submitting item to JSON file at: " <> url)
-
-    -- Send a POST request with JSON data
-    coreResponse <- fetch url
+    response <- fetch url
       { method: POST
       , body: requestBody
       , headers: requestHeaders
       }
-    
-    -- Parse the response as JSON
-    response <- fromJSON coreResponse.json :: Aff Foreign
-    pure $ "Item saved successfully: " <> unsafeStringify response
 
-  -- Return result as either a success message or an error
-  case result of
-    Left err -> pure $ Left $ "Error saving item: " <> show err
-    Right msg -> pure $ Right $ Message msg
+    -- Handle different response scenarios
+    if response.status == 204 
+      then pure $ Right $ Message "Item saved successfully (no content)"
+      else do
+        -- Try to parse response as InventoryResponse
+        let responseText = unsafeStringify response.json
+        case readJSON_ responseText :: Maybe InventoryResponse of
+          Just resp -> pure $ Right resp
+          Nothing -> case response.status of
+            200 -> pure $ Right $ Message "Item saved successfully"
+            status -> pure $ Left $ "Unexpected response status: " <> show status
 
+  pure case result of
+    Left err -> Left $ "Error saving item: " <> show err
+    Right (Left err) -> Left err
+    Right (Right msg) -> Right msg
 
 postInventoryToHttp :: MenuItem -> Aff (Either String InventoryResponse)
 postInventoryToHttp menuItem = do
@@ -98,3 +106,5 @@ postInventoryToHttp menuItem = do
   case result of
     Left err -> pure $ Left $ "Submission error: " <> show err
     Right msg -> pure $ Right $ Message msg
+
+    

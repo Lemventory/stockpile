@@ -17,7 +17,7 @@ import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Effect (Effect)
 import Effect.Random (random)
-import Foreign (Foreign, ForeignError(..), fail)
+import Foreign (Foreign, ForeignError(..), F, fail)
 import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
@@ -373,3 +373,20 @@ instance showStrainLineage :: Show StrainLineage where
 instance showMenuItem :: Show MenuItem where
   show (MenuItem item) = 
     "MenuItem " <> show item
+
+instance writeForeignInventoryResponse :: WriteForeign InventoryResponse where
+  writeImpl (InventoryData inventory) = writeImpl { type: "data", value: inventory }
+  writeImpl (Message msg) = writeImpl { type: "message", value: msg }
+
+instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
+  readImpl json = do
+    obj <- readImpl json
+    tpe <- readProp "type" obj >>= readImpl
+    case tpe of 
+      "data" -> do
+        value <- readProp "value" obj >>= readImpl
+        pure $ InventoryData value
+      "message" -> do
+        value <- readProp "value" obj >>= readImpl :: F String
+        pure $ Message value
+      _ -> fail $ ForeignError "Invalid InventoryResponse type"   
