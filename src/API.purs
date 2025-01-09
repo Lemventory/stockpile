@@ -156,5 +156,3 @@ postInventoryToHttp menuItem = do
   case result of
     Left err -> pure $ Left $ "Submission error: " <> show err
     Right msg -> pure $ Right $ Message msg
-
-    

@@ -26,7 +26,6 @@ padStart targetLength str =
     padding = replicate paddingLength "0" -- Create an Array String
   in joinWith "" padding <> str
 
-
 parseCommaList :: String -> Array String
 parseCommaList str = 
   if str == "" 

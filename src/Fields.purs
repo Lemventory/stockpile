@@ -1,11 +1,11 @@
 module Fields where
 
 import Prelude
-
-import Data.String (trim)
 import Form (makeEnumDropdown)
 import Validation (allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
 import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset)
+
+import Data.String (trim)
 
 -- | Field configurations
 makeFieldConfig :: String -> String -> String -> ValidationPreset -> FieldConfig

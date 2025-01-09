@@ -1,6 +1,8 @@
 module UUID where
 
 import Prelude
+import Utils (padStart, randomInt) 
+
 import Data.Either (Either(..))
 import Data.Int (hexadecimal, toStringAs)
 import Data.Int.Bits ((.|.))
@@ -9,7 +11,7 @@ import Data.String (joinWith)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Effect (Effect)
-import Utils (padStart, randomInt) 
+
 
 newtype UUID = UUID String
 

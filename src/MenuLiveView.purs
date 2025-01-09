@@ -6,6 +6,7 @@ import Prelude
 
 import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), Species)
 import API (fetchInventory)
+
 import Data.Array (filter, sortBy)
 import Data.Array as Array
 import Data.Either (Either(..))

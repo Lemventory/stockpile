@@ -2,6 +2,9 @@ module Form where
 
 import Prelude
 
+import Types (DropdownConfig, FieldConfig)
+import Utils (getAllEnumValues, parseCommaList)
+
 import Data.Array ((:))
 import Data.Enum (class BoundedEnum)
 import Data.Foldable (for_)
@@ -14,8 +17,6 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
-import Types (DropdownConfig, FieldConfig)
-import Utils (getAllEnumValues, parseCommaList)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select

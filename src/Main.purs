@@ -1,7 +1,7 @@
 module Main where
 
-import CreateItem (createItem)
 import Prelude
+import CreateItem (createItem)
 
 import Effect (Effect)
 import Effect.Class.Console (log)

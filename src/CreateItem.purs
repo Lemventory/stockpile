@@ -28,7 +28,6 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 
-
 createItem :: Effect Unit
 createItem = do
   initialId <- genUUID

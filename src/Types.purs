@@ -1,6 +1,7 @@
 module Types where
 
 import Prelude
+import UUID (UUID, parseUUID)
 
 import Control.Monad.Except (ExceptT)
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
@@ -8,13 +9,12 @@ import Data.Generic.Rep (class Generic)
 import Data.Identity (Identity)
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
-import UUID (UUID, parseUUID)
-import Foreign (Foreign, ForeignError(..), F, fail)
-import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 import Data.Int as Int
 import Data.Number (fromString) as Number
 import Data.String (trim)
+import Foreign (Foreign, ForeignError(..), F, fail)
+import Foreign.Index (readProp)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 

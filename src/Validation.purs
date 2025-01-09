@@ -1,6 +1,9 @@
 module Validation where
   
 import Prelude
+import Utils (formatDollarAmount, parseCommaList)
+import UUID (UUID, parseUUID)
+import Types (FieldValidator, ItemCategory, MenuItem(..), MenuItemFormInput, Species, StrainLineage(..), StrainLineageFormInput, ValidationPreset, ValidationResult(..), ValidationRule, fromFormValue)
 
 import Data.Array (all)
 import Data.Either (Either(..), note)
@@ -11,9 +14,6 @@ import Data.String (trim)
 import Data.String (length) as String
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
-import Utils (formatDollarAmount, parseCommaList)
-import UUID (UUID, parseUUID)
-import Types (FieldValidator, ItemCategory, MenuItem(..), MenuItemFormInput, Species, StrainLineage(..), StrainLineageFormInput, ValidationPreset, ValidationResult(..), ValidationRule, fromFormValue)
 
 -- | Basic validation rules
 requireValid :: ∀ a. String -> ValidationResult a -> Either String a
