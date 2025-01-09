@@ -9,13 +9,12 @@ import Data.String (joinWith)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Effect (Effect)
-import Utils (padStart, randomInt)
+import Utils (padStart, randomInt) 
 
 newtype UUID = UUID String
 
 instance showUUID :: Show UUID where
   show (UUID uuid) = uuid
-
 derive instance eqUUID :: Eq UUID
 derive instance ordUUID :: Ord UUID
 

@@ -2,7 +2,13 @@ module CreateItem where
 
 import Prelude
 
+import Types (InventoryResponse(..))
+import UUID (genUUID)
+import Validation (validateMenuItem)
+import Form (buttonClass, makeDropdown, makeField)
+import Fields (brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
 import API (updateInventoryInJson)
+
 import Data.Array (all)
 import Data.Either (Either(..))
 import Data.Int (fromString)
@@ -21,10 +27,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Fields (brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
-import Form (buttonClass, makeDropdown, makeField, validateMenuItem)
-import Types (InventoryResponse(..))
-import UUID (genUUID)
+
 
 createItem :: Effect Unit
 createItem = do

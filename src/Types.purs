@@ -12,6 +12,9 @@ import UUID (UUID, parseUUID)
 import Foreign (Foreign, ForeignError(..), F, fail)
 import Foreign.Index (readProp)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
+import Data.Int as Int
+import Data.Number (fromString) as Number
+import Data.String (trim)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -41,7 +44,6 @@ data MenuItem = MenuItem
   }
 derive instance genericMenuItem :: Generic MenuItem _
 
-
 data ItemCategory 
   = Flower 
   | PreRolls 
@@ -55,6 +57,94 @@ data ItemCategory
 derive instance eqItemCategory :: Eq ItemCategory
 derive instance ordItemCategory :: Ord ItemCategory
 
+data StrainLineage = StrainLineage
+  { thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: Species
+  , dominant_tarpene :: String
+  , tarpenes :: Array String
+  , lineage :: Array String
+  , leafly_url :: String
+  , img :: String
+  }
+derive instance genericStrainLineage :: Generic StrainLineage _
+
+data Species 
+  = Indica 
+  | IndicaDominantHybrid 
+  | Hybrid 
+  | SativaDominantHybrid 
+  | Sativa 
+derive instance eqItemSpecies :: Eq Species
+derive instance ordItemSpecies :: Ord Species
+
+-- | Form input types
+type MenuItemFormInput = 
+  { name :: String
+  , sku :: String
+  , brand :: String
+  , price :: String
+  , quantity :: String
+  , category :: String
+  , description :: String
+  , tags :: String
+  , effects :: String
+  , strainLineage :: StrainLineageFormInput
+  }
+
+type StrainLineageFormInput = 
+  { thc :: String
+  , cbg :: String
+  , strain :: String
+  , creator :: String
+  , species :: String
+  , dominant_tarpene :: String
+  , tarpenes :: String
+  , lineage :: String
+  }
+
+-- | Field configuration types
+type FieldConfig = 
+  { label :: String
+  , placeholder :: String
+  , defaultValue :: String
+  , validation :: ValidationRule
+  , errorMessage :: String
+  , formatInput :: String -> String
+  }
+
+type DropdownConfig = 
+  { label :: String
+  , options :: Array { value :: String, label :: String }
+  , defaultValue :: String
+  }
+
+-- | Core validation types and type classes
+data ValidationResult a = 
+  ValidationSuccess a 
+  | ValidationError String
+
+-- | Validation types
+type ValidationRule = String -> Boolean
+
+type FieldValidator a = 
+  { validate :: String -> Boolean
+  , convert :: String -> Maybe a
+  , error :: String
+  }
+
+type ValidationPreset = 
+  { validation :: ValidationRule
+  , errorMessage :: String
+  , formatInput :: String -> String
+  }
+
+class FormValue a where
+  fromFormValue :: String -> ValidationResult a
+
+-- | Instances 
 instance Enum ItemCategory where
   succ Flower = Just PreRolls
   succ PreRolls = Just Vaporizers
@@ -113,29 +203,6 @@ instance Show ItemCategory where
   show Topicals = "Topicals"
   show Tinctures = "Tinctures"
   show Accessories = "Accessories"
-
-data StrainLineage = StrainLineage
-  { thc :: String
-  , cbg :: String
-  , strain :: String
-  , creator :: String
-  , species :: Species
-  , dominant_tarpene :: String
-  , tarpenes :: Array String
-  , lineage :: Array String
-  , leafly_url :: String
-  , img :: String
-  }
-derive instance genericStrainLineage :: Generic StrainLineage _
-
-data Species 
-  = Indica 
-  | IndicaDominantHybrid 
-  | Hybrid 
-  | SativaDominantHybrid 
-  | Sativa 
-derive instance eqItemSpecies :: Eq Species
-derive instance ordItemSpecies :: Ord Species
 
 instance Enum Species where
   succ Indica = Just IndicaDominantHybrid
@@ -311,3 +378,44 @@ instance showStrainLineage :: Show StrainLineage where
 instance showMenuItem :: Show MenuItem where
   show (MenuItem item) = 
     "MenuItem " <> show item
+
+-- | FormValue instances
+instance formValueString :: FormValue String where
+  fromFormValue = ValidationSuccess <<< trim
+
+instance formValueNumber :: FormValue Number where
+  fromFormValue str = case Number.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid number format"
+
+instance formValueInt :: FormValue Int where
+  fromFormValue str = case Int.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid integer format"
+
+instance formValueItemCategory :: FormValue ItemCategory where
+  fromFormValue str = case str of
+    "Flower" -> ValidationSuccess Flower
+    "PreRolls" -> ValidationSuccess PreRolls
+    "Vaporizers" -> ValidationSuccess Vaporizers
+    "Edibles" -> ValidationSuccess Edibles
+    "Drinks" -> ValidationSuccess Drinks
+    "Concentrates" -> ValidationSuccess Concentrates
+    "Topicals" -> ValidationSuccess Topicals
+    "Tinctures" -> ValidationSuccess Tinctures
+    "Accessories" -> ValidationSuccess Accessories
+    _ -> ValidationError "Invalid category value"
+
+instance formValueSpecies :: FormValue Species where
+  fromFormValue str = case str of
+    "Indica" -> ValidationSuccess Indica
+    "IndicaDominant" -> ValidationSuccess IndicaDominantHybrid
+    "Hybrid" -> ValidationSuccess Hybrid
+    "SativaDominant" -> ValidationSuccess SativaDominantHybrid
+    "Sativa" -> ValidationSuccess Sativa
+    _ -> ValidationError "Invalid species value"
+
+instance formValueUUID :: FormValue UUID where
+  fromFormValue str = case parseUUID (trim str) of
+    Just uuid -> ValidationSuccess uuid
+    Nothing -> ValidationError "Invalid UUID format"

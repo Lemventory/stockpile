@@ -3,8 +3,9 @@ module Fields where
 import Prelude
 
 import Data.String (trim)
-import Form (DropdownConfig, FieldConfig, ValidationPreset, allOf, commaListField, makeEnumDropdown, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
-import Types (ItemCategory, Species)
+import Form (makeEnumDropdown)
+import Validation (allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
+import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset)
 
 -- | Field configurations
 makeFieldConfig :: String -> String -> String -> ValidationPreset -> FieldConfig
@@ -86,5 +87,3 @@ tarpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-
 
 lineageConfig :: String -> FieldConfig
 lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue commaListField
-
-
