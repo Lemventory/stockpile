@@ -27,11 +27,9 @@ parseUUID str =
                then Just $ UUID str
                else Nothing
 
--- | Convert UUID to String
 uuidToString :: UUID -> String
 uuidToString (UUID uuid) = uuid
 
--- | Empty UUID (all zeros)
 emptyUUID :: UUID
 emptyUUID = UUID "00000000-0000-0000-0000-000000000000"
 
