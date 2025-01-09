@@ -5,8 +5,7 @@ import Prelude
 import Types (InventoryResponse(..))
 import UUID (genUUID)
 import Validation (validateMenuItem)
-import Form (buttonClass, makeDropdown, makeField)
-import Fields (brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
 import API (updateInventoryInJson)
 
 import Data.Array (all)
