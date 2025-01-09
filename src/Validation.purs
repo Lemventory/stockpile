@@ -163,7 +163,6 @@ validateField validator input = do
     else Nothing
   note validator.error $ validator.convert trimmed
 
--- | Form validation
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
   sku <- validateField uuidValidator input.sku

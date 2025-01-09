@@ -32,9 +32,8 @@ makeField config setValue setValid validEvent =
         , if config.label == "Description"
             then D.textarea
                 [ DA.placeholder_ config.placeholder
-                , DA.cols_ "40"  -- Added standard width
+                , DA.cols_ "40" 
                 , DA.rows_ "4"
-                -- Let's use DOM defaultValue for textarea initial state
                 , DL.keyup_ \evt -> do
                     let targetEvent = toEvent evt
                     for_ 
@@ -54,7 +53,7 @@ makeField config setValue setValid validEvent =
                         setValid (Just (config.validation formatted))
                 , DA.klass_ (inputKls <> " resize-y")
                 ]
-                [ text_ config.defaultValue ]  -- Set initial value as child text
+                [ text_ config.defaultValue ]
             else D.input
                 [ DA.placeholder_ config.placeholder
                 , DA.value_ config.defaultValue
