@@ -7,7 +7,7 @@ import Data.List.Lazy (replicateM)
 import Effect (Effect)
 import Effect.Class.Console (log)
 -- import MenuLiveView (runLiveView)
-import Types (genUUID, uuidToString)
+import UUID (genUUID, uuidToString)
 
 main :: Effect Unit
 main = do

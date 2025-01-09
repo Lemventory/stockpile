@@ -2,10 +2,13 @@ module CreateItem where
 
 import Prelude
 
-import API (postInventoryToJson)
+import API (updateInventoryInJson)
 import Data.Array (all)
 import Data.Either (Either(..))
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number as Number
+import Data.String (trim)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
 import Deku.DOM as D
@@ -18,12 +21,15 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, makeDropdown, makeField, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig, validateForm)
-import Types (InventoryResponse(..), genUUID)
+import Fields (brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Form (buttonClass, makeDropdown, makeField, validateMenuItem)
+import Types (InventoryResponse(..))
+import UUID (genUUID)
 
 createItem :: Effect Unit
 createItem = do
   initialId <- genUUID
+  let initialSkuStr = show initialId
   
   void $ runInBody Deku.do
     -- Status and loading state
@@ -31,54 +37,53 @@ createItem = do
     setSubmitting /\ submittingEvent <- useState false
     setFiber /\ _ <- useState (pure unit)
 
-    -- Basic MenuItem fields
+    -- Initialize states with Just false instead of Nothing
     setName /\ nameEvent <- useState ""
-    setValidName /\ validNameEvent <- useState (Nothing :: Maybe Boolean)
+    setValidName /\ validNameEvent <- useState (Just false :: Maybe Boolean)
 
-    setSku /\ skuEvent <- useState (show initialId)
-    setValidSku /\ validSkuEvent <- useState (Nothing :: Maybe Boolean)
+    setSku /\ skuEvent <- useState initialSkuStr
+    setValidSku /\ validSkuEvent <- useState (Just true :: Maybe Boolean)
 
     setBrand /\ brandEvent <- useState ""
-    setValidBrand /\ validBrandEvent <- useState (Nothing :: Maybe Boolean)
+    setValidBrand /\ validBrandEvent <- useState (Just false :: Maybe Boolean)
 
     setPrice /\ priceEvent <- useState ""
-    setValidPrice /\ validPriceEvent <- useState (Nothing :: Maybe Boolean)
+    setValidPrice /\ validPriceEvent <- useState (Just false :: Maybe Boolean)
 
     setQuantity /\ quantityEvent <- useState ""
-    setValidQuantity /\ validQuantityEvent <- useState (Nothing :: Maybe Boolean)
+    setValidQuantity /\ validQuantityEvent <- useState (Just false :: Maybe Boolean)
 
     setCategory /\ categoryEvent <- useState ""
-    setValidCategory /\ validCategoryEvent <- useState (Nothing :: Maybe Boolean)
+    setValidCategory /\ validCategoryEvent <- useState (Just false :: Maybe Boolean)
 
+    -- Optional fields don't need validation states
     setDescription /\ descriptionEvent <- useState ""
-    setValidDescription /\ validDescriptionEvent <- useState (Nothing :: Maybe Boolean)
-
-    -- Array fields
     setTags /\ tagsEvent <- useState ""
     setEffects /\ effectsEvent <- useState ""
     setTarpenes /\ tarpenesEvent <- useState ""
     setLineage /\ lineageEvent <- useState ""
 
-    -- StrainLineage fields
+    -- StrainLineage fields with initial validation states
     setThc /\ thcEvent <- useState ""
-    setValidThc /\ validThcEvent <- useState (Nothing :: Maybe Boolean)
+    setValidThc /\ validThcEvent <- useState (Just false :: Maybe Boolean)
 
     setCbg /\ cbgEvent <- useState ""
-    setValidCbg /\ validCbgEvent <- useState (Nothing :: Maybe Boolean)
+    setValidCbg /\ validCbgEvent <- useState (Just false :: Maybe Boolean)
 
     setStrain /\ strainEvent <- useState ""
-    setValidStrain /\ validStrainEvent <- useState (Nothing :: Maybe Boolean)
+    setValidStrain /\ validStrainEvent <- useState (Just false :: Maybe Boolean)
 
     setCreator /\ creatorEvent <- useState ""
-    setValidCreator /\ validCreatorEvent <- useState (Nothing :: Maybe Boolean)
+    setValidCreator /\ validCreatorEvent <- useState (Just false :: Maybe Boolean)
 
     setSpecies /\ speciesEvent <- useState ""
-    setValidSpecies /\ validSpeciesEvent <- useState (Nothing :: Maybe Boolean)
+    setValidSpecies /\ validSpeciesEvent <- useState (Just false :: Maybe Boolean)
 
     setDominantTarpene /\ dominantTarpeneEvent <- useState ""
-    setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Nothing :: Maybe Boolean)
+    setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false :: Maybe Boolean)
 
     let
+      -- Form validation check (excluding optional fields)
       isFormValid = ado
         vName <- validNameEvent
         vSku <- validSkuEvent
@@ -86,7 +91,6 @@ createItem = do
         vPrice <- validPriceEvent
         vQuantity <- validQuantityEvent
         vCategory <- validCategoryEvent
-        vDescription <- validDescriptionEvent
         vThc <- validThcEvent
         vCbg <- validCbgEvent
         vStrain <- validStrainEvent
@@ -95,41 +99,47 @@ createItem = do
         vDominantTarpene <- validDominantTarpeneEvent
         in all (fromMaybe false)
           [ vName, vSku, vBrand, vPrice, vQuantity, vCategory
-          , vDescription, vThc, vCbg, vStrain, vCreator, vSpecies
-          , vDominantTarpene ]
+          , vThc, vCbg, vStrain, vCreator, vSpecies
+          , vDominantTarpene
+          ]
 
       resetForm = do
         newId <- genUUID
         setSku (show newId)
-        setValidSku Nothing
+        setValidSku (Just true)
         setName ""
-        setValidName Nothing
+        setValidName (Just false)
         setBrand ""
-        setValidBrand Nothing
+        setValidBrand (Just false)
         setPrice ""
-        setValidPrice Nothing
+        setValidPrice (Just false)
         setQuantity ""
-        setValidQuantity Nothing
+        setValidQuantity (Just false)
         setCategory ""
-        setValidCategory Nothing
+        setValidCategory (Just false)
         setDescription ""
-        setValidDescription Nothing
         setTags ""
         setEffects ""
         setThc ""
-        setValidThc Nothing
+        setValidThc (Just false)
         setCbg ""
-        setValidCbg Nothing
+        setValidCbg (Just false)
         setStrain ""
-        setValidStrain Nothing
+        setValidStrain (Just false)
         setCreator ""
-        setValidCreator Nothing
+        setValidCreator (Just false)
         setSpecies ""
-        setValidSpecies Nothing
+        setValidSpecies (Just false)
         setDominantTarpene ""
-        setValidDominantTarpene Nothing
+        setValidDominantTarpene (Just false)
         setTarpenes ""
         setLineage ""
+
+      ensureNumber :: String -> String
+      ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
+
+      ensureInt :: String -> String
+      ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
 
     D.div_
       [ D.div
@@ -138,12 +148,12 @@ createItem = do
               [ DA.klass_ "text-2xl font-bold mb-6" ]
               [ text_ "Add New Menu Item" ]
           , makeField (nameConfig "") setName setValidName validNameEvent
-          , makeField (skuConfig (show initialId)) setSku setValidSku validSkuEvent
+          , makeField (skuConfig initialSkuStr) setSku setValidSku validSkuEvent
           , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
           , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
           , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
           , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
-          , makeField (descriptionConfig "") setDescription setValidDescription validDescriptionEvent
+          , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
           , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
           , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
           , makeField (thcConfig "") setThc setValidThc validThcEvent
@@ -167,8 +177,8 @@ createItem = do
                           { name
                           , sku
                           , brand
-                          , price
-                          , quantity
+                          , price: ensureNumber price
+                          , quantity: ensureInt quantity
                           , category
                           , description
                           , tags
@@ -189,7 +199,7 @@ createItem = do
                     liftEffect $ Console.log "Form data:"
                     liftEffect $ Console.logShow formInput
                     
-                    case validateForm formInput of
+                    case validateMenuItem formInput of
                       Left err -> liftEffect do
                         Console.error "Form validation failed:"
                         Console.errorShow err
@@ -200,19 +210,20 @@ createItem = do
                       Right menuItem -> do
                         liftEffect $ Console.info "Form validated successfully:"
                         liftEffect $ Console.logShow menuItem
-                        result <- postInventoryToJson menuItem
+                        result <- updateInventoryInJson menuItem
                         liftEffect case result of
-                          Right (Message _) -> do
+                          Right (Message msg) -> do
                             Console.info "Submission successful"
-                            setStatusMessage "Item successfully submitted!"
+                            setStatusMessage msg
                             resetForm
                           Right (InventoryData _) -> do
-                            Console.warn "Unexpected response type"
-                            setStatusMessage "Unexpected response type"
+                            Console.info "Item added to inventory"
+                            setStatusMessage "Item successfully added to inventory!"
+                            resetForm
                           Left err -> do
-                            Console.error "API Error:"
+                            Console.error "File System Error:"
                             Console.errorShow err
-                            setStatusMessage $ "Error submitting item: " <> err
+                            setStatusMessage $ "Error saving item: " <> err
                         liftEffect $ Console.groupEnd
                         liftEffect $ setSubmitting false
               ) <$> nameEvent

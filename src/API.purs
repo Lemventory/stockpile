@@ -11,9 +11,8 @@ import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
 import Foreign (Foreign)
-import Types (Inventory, InventoryResponse(..), MenuItem, QueryMode(..))
+import Types (Inventory(..), InventoryResponse(..), MenuItem, QueryMode(..))
 import Yoga.JSON (readJSON_, unsafeStringify, writeImpl, writeJSON)
-
 
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory mode = case mode of
@@ -33,6 +32,57 @@ fetchInventoryFromJson = do
   case result of
     Left err -> pure $ Left $ "Fetch error: " <> show err
     Right inventory -> pure $ Right $ InventoryData inventory
+
+writeInventoryToJson :: MenuItem -> Aff (Either String InventoryResponse)
+writeInventoryToJson menuItem = do
+  result <- attempt do
+    let 
+      url = "/inventory.json"
+      content = writeJSON menuItem
+      requestHeaders = { "Content-Type": "application/json" }
+    
+    liftEffect $ log ("Writing to URL: " <> url)
+    liftEffect $ log ("Content: " <> content)
+    
+    response <- fetch url 
+      { method: POST
+      , body: content
+      , headers: requestHeaders
+      }
+    
+    pure $ Message "Successfully wrote to file"
+
+  pure case result of
+    Left err -> Left $ "Write error: " <> show err
+    Right msg -> Right msg
+
+updateInventoryInJson :: MenuItem -> Aff (Either String InventoryResponse)
+updateInventoryInJson menuItem = do
+  currentInventory <- fetchInventoryFromJson
+  
+  case currentInventory of
+    Left err -> pure $ Left $ "Error reading current inventory: " <> err
+    Right (InventoryData (Inventory items)) -> do
+      let
+        updatedItems = items <> [menuItem]
+        updatedInventory = Inventory updatedItems
+        content = writeJSON updatedInventory
+        url = "/inventory.json"
+        requestHeaders = { "Content-Type": "application/json" }
+      
+      result <- attempt do
+        liftEffect $ log ("Updating URL: " <> url)
+        response <- fetch url 
+          { method: POST
+          , body: content
+          , headers: requestHeaders
+          }
+        pure $ Message "Successfully updated inventory"
+      
+      pure case result of
+        Left err -> Left $ "Update error: " <> show err
+        Right msg -> Right msg
+    Right (Message _) -> pure $ Left "Unexpected response format"
 
 fetchInventoryFromHttp :: Aff (Either String InventoryResponse)
 fetchInventoryFromHttp = do

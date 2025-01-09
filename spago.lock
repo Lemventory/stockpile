@@ -21,6 +21,7 @@
             "fetch-yoga-json",
             "lists",
             "maybe",
+            "node-fs",
             "parsing",
             "prelude",
             "transformers",
@@ -90,6 +91,11 @@
             "media-types",
             "mmorph",
             "newtype",
+            "node-buffer",
+            "node-event-emitter",
+            "node-fs",
+            "node-path",
+            "node-streams",
             "nonempty",
             "now",
             "nullable",
@@ -1588,6 +1594,80 @@
       "dependencies": [
         "prelude",
         "safe-coerce"
+      ]
+    },
+    "node-buffer": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-PWE2DJ5ruBLCmeA/fUiuySEFmUJ/VuRfyrnCuVZBlu4=",
+      "dependencies": [
+        "arraybuffer-types",
+        "effect",
+        "maybe",
+        "nullable",
+        "st",
+        "unsafe-coerce"
+      ]
+    },
+    "node-event-emitter": {
+      "type": "registry",
+      "version": "3.0.0",
+      "integrity": "sha256-Qw0MjsT4xRH2j2i4K8JmRjcMKnH5z1Cw39t00q4LE4w=",
+      "dependencies": [
+        "effect",
+        "either",
+        "functions",
+        "maybe",
+        "nullable",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "node-fs": {
+      "type": "registry",
+      "version": "9.2.0",
+      "integrity": "sha256-Sg0vkXycEzkEerX6hLccz21Ygd9w1+QSk1thotRZPGI=",
+      "dependencies": [
+        "datetime",
+        "effect",
+        "either",
+        "enums",
+        "exceptions",
+        "functions",
+        "integers",
+        "js-date",
+        "maybe",
+        "node-buffer",
+        "node-path",
+        "node-streams",
+        "nullable",
+        "partial",
+        "prelude",
+        "strings",
+        "unsafe-coerce"
+      ]
+    },
+    "node-path": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-pd82nQ+2l5UThzaxPdKttgDt7xlsgIDLpPG0yxDEdyE=",
+      "dependencies": [
+        "effect"
+      ]
+    },
+    "node-streams": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-2n6dq7YWleTDmD1Kur/ul7Cn08IvWrScgPf+0PgX2TQ=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "either",
+        "exceptions",
+        "node-buffer",
+        "node-event-emitter",
+        "nullable",
+        "prelude"
       ]
     },
     "nonempty": {

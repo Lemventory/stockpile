@@ -2,7 +2,7 @@ module Form where
 
 import Prelude
 
-import Data.Array (all, catMaybes, range, (!!), (:))
+import Data.Array (all, catMaybes, filter, range, (!!), (:))
 import Data.Array (length) as Array
 import Data.Either (Either(..), note)
 import Data.Enum (class BoundedEnum, fromEnum, toEnum)
@@ -22,7 +22,8 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
-import Types (ItemCategory(..), MenuItem(..), Species(..), StrainLineage(..), UUID, parseUUID)
+import Types (ItemCategory(..), MenuItem(..), Species(..), StrainLineage(..))
+import UUID (UUID, parseUUID)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -167,6 +168,22 @@ positiveInteger str = case fromString str of
   Just n -> n > 0
   Nothing -> false
 
+vowels :: ValidationRule
+vowels str = case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+consonants :: ValidationRule
+consonants str = case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
+commaList :: ValidationRule
+commaList str = 
+  case regex "^[^,]+(,[^,]+)*$" noFlags of
+    Left _ -> false
+    Right validRegex -> test validRegex str
+
 maxLength :: Int -> ValidationRule
 maxLength n str = String.length str <= n
 
@@ -209,7 +226,20 @@ numberField =
   , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
--- | UI Components
+commaListField :: ValidationPreset
+commaListField = 
+  { validation: commaList
+  , errorMessage: "Must be a comma-separated list"
+  , formatInput: trim
+  }
+
+multilineText :: ValidationPreset
+multilineText =
+  { validation: nonEmpty
+  , errorMessage: "Required"
+  , formatInput: identity
+  }
+
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
 makeField config setValue setValid validEvent = 
   D.div_
@@ -217,29 +247,55 @@ makeField config setValue setValid validEvent =
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ config.label ]
-        , D.input
-            [ DA.placeholder_ config.placeholder
-            , DA.value_ config.defaultValue
-            , DL.keyup_ \evt -> do
-                let targetEvent = toEvent evt
-                for_ 
-                  (target targetEvent >>= Input.fromEventTarget)
-                  \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (config.validation formatted))
-            , DL.input_ \evt -> do
-                for_ 
-                  (target evt >>= Input.fromEventTarget)
-                  \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (config.validation formatted))
-            , DA.klass_ inputKls
-            ]
-            []
+        , if config.label == "Description"
+            then D.textarea
+                [ DA.placeholder_ config.placeholder
+                , DA.cols_ "40"  -- Added standard width
+                , DA.rows_ "4"
+                -- Let's use DOM defaultValue for textarea initial state
+                , DL.keyup_ \evt -> do
+                    let targetEvent = toEvent evt
+                    for_ 
+                      (target targetEvent >>= Input.fromEventTarget)
+                      \inputElement -> do
+                        v <- Input.value inputElement
+                        let formatted = config.formatInput v
+                        setValue formatted
+                        setValid (Just (config.validation formatted))
+                , DL.input_ \evt -> do
+                    for_ 
+                      (target evt >>= Input.fromEventTarget)
+                      \inputElement -> do
+                        v <- Input.value inputElement
+                        let formatted = config.formatInput v
+                        setValue formatted
+                        setValid (Just (config.validation formatted))
+                , DA.klass_ (inputKls <> " resize-y")
+                ]
+                [ text_ config.defaultValue ]  -- Set initial value as child text
+            else D.input
+                [ DA.placeholder_ config.placeholder
+                , DA.value_ config.defaultValue
+                , DL.keyup_ \evt -> do
+                    let targetEvent = toEvent evt
+                    for_ 
+                      (target targetEvent >>= Input.fromEventTarget)
+                      \inputElement -> do
+                        v <- Input.value inputElement
+                        let formatted = config.formatInput v
+                        setValue formatted
+                        setValid (Just (config.validation formatted))
+                , DL.input_ \evt -> do
+                    for_ 
+                      (target evt >>= Input.fromEventTarget)
+                      \inputElement -> do
+                        v <- Input.value inputElement
+                        let formatted = config.formatInput v
+                        setValue formatted
+                        setValid (Just (config.validation formatted))
+                , DA.klass_ inputKls
+                ]
+                []
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
             [ text (map (\mValid -> case mValid of 
@@ -317,7 +373,11 @@ parseCommaList :: String -> Array String
 parseCommaList str = 
   if str == "" 
     then []
-    else map trim $ split (Pattern ",") str
+    else 
+      str 
+      # split (Pattern ",") 
+      # map trim 
+      # filter (_ /= "")
 
 formatDollarAmount :: String -> String
 formatDollarAmount str = 
@@ -391,7 +451,6 @@ validateMenuItem input = do
   price <- validateField numberValidator input.price
   quantity <- validateField intValidator input.quantity
   category <- validateField categoryValidator input.category
-  description <- validateField (requiredField Just "Description") input.description
   
   strainLineage <- validateStrainLineage input.strainLineage
 
@@ -406,7 +465,7 @@ validateMenuItem input = do
     , quantity
     , category
     , subcategory: show category
-    , description
+    , description: input.description
     , tags: parseCommaList input.tags
     , effects: parseCommaList input.effects
     , strain_lineage: strainLineage
@@ -434,7 +493,6 @@ validateStrainLineage input = do
     , img: ""
     }
 
--- | Create a validator that ensures non-empty input and converts to type
 requiredField :: forall a. (String -> Maybe a) -> String -> FieldValidator a
 requiredField convert field = 
   { validate: (_ /= "")
@@ -485,114 +543,6 @@ speciesValidator =
       _ -> Nothing
   , error: "Must be a valid species"
   }
-
--- | Field configurations
-makeFieldConfig :: String -> String -> String -> ValidationPreset -> FieldConfig
-makeFieldConfig label placeholder defaultValue preset =
-  { label
-  , placeholder
-  , defaultValue
-  , validation: preset.validation
-  , errorMessage: preset.errorMessage
-  , formatInput: preset.formatInput
-  }
-
-categoryConfig :: DropdownConfig
-categoryConfig = makeEnumDropdown 
-  { label: "Category"
-  , enumType: (bottom :: ItemCategory)
-  }
-
-speciesConfig :: DropdownConfig
-speciesConfig = makeEnumDropdown 
-  { label: "Species"
-  , enumType: (bottom :: Species)
-  }
-
-skuConfig :: String -> FieldConfig
-skuConfig defaultValue = makeFieldConfig "SKU" "Enter UUID" defaultValue
-  { validation: allOf [nonEmpty, validUUID]
-  , errorMessage: "Required, must be a valid UUID"
-  , formatInput: trim
-  }
-
-nameConfig :: String -> FieldConfig
-nameConfig defaultValue = makeFieldConfig "Name" "Enter product name" defaultValue
-  (requiredTextWithLimit 50)
-
-brandConfig :: String -> FieldConfig
-brandConfig defaultValue = makeFieldConfig "Brand" "Enter brand name" defaultValue
-  (requiredTextWithLimit 30)
-
-priceConfig :: String -> FieldConfig
-priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue 
-  moneyField
-
-quantityConfig :: String -> FieldConfig
-quantityConfig defaultValue = makeFieldConfig "Quantity" "Enter quantity" defaultValue 
-  numberField
-
-thcConfig :: String -> FieldConfig
-thcConfig defaultValue = makeFieldConfig "THC %" "Enter THC percentage" defaultValue 
-  percentageField
-
-cbgConfig :: String -> FieldConfig
-cbgConfig defaultValue = makeFieldConfig "CBG %" "Enter CBG percentage" defaultValue 
-  percentageField
-
-strainConfig :: String -> FieldConfig
-strainConfig defaultValue = makeFieldConfig "Strain" "Enter strain name" defaultValue 
-  requiredText
-
-creatorConfig :: String -> FieldConfig
-creatorConfig defaultValue = makeFieldConfig "Creator" "Enter creator name" defaultValue 
-  requiredText
-
-descriptionConfig :: String -> FieldConfig
-descriptionConfig defaultValue = makeFieldConfig "Description" "Enter description" defaultValue 
-  requiredText
-
-dominantTarpeneConfig :: String -> FieldConfig
-dominantTarpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue 
-  requiredText
-
-tagsConfig :: String -> FieldConfig
-tagsConfig defaultValue = makeFieldConfig "Tags" "Enter tags (comma-separated)" defaultValue 
-  { validation: const true
-  , errorMessage: ""
-  , formatInput: trim
-  }
-
-effectsConfig :: String -> FieldConfig
-effectsConfig defaultValue = makeFieldConfig "Effects" "Enter effects (comma-separated)" defaultValue 
-  { validation: const true
-  , errorMessage: ""
-  , formatInput: trim
-  }
-
-tarpenesConfig :: String -> FieldConfig
-tarpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" defaultValue 
-  { validation: const true
-  , errorMessage: ""
-  , formatInput: trim
-  }
-
-lineageConfig :: String -> FieldConfig
-lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue 
-  { validation: const true
-  , errorMessage: ""
-  , formatInput: trim
-  }
-
-vowels :: ValidationRule
-vowels str = case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
-
-consonants :: ValidationRule
-consonants str = case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
 
 -- | Styling
 inputKls :: String

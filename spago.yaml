@@ -17,6 +17,7 @@ package:
     - fetch-yoga-json
     - lists
     - maybe
+    - node-fs
     - parsing
     - prelude
     - transformers
