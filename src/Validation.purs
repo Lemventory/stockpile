@@ -1,19 +1,19 @@
 module Validation where
   
 import Prelude
-import Utils (formatDollarAmount, parseCommaList)
-import UUID (UUID, parseUUID)
-import Types (FieldValidator, ItemCategory, MenuItem(..), MenuItemFormInput, Species, StrainLineage(..), StrainLineageFormInput, ValidationPreset, ValidationResult(..), ValidationRule, fromFormValue)
 
 import Data.Array (all)
 import Data.Either (Either(..), note)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
-import Data.String (trim)
 import Data.String (length) as String
+import Data.String (trim)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
+import Types (class FormValue, FieldConfigRow, FieldValidator, HTMLFormField, ItemCategory, MenuItem(..), MenuItemFormInput, Species, StrainLineage(..), StrainLineageFormInput, TextFieldConfig, ValidationPreset, ValidationResult(..), ValidationRule, NumberFieldConfig, fromFormValue)
+import UUID (UUID, parseUUID)
+import Utils (formatDollarAmount, parseCommaList)
 
 -- | Basic validation rules
 requireValid :: ∀ a. String -> ValidationResult a -> Either String a
@@ -122,21 +122,78 @@ multilineText =
   }
 
 -- | Form validation
-validateForm :: MenuItemFormInput -> Either String MenuItem
-validateForm input = do
-  name <- requireValid "Name" $ fromFormValue input.name
-  sku <- requireValid "SKU" $ 
-    case parseUUID input.sku of
-      Just uuid -> ValidationSuccess uuid
-      Nothing -> ValidationError "Invalid UUID format"
-  brand <- requireValid "Brand" $ fromFormValue input.brand
-  price <- requireValid "Price" $ fromFormValue input.price
-  quantity <- requireValid "Quantity" $ fromFormValue input.quantity
-  category <- requireValid "Category" $ fromFormValue input.category
-  description <- requireValid "Description" $ fromFormValue input.description
+validateForm :: forall r. Record (FieldConfigRow r) -> MenuItemFormInput -> Either String MenuItem
+validateForm config input = do
+  -- Basic field validations
+  name <- validateTextField 
+    { label: "Name"
+    , maxLength: 50
+    , placeholder: "Enter name"
+    , defaultValue: ""
+    , validation: allOf [nonEmpty, alphanumeric]
+    , errorMessage: "Required, text only (max 50 chars)"
+    , formatInput: trim
+    } input.name
 
-  strainLineage <- validateStrainLineage input.strainLineage
+  sku <- validateField uuidValidator input.sku
 
+  brand <- validateTextField
+    { label: "Brand"
+    , maxLength: 30
+    , placeholder: "Enter brand"
+    , defaultValue: ""
+    , validation: allOf [nonEmpty, alphanumeric]
+    , errorMessage: "Required, text only (max 30 chars)"
+    , formatInput: trim
+    } input.brand
+
+  price <- validateNumberField
+    { label: "Price"
+    , min: 0.0
+    , max: 999999.99
+    , placeholder: "Enter price"
+    , defaultValue: ""
+    , validation: allOf [nonEmpty, dollarAmount]
+    , errorMessage: "Required, valid dollar amount"
+    , formatInput: formatDollarAmount
+    } input.price
+
+  quantity <- validateNumberField
+    { label: "Quantity"
+    , min: 0.0
+    , max: 999999.0
+    , placeholder: "Enter quantity"
+    , defaultValue: ""
+    , validation: allOf [nonEmpty, positiveInteger]
+    , errorMessage: "Required, positive whole number"
+    , formatInput: \str -> fromMaybe str $ map show $ fromString str
+    } input.quantity
+
+  category <- validateField categoryValidator input.category
+
+  description <- validateTextField
+    { label: "Description"
+    , maxLength: 1000
+    , placeholder: "Enter description"
+    , defaultValue: ""
+    , validation: nonEmpty
+    , errorMessage: "Required"
+    , formatInput: identity
+    } input.description
+
+  -- Strain lineage validation
+  strainLineage <- validateStrainLineage 
+    { thc: input.strainLineage.thc
+    , cbg: input.strainLineage.cbg
+    , strain: input.strainLineage.strain
+    , creator: input.strainLineage.creator
+    , species: input.strainLineage.species
+    , dominant_tarpene: input.strainLineage.dominant_tarpene
+    , tarpenes: input.strainLineage.tarpenes
+    , lineage: input.strainLineage.lineage
+    }
+
+  -- Construct the final MenuItem with all validated fields
   pure $ MenuItem
     { sort: 0
     , sku
@@ -147,12 +204,43 @@ validateForm input = do
     , per_package: show quantity
     , quantity
     , category
-    , subcategory: show category 
+    , subcategory: show category
     , description
     , tags: parseCommaList input.tags
     , effects: parseCommaList input.effects
     , strain_lineage: strainLineage
     }
+
+validateTextField :: forall r. Record (TextFieldConfig r) -> String -> Either String String
+validateTextField config input =
+  case validateField (requiredField Just config.label) input of
+    Right value -> 
+      if String.length value <= config.maxLength
+      then Right value
+      else Left $ "Must be less than " <> show config.maxLength <> " characters"
+    Left err -> Left err
+
+validateNumberField :: forall r. Record (NumberFieldConfig r) -> String -> Either String Number
+validateNumberField config input =
+  case validateField numberValidator input of
+    Right value ->
+      if value >= config.min && value <= config.max
+      then Right value
+      else Left $ "Must be between " <> show config.min <> " and " <> show config.max
+    Left err -> Left err
+
+validateFormField :: forall r a
+   . FormValue a
+  => Record (HTMLFormField r)
+  -> ValidationResult a
+validateFormField field = do
+  let validationResult = fromFormValue field.value
+  case validationResult of
+    ValidationSuccess value -> 
+      if field.validation field.value
+      then ValidationSuccess value
+      else ValidationError err
+    ValidationError err -> ValidationError err
 
 validateField :: forall a. FieldValidator a -> String -> Either String a
 validateField validator input = do
@@ -162,6 +250,16 @@ validateField validator input = do
     then Just trimmed
     else Nothing
   note validator.error $ validator.convert trimmed
+
+-- validateTextField :: forall r. Record (TextFieldConfig r) -> String -> ValidationResult String
+-- validateTextField config input =
+--   let baseValidation = validateField (requiredField Just config.label) input
+--   in case baseValidation of
+--     Right value -> 
+--       if String.length value <= config.maxLength
+--       then ValidationSuccess value
+--       else ValidationError $ "Must be less than " <> show config.maxLength <> " characters"
+--     Left err -> ValidationError err
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
