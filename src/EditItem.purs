@@ -2,131 +2,78 @@ module EditItem where
 
 import Prelude
 
-import Types (InventoryResponse(..), MenuItem(..), Inventory(..), StrainLineage(..), QueryMode(..))
-import UUID (parseUUID)
-import Validation (validateMenuItem)
-import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, 
-            creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, 
-            lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, 
-            speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
 import API (updateInventoryInJson, fetchInventory)
-
 import Data.Array (all, find)
 import Data.Either (Either(..))
-import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number as Number
-import Data.String (Pattern(..), split, trim, joinWith)
+import Data.String (joinWith)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
-import Deku.Hooks (useState, useHot)
+import Deku.Hooks (useState)
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
-import Effect.Aff as Aff
+import Effect.Aff (launchAff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Class.Console as Console
+import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Types (InventoryResponse(..), MenuItem(..), Inventory(..), StrainLineage(..), QueryMode(..))
+import Validation (validateMenuItem)
 
 editItem :: String -> Effect Unit
-editItem targetUUID = void $ runInBody $ Deku.do
+editItem targetUUID = void $ runInBody Deku.do
   -- Status and loading state
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setLoading /\ loadingEvent <- useState true
+  setFiber /\ _ <- useState (pure unit)
 
-  -- Form field states with hot values for sampling
-  setName /\ nameEvent <- useHot ""
+  -- Form field states
+  setName /\ nameEvent <- useState ""
   setValidName /\ validNameEvent <- useState (Just false :: Maybe Boolean)
   
-  setSku /\ skuEvent <- useHot targetUUID
+  setSku /\ skuEvent <- useState targetUUID
   setValidSku /\ validSkuEvent <- useState (Just true :: Maybe Boolean)
 
-  setBrand /\ brandEvent <- useHot ""
+  setBrand /\ brandEvent <- useState ""
   setValidBrand /\ validBrandEvent <- useState (Just false :: Maybe Boolean)
 
-  setPrice /\ priceEvent <- useHot ""
+  setPrice /\ priceEvent <- useState ""
   setValidPrice /\ validPriceEvent <- useState (Just false :: Maybe Boolean)
 
-  setQuantity /\ quantityEvent <- useHot ""
+  setQuantity /\ quantityEvent <- useState ""
   setValidQuantity /\ validQuantityEvent <- useState (Just false :: Maybe Boolean)
 
-  setCategory /\ categoryEvent <- useHot ""
+  setCategory /\ categoryEvent <- useState ""
   setValidCategory /\ validCategoryEvent <- useState (Just false :: Maybe Boolean)
 
-  setDescription /\ descriptionEvent <- useHot ""
-  setTags /\ tagsEvent <- useHot ""
-  setEffects /\ effectsEvent <- useHot ""
-  setTarpenes /\ tarpenesEvent <- useHot ""
-  setLineage /\ lineageEvent <- useHot ""
+  -- Optional fields
+  setDescription /\ descriptionEvent <- useState ""
+  setTags /\ tagsEvent <- useState ""
+  setEffects /\ effectsEvent <- useState ""
+  setTarpenes /\ tarpenesEvent <- useState ""
+  setLineage /\ lineageEvent <- useState ""
 
-  setThc /\ thcEvent <- useHot ""
+  -- StrainLineage fields
+  setThc /\ thcEvent <- useState ""
   setValidThc /\ validThcEvent <- useState (Just false :: Maybe Boolean)
 
-  setCbg /\ cbgEvent <- useHot ""
+  setCbg /\ cbgEvent <- useState ""
   setValidCbg /\ validCbgEvent <- useState (Just false :: Maybe Boolean)
 
-  setStrain /\ strainEvent <- useHot ""
+  setStrain /\ strainEvent <- useState ""
   setValidStrain /\ validStrainEvent <- useState (Just false :: Maybe Boolean)
 
-  setCreator /\ creatorEvent <- useHot ""
+  setCreator /\ creatorEvent <- useState ""
   setValidCreator /\ validCreatorEvent <- useState (Just false :: Maybe Boolean)
 
-  setSpecies /\ speciesEvent <- useHot ""
+  setSpecies /\ speciesEvent <- useState ""
   setValidSpecies /\ validSpeciesEvent <- useState (Just false :: Maybe Boolean)
 
-  setDominantTarpene /\ dominantTarpeneEvent <- useHot ""
+  setDominantTarpene /\ dominantTarpeneEvent <- useState ""
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false :: Maybe Boolean)
-
-  -- Load initial data
-  void $ Aff.launchAff_ do
-    result <- fetchInventory JsonMode
-    liftEffect $ case result of
-      Right (InventoryData inv) -> 
-        case find (\(MenuItem item) -> show item.sku == targetUUID) inv of
-          Just (MenuItem item) -> do
-            let StrainLineage meta = item.strain_lineage
-            setName item.name
-            setValidName (Just true)
-            setSku (show item.sku)
-            setValidSku (Just true)
-            setBrand item.brand
-            setValidBrand (Just true)
-            setPrice (show item.price)
-            setValidPrice (Just true)
-            setQuantity (show item.quantity)
-            setValidQuantity (Just true)
-            setCategory (show item.category)
-            setValidCategory (Just true)
-            setDescription item.description
-            setTags (joinWith ", " item.tags)
-            setEffects (joinWith ", " item.effects)
-            setThc meta.thc
-            setValidThc (Just true)
-            setCbg meta.cbg
-            setValidCbg (Just true)
-            setStrain meta.strain
-            setValidStrain (Just true)
-            setCreator meta.creator
-            setValidCreator (Just true)
-            setSpecies (show meta.species)
-            setValidSpecies (Just true)
-            setDominantTarpene meta.dominant_tarpene
-            setValidDominantTarpene (Just true)
-            setTarpenes (joinWith ", " meta.tarpenes)
-            setLineage (joinWith ", " meta.lineage)
-            setLoading false
-          Nothing -> do
-            setStatusMessage "Item not found"
-            setLoading false
-      Left err -> do
-        setStatusMessage $ "Error loading item: " <> err
-        setLoading false
-      _ -> do
-        setStatusMessage "Unexpected response"
-        setLoading false
 
   let
     isFormValid = ado
@@ -148,14 +95,58 @@ editItem targetUUID = void $ runInBody $ Deku.do
         , vDominantTarpene
         ]
 
-    ensureNumber :: String -> String
-    ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
-
-    ensureInt :: String -> String
-    ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
-
-  D.div_
-    [ D.div
+  D.div [] [ D.div_
+    [ D.button
+        [ DA.klass_ $ buttonClass "blue"
+        , DL.click_ \_ -> launchAff_ do
+            result <- fetchInventory JsonMode
+            liftEffect $ case result of
+              Right (InventoryData (Inventory items)) -> 
+                case find (\(MenuItem item) -> show item.sku == targetUUID) items of
+                  Just (MenuItem item) -> do
+                    let StrainLineage meta = item.strain_lineage
+                    setName item.name
+                    setValidName (Just true)
+                    setSku (show item.sku)
+                    setValidSku (Just true)
+                    setBrand item.brand
+                    setValidBrand (Just true)
+                    setPrice (show item.price)
+                    setValidPrice (Just true)
+                    setQuantity (show item.quantity)
+                    setValidQuantity (Just true)
+                    setCategory (show item.category)
+                    setValidCategory (Just true)
+                    setDescription item.description
+                    setTags (joinWith ", " item.tags)
+                    setEffects (joinWith ", " item.effects)
+                    setThc meta.thc
+                    setValidThc (Just true)
+                    setCbg meta.cbg
+                    setValidCbg (Just true)
+                    setStrain meta.strain
+                    setValidStrain (Just true)
+                    setCreator meta.creator
+                    setValidCreator (Just true)
+                    setSpecies (show meta.species)
+                    setValidSpecies (Just true)
+                    setDominantTarpene meta.dominant_tarpene
+                    setValidDominantTarpene (Just true)
+                    setTarpenes (joinWith ", " meta.tarpenes)
+                    setLineage (joinWith ", " meta.lineage)
+                    setLoading false
+                  Nothing -> do
+                    setStatusMessage "Item not found"
+                    setLoading false
+              Left err -> do
+                setStatusMessage $ "Error loading item: " <> err
+                setLoading false
+              _ -> do
+                setStatusMessage "Unexpected response"
+                setLoading false
+        ]
+        [ text_ "Load Item" ]
+    , D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
         [ D.h2 
             [ DA.klass_ "text-2xl font-bold mb-6" ]
@@ -187,52 +178,67 @@ editItem targetUUID = void $ runInBody $ Deku.do
     , D.button
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
-        , DL.click_ \_ -> do
-            setSubmitting true
-            Aff.launchAff_ do
-              let formInput = 
-                    { name: nameEvent.value
-                    , sku: skuEvent.value
-                    , brand: brandEvent.value
-                    , price: ensureNumber priceEvent.value
-                    , quantity: ensureInt quantityEvent.value
-                    , category: categoryEvent.value
-                    , description: descriptionEvent.value
-                    , tags: split (Pattern ",") tagsEvent.value
-                    , effects: split (Pattern ",") effectsEvent.value
-                    , strainLineage:
-                        { thc: thcEvent.value
-                        , cbg: cbgEvent.value
-                        , strain: strainEvent.value
-                        , creator: creatorEvent.value
-                        , species: speciesEvent.value
-                        , dominant_tarpene: dominantTarpeneEvent.value
-                        , tarpenes: split (Pattern ",") tarpenesEvent.value
-                        , lineage: split (Pattern ",") lineageEvent.value
+        , DL.runOn DL.click $ 
+            (\name sku brand price quantity category description tags effects 
+              thc cbg strain creator species dominant_tarpene tarpenes lineage -> do
+                setSubmitting true
+                void $ setFiber =<< launchAff do
+                  let formInput = 
+                        { name
+                        , sku
+                        , brand
+                        , price
+                        , quantity
+                        , category
+                        , description
+                        , tags
+                        , effects
+                        , strainLineage:
+                            { thc
+                            , cbg
+                            , strain
+                            , creator
+                            , species
+                            , dominant_tarpene
+                            , tarpenes
+                            , lineage
+                            }
                         }
-                    }
-              
-              case validateMenuItem formInput of
-                Left err -> liftEffect do
-                  setStatusMessage $ "Validation error: " <> err
-                  setSubmitting false
-                
-                Right menuItem -> do
-                  result <- updateInventoryInJson menuItem
-                  liftEffect case result of
-                    Right (Message msg) -> do
-                      Console.info "Update successful"
-                      setStatusMessage msg
+                  
+                  case validateMenuItem formInput of
+                    Left err -> liftEffect do
+                      setStatusMessage $ "Validation error: " <> err
                       setSubmitting false
-                    Right (InventoryData _) -> do
-                      Console.info "Item updated in inventory"
-                      setStatusMessage "Item successfully updated!"
-                      setSubmitting false
-                    Left err -> do
-                      Console.error "File System Error:"
-                      Console.errorShow err
-                      setStatusMessage $ "Error updating item: " <> err
-                      setSubmitting false
+                    
+                    Right menuItem -> do
+                      result <- updateInventoryInJson menuItem
+                      liftEffect case result of
+                        Right (Message msg) -> do
+                          setStatusMessage msg
+                          setSubmitting false
+                        Right (InventoryData _) -> do
+                          setStatusMessage "Item successfully updated!"
+                          setSubmitting false
+                        Left err -> do
+                          setStatusMessage $ "Error updating item: " <> err
+                          setSubmitting false
+            ) <$> nameEvent
+              <*> skuEvent
+              <*> brandEvent
+              <*> priceEvent
+              <*> quantityEvent
+              <*> categoryEvent
+              <*> descriptionEvent
+              <*> tagsEvent
+              <*> effectsEvent
+              <*> thcEvent
+              <*> cbgEvent
+              <*> strainEvent
+              <*> creatorEvent
+              <*> speciesEvent
+              <*> dominantTarpeneEvent
+              <*> tarpenesEvent
+              <*> lineageEvent
         ]
         [ text $ map (\submitting -> 
             if submitting then "Updating..." else "Update"
@@ -241,4 +247,4 @@ editItem targetUUID = void $ runInBody $ Deku.do
     , D.div
         [ DA.klass_ "mt-4 text-center" ]
         [ text statusMessageEvent ]
-    ]
+    ] ]
