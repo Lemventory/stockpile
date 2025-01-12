@@ -1,20 +1,26 @@
 module Types where
 
 import Prelude
-import UUID (UUID, parseUUID)
 
 import Control.Monad.Except (ExceptT)
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
 import Data.Generic.Rep (class Generic)
 import Data.Identity (Identity)
+import Data.Int as Int
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
-import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
-import Data.Int as Int
 import Data.Number (fromString) as Number
 import Data.String (trim)
+import Deku.Attribute (Attribute)
+import Deku.Control (elementify)
+import Deku.Core (Nut, attributeAtYourOwnRisk)
+import Effect (Effect)
+import FRP.Poll (Poll)
 import Foreign (Foreign, ForeignError(..), F, fail)
 import Foreign.Index (readProp)
+import Type.Prelude (Proxy)
+import UUID (UUID, parseUUID)
+import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -81,6 +87,35 @@ derive instance eqItemSpecies :: Eq Species
 derive instance ordItemSpecies :: Ord Species
 
 -- | Form input types
+type HTMLFormField (r :: Row Type) =
+  ( __tag :: Proxy "HTMLFormField"
+  , value :: String
+  , validation :: ValidationRule
+  , onUpdate :: String -> Effect Unit
+  | r
+  )
+
+formField 
+  :: forall r
+   . Array (Poll (Attribute (HTMLFormField r))) 
+  -> Array Nut 
+  -> Nut
+formField = elementify Nothing "div"
+
+formFieldValue
+  :: forall r
+   . Poll String
+  -> Poll (Attribute (value :: String | r))
+formFieldValue = map (attributeAtYourOwnRisk "value")
+
+formFieldValidation
+  :: forall r
+   . Poll ValidationRule
+  -> Poll (Attribute (validation :: ValidationRule | r))
+formFieldValidation = map \rule ->
+  attributeAtYourOwnRisk "data-validation" 
+    (show $ rule "")
+
 type MenuItemFormInput = 
   { name :: String
   , sku :: String
@@ -106,20 +141,34 @@ type StrainLineageFormInput =
   }
 
 -- | Field configuration types
-type FieldConfig = 
-  { label :: String
+type FieldConfig = Record (FieldConfigRow ())
+
+type FieldConfigRow r =
+  ( label :: String
   , placeholder :: String
   , defaultValue :: String
   , validation :: ValidationRule
   , errorMessage :: String
   , formatInput :: String -> String
-  }
+  | r
+  )
 
 type DropdownConfig = 
   { label :: String
   , options :: Array { value :: String, label :: String }
   , defaultValue :: String
   }
+
+type TextFieldConfig r =
+  ( maxLength :: Int
+  | FieldConfigRow r
+  )
+
+type NumberFieldConfig r = 
+  ( min :: Number
+  , max :: Number
+  | FieldConfigRow r
+  )
 
 -- | Core validation types and type classes
 data ValidationResult a = 
@@ -269,6 +318,15 @@ instance writeForeignStrainLineage :: WriteForeign StrainLineage where
 instance writeForeignSpecies :: WriteForeign Species where 
   writeImpl = writeImpl <<< show
 
+instance writeForeignFieldConfig :: WriteForeign (Record (FieldConfigRow r)) where
+  writeImpl config = writeImpl
+    { label: config.label
+    , placeholder: config.placeholder
+    , validation: show config.validation
+    , errorMessage: config.errorMessage
+    , formatInput: show config.formatInput
+    }
+
 instance writeForeignInventoryResponse :: WriteForeign InventoryResponse where
   writeImpl (InventoryData inventory) = writeImpl { type: "data", value: inventory }
   writeImpl (Message msg) = writeImpl { type: "message", value: msg }
@@ -380,6 +438,11 @@ instance showMenuItem :: Show MenuItem where
     "MenuItem " <> show item
 
 -- | FormValue instances
+instance formValueValidated :: (FieldValidator a) => FormValue (Validated a) where
+  fromFormValue str = case validateField validator str of
+    Right value -> ValidationSuccess value
+    Left err -> ValidationError err
+
 instance formValueString :: FormValue String where
   fromFormValue = ValidationSuccess <<< trim
 
