@@ -2,8 +2,6 @@ module Form where
 
 import Prelude
 
-import Utils (getAllEnumValues, parseCommaList)
-
 import Data.Array ((:))
 import Data.Enum (class BoundedEnum)
 import Data.Foldable (for_)
@@ -16,12 +14,13 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import FRP.Poll (Poll)
+import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset, runValidation)
+import Utils (getAllEnumValues, parseCommaList)
+import Validation (allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
-import Validation (allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
-import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset)
 
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
 makeField config setValue setValid validEvent = 
@@ -43,7 +42,7 @@ makeField config setValue setValid validEvent =
                         v <- Input.value inputElement
                         let formatted = config.formatInput v
                         setValue formatted
-                        setValid (Just (config.validation formatted))
+                        setValid (Just (runValidation config.validation formatted))
                 , DL.input_ \evt -> do
                     for_ 
                       (target evt >>= Input.fromEventTarget)
@@ -51,7 +50,7 @@ makeField config setValue setValid validEvent =
                         v <- Input.value inputElement
                         let formatted = config.formatInput v
                         setValue formatted
-                        setValid (Just (config.validation formatted))
+                        setValid (Just (runValidation config.validation formatted))
                 , DA.klass_ (inputKls <> " resize-y")
                 ]
                 [ text_ config.defaultValue ]
@@ -66,7 +65,7 @@ makeField config setValue setValid validEvent =
                         v <- Input.value inputElement
                         let formatted = config.formatInput v
                         setValue formatted
-                        setValid (Just (config.validation formatted))
+                        setValid (Just (runValidation config.validation formatted))
                 , DL.input_ \evt -> do
                     for_ 
                       (target evt >>= Input.fromEventTarget)
@@ -74,7 +73,7 @@ makeField config setValue setValid validEvent =
                         v <- Input.value inputElement
                         let formatted = config.formatInput v
                         setValue formatted
-                        setValid (Just (config.validation formatted))
+                        setValid (Just (runValidation config.validation formatted))
                 , DA.klass_ inputKls
                 ]
                 []

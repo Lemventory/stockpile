@@ -3,9 +3,11 @@ module Types where
 import Prelude
 
 import Control.Monad.Except (ExceptT)
+import Data.Either (Either(..))
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
 import Data.Generic.Rep (class Generic)
 import Data.Identity (Identity)
+import Data.Int (fromString)
 import Data.Int as Int
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
@@ -18,7 +20,7 @@ import Effect (Effect)
 import FRP.Poll (Poll)
 import Foreign (Foreign, ForeignError(..), F, fail)
 import Foreign.Index (readProp)
-import Type.Prelude (Proxy)
+import Type.Proxy (Proxy(..))
 import UUID (UUID, parseUUID)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
@@ -113,8 +115,7 @@ formFieldValidation
    . Poll ValidationRule
   -> Poll (Attribute (validation :: ValidationRule | r))
 formFieldValidation = map \rule ->
-  attributeAtYourOwnRisk "data-validation" 
-    (show $ rule "")
+  attributeAtYourOwnRisk "data-validation" (show rule)
 
 type MenuItemFormInput = 
   { name :: String
@@ -143,6 +144,8 @@ type StrainLineageFormInput =
 -- | Field configuration types
 type FieldConfig = Record (FieldConfigRow ())
 
+newtype FieldConfigRecord r = FieldConfigRecord (Record (FieldConfigRow r))
+
 type FieldConfigRow r =
   ( label :: String
   , placeholder :: String
@@ -170,19 +173,28 @@ type NumberFieldConfig r =
   | FieldConfigRow r
   )
 
+toFieldConfigRecord :: forall r. Record (FieldConfigRow r) -> FieldConfigRecord r
+toFieldConfigRecord = FieldConfigRecord
+
+fromFieldConfigRecord :: forall r. FieldConfigRecord r -> Record (FieldConfigRow r)
+fromFieldConfigRecord (FieldConfigRecord record) = record
+
 -- | Core validation types and type classes
 data ValidationResult a = 
   ValidationSuccess a 
   | ValidationError String
 
 -- | Validation types
-type ValidationRule = String -> Boolean
+newtype ValidationRule = ValidationRule (String -> Boolean)
 
-type FieldValidator a = 
-  { validate :: String -> Boolean
-  , convert :: String -> Maybe a
-  , error :: String
-  }
+newtype Validated a = Validated a
+
+derive instance genericValidated :: Generic (Validated a) _
+derive instance functorValidated :: Functor Validated
+
+class FieldValidator a where
+  validateField :: String -> Either String a
+  validationError :: Proxy a -> String
 
 type ValidationPreset = 
   { validation :: ValidationRule
@@ -192,6 +204,14 @@ type ValidationPreset =
 
 class FormValue a where
   fromFormValue :: String -> ValidationResult a
+
+-- Helper function to create ValidationRule
+mkValidationRule :: (String -> Boolean) -> ValidationRule
+mkValidationRule = ValidationRule
+
+-- Helper function to use ValidationRule
+runValidation :: ValidationRule -> String -> Boolean
+runValidation (ValidationRule f) = f
 
 -- | Instances 
 instance Enum ItemCategory where
@@ -292,6 +312,8 @@ instance Show Species where
   show SativaDominantHybrid = "SativaDominantHybrid"
   show Sativa = "Sativa"
 
+
+-- | WriteForeign instances
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
@@ -318,19 +340,23 @@ instance writeForeignStrainLineage :: WriteForeign StrainLineage where
 instance writeForeignSpecies :: WriteForeign Species where 
   writeImpl = writeImpl <<< show
 
-instance writeForeignFieldConfig :: WriteForeign (Record (FieldConfigRow r)) where
-  writeImpl config = writeImpl
+instance writeForeignFieldConfigRecord :: WriteForeign (FieldConfigRecord r) where
+  writeImpl (FieldConfigRecord config) = writeImpl
     { label: config.label
     , placeholder: config.placeholder
-    , validation: show config.validation
+    , validation: config.validation
     , errorMessage: config.errorMessage
-    , formatInput: show config.formatInput
+    , formatInput: "<format function>" 
     }
 
 instance writeForeignInventoryResponse :: WriteForeign InventoryResponse where
   writeImpl (InventoryData inventory) = writeImpl { type: "data", value: inventory }
   writeImpl (Message msg) = writeImpl { type: "message", value: msg }
 
+instance writeForeignValidationRule :: WriteForeign ValidationRule where
+  writeImpl _ = writeImpl "<validation function>"
+
+-- | ReadForeign instances
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
     sort <- readProp "sort" json >>= readImpl
@@ -429,6 +455,7 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
         inventory <- readImpl f
         pure $ InventoryData inventory
       
+-- | Show instances
 instance showStrainLineage :: Show StrainLineage where
   show (StrainLineage lineage) = 
     "StrainLineage " <> show lineage
@@ -437,9 +464,55 @@ instance showMenuItem :: Show MenuItem where
   show (MenuItem item) = 
     "MenuItem " <> show item
 
+instance showValidationRule :: Show ValidationRule where
+  show _ = "<validation function>"
+
+-- | FieldValidator instances
+instance fieldValidatorValidated :: (FieldValidator a) => FieldValidator (Validated a) where
+  validateField str = do
+    result <- validateField str
+    pure $ Validated result
+  validationError _ = "Validated: " <> validationError (Proxy :: Proxy a)
+
+instance fieldValidatorString :: FieldValidator String where
+  validateField str = Right (trim str)
+  validationError _ = "Invalid string format"
+
+instance fieldValidatorNumber :: FieldValidator Number where
+  validateField str = case Number.fromString (trim str) of
+    Just n -> if n >= 0.0 
+              then Right n 
+              else Left "Must be a positive number"
+    Nothing -> Left "Must be a valid number"
+  validationError _ = "Must be a valid number"
+
+instance fieldValidatorInt :: FieldValidator Int where
+  validateField str = case fromString (trim str) of
+    Just n -> Right n 
+    Nothing -> Left "Must be a valid integer"
+  validationError _ = "Must be a valid integer"
+
+instance fieldValidatorUUID :: FieldValidator UUID where
+  validateField str = case parseUUID (trim str) of
+    Just uuid -> Right uuid
+    Nothing -> Left "Must be a valid UUID"
+  validationError _ = "Invalid UUID format"
+
+instance fieldValidatorItemCategory :: FieldValidator ItemCategory where
+  validateField str = case fromFormValue str of
+    ValidationSuccess cat -> Right cat
+    ValidationError err -> Left err
+  validationError _ = "Must be a valid category"
+
+instance fieldValidatorSpecies :: FieldValidator Species where
+  validateField str = case fromFormValue str of
+    ValidationSuccess species -> Right species
+    ValidationError err -> Left err
+  validationError _ = "Must be a valid species"
+
 -- | FormValue instances
 instance formValueValidated :: (FieldValidator a) => FormValue (Validated a) where
-  fromFormValue str = case validateField validator str of
+  fromFormValue str = case validateField str of
     Right value -> ValidationSuccess value
     Left err -> ValidationError err
 
