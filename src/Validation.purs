@@ -22,7 +22,7 @@ requireValid field = case _ of
   ValidationSuccess x -> Right x
   ValidationError err -> Left $ field <> ": " <> err
 
-requiredField :: forall a. (FieldValidator a) => ValidationRule
+requiredField :: forall a. FormValue a => FieldValidator a => ValidationRule
 requiredField = ValidationRule \str -> 
   let
     validate :: String -> Either String a
@@ -133,10 +133,8 @@ multilineText =
   }
 
 -- | Form validation
-  
 validateForm :: forall r. Record (FieldConfigRow r) -> MenuItemFormInput -> Either String MenuItem
-validateForm _ input = do  -- Use _ to indicate unused parameter
-  -- Basic field validations
+validateForm _ input = do
   name <- validateTextField 
     { label: "Name"
     , maxLength: 50
@@ -153,7 +151,6 @@ validateForm _ input = do  -- Use _ to indicate unused parameter
   quantity <- requireValid "Quantity" $ fromFormValue input.quantity
   category <- requireValid "Category" $ fromFormValue input.category
   
-  -- Strain lineage validation
   strainLineage <- validateStrainLineage input.strainLineage
 
   pure $ MenuItem
@@ -193,7 +190,7 @@ validateNumberField config input =
 
 validateFormField :: forall r a
    . FormValue a
-  => FieldValidator a  -- Add this constraint
+  => FieldValidator a
   => Record (HTMLFormField r)
   -> ValidationResult a
 validateFormField field = 
@@ -205,11 +202,14 @@ validateFormField field =
       else ValidationError (validationError (Proxy :: Proxy a))
     ValidationError err -> ValidationError err
 
-validateField :: forall a. (FieldValidator a) => String -> Either String a
+validateField :: forall a. FormValue a => FieldValidator a => String -> Either String a
 validateField str = do
-  case trim str of
-    "" -> Left (validationError (Proxy :: Proxy a))
-    trimmed -> validateField trimmed
+  let trimmed = trim str
+  if trimmed == ""
+    then Left (validationError (Proxy :: Proxy a))
+    else case fromFormValue trimmed of
+      ValidationSuccess value -> Right value
+      ValidationError err -> Left err
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do

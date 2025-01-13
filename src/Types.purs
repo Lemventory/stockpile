@@ -184,13 +184,15 @@ data ValidationResult a =
   ValidationSuccess a 
   | ValidationError String
 
--- | Validation types
 newtype ValidationRule = ValidationRule (String -> Boolean)
 
 newtype Validated a = Validated a
 
 derive instance genericValidated :: Generic (Validated a) _
 derive instance functorValidated :: Functor Validated
+
+class FormValue a where
+  fromFormValue :: String -> ValidationResult a
 
 class FieldValidator a where
   validateField :: String -> Either String a
@@ -202,14 +204,10 @@ type ValidationPreset =
   , formatInput :: String -> String
   }
 
-class FormValue a where
-  fromFormValue :: String -> ValidationResult a
-
 -- Helper function to create ValidationRule
 mkValidationRule :: (String -> Boolean) -> ValidationRule
 mkValidationRule = ValidationRule
 
--- Helper function to use ValidationRule
 runValidation :: ValidationRule -> String -> Boolean
 runValidation (ValidationRule f) = f
 
@@ -454,7 +452,7 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
       Nothing -> do
         inventory <- readImpl f
         pure $ InventoryData inventory
-      
+
 -- | Show instances
 instance showStrainLineage :: Show StrainLineage where
   show (StrainLineage lineage) = 
@@ -466,6 +464,52 @@ instance showMenuItem :: Show MenuItem where
 
 instance showValidationRule :: Show ValidationRule where
   show _ = "<validation function>"
+
+-- | FormValue instances
+instance formValueString :: FormValue String where
+  fromFormValue = ValidationSuccess <<< trim
+
+instance formValueNumber :: FormValue Number where
+  fromFormValue str = case Number.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid number format"
+
+instance formValueInt :: FormValue Int where
+  fromFormValue str = case Int.fromString (trim str) of
+    Just n -> ValidationSuccess n
+    Nothing -> ValidationError "Invalid integer format"
+
+instance formValueItemCategory :: FormValue ItemCategory where
+  fromFormValue str = case str of
+    "Flower" -> ValidationSuccess Flower
+    "PreRolls" -> ValidationSuccess PreRolls
+    "Vaporizers" -> ValidationSuccess Vaporizers
+    "Edibles" -> ValidationSuccess Edibles
+    "Drinks" -> ValidationSuccess Drinks
+    "Concentrates" -> ValidationSuccess Concentrates
+    "Topicals" -> ValidationSuccess Topicals
+    "Tinctures" -> ValidationSuccess Tinctures
+    "Accessories" -> ValidationSuccess Accessories
+    _ -> ValidationError "Invalid category value"
+
+instance formValueSpecies :: FormValue Species where
+  fromFormValue str = case str of
+    "Indica" -> ValidationSuccess Indica
+    "IndicaDominant" -> ValidationSuccess IndicaDominantHybrid
+    "Hybrid" -> ValidationSuccess Hybrid
+    "SativaDominant" -> ValidationSuccess SativaDominantHybrid
+    "Sativa" -> ValidationSuccess Sativa
+    _ -> ValidationError "Invalid species value"
+
+instance formValueUUID :: FormValue UUID where
+  fromFormValue str = case parseUUID (trim str) of
+    Just uuid -> ValidationSuccess uuid
+    Nothing -> ValidationError "Invalid UUID format"
+
+instance formValueValidated :: (FieldValidator a) => FormValue (Validated a) where
+  fromFormValue str = case validateField str of
+    Right value -> ValidationSuccess value
+    Left err -> ValidationError err
 
 -- | FieldValidator instances
 instance fieldValidatorValidated :: (FieldValidator a) => FieldValidator (Validated a) where
@@ -509,49 +553,3 @@ instance fieldValidatorSpecies :: FieldValidator Species where
     ValidationSuccess species -> Right species
     ValidationError err -> Left err
   validationError _ = "Must be a valid species"
-
--- | FormValue instances
-instance formValueValidated :: (FieldValidator a) => FormValue (Validated a) where
-  fromFormValue str = case validateField str of
-    Right value -> ValidationSuccess value
-    Left err -> ValidationError err
-
-instance formValueString :: FormValue String where
-  fromFormValue = ValidationSuccess <<< trim
-
-instance formValueNumber :: FormValue Number where
-  fromFormValue str = case Number.fromString (trim str) of
-    Just n -> ValidationSuccess n
-    Nothing -> ValidationError "Invalid number format"
-
-instance formValueInt :: FormValue Int where
-  fromFormValue str = case Int.fromString (trim str) of
-    Just n -> ValidationSuccess n
-    Nothing -> ValidationError "Invalid integer format"
-
-instance formValueItemCategory :: FormValue ItemCategory where
-  fromFormValue str = case str of
-    "Flower" -> ValidationSuccess Flower
-    "PreRolls" -> ValidationSuccess PreRolls
-    "Vaporizers" -> ValidationSuccess Vaporizers
-    "Edibles" -> ValidationSuccess Edibles
-    "Drinks" -> ValidationSuccess Drinks
-    "Concentrates" -> ValidationSuccess Concentrates
-    "Topicals" -> ValidationSuccess Topicals
-    "Tinctures" -> ValidationSuccess Tinctures
-    "Accessories" -> ValidationSuccess Accessories
-    _ -> ValidationError "Invalid category value"
-
-instance formValueSpecies :: FormValue Species where
-  fromFormValue str = case str of
-    "Indica" -> ValidationSuccess Indica
-    "IndicaDominant" -> ValidationSuccess IndicaDominantHybrid
-    "Hybrid" -> ValidationSuccess Hybrid
-    "SativaDominant" -> ValidationSuccess SativaDominantHybrid
-    "Sativa" -> ValidationSuccess Sativa
-    _ -> ValidationError "Invalid species value"
-
-instance formValueUUID :: FormValue UUID where
-  fromFormValue str = case parseUUID (trim str) of
-    Just uuid -> ValidationSuccess uuid
-    Nothing -> ValidationError "Invalid UUID format"
