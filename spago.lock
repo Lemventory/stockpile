@@ -6,8 +6,11 @@
         "core": {
           "dependencies": [
             "aff",
+            "aff-promise",
             "affjax",
             "affjax-web",
+            "arraybuffer",
+            "arraybuffer-types",
             "arrays",
             "console",
             "css",
@@ -16,6 +19,7 @@
             "deku-dom",
             "effect",
             "either",
+            "encoding",
             "enums",
             "fetch",
             "fetch-yoga-json",
@@ -33,10 +37,12 @@
           ],
           "build_plan": [
             "aff",
+            "aff-promise",
             "affjax",
             "affjax-web",
             "ansi",
             "argonaut-core",
+            "arraybuffer",
             "arraybuffer-types",
             "arrays",
             "assert",
@@ -56,12 +62,14 @@
             "distributive",
             "effect",
             "either",
+            "encoding",
             "enums",
             "exceptions",
             "exists",
             "fetch",
             "fetch-yoga-json",
             "filterable",
+            "float32",
             "foldable-traversable",
             "foreign",
             "foreign-object",
@@ -124,6 +132,7 @@
             "tuples",
             "type-equality",
             "typelevel-prelude",
+            "uint",
             "unfoldable",
             "unicode",
             "unsafe-coerce",
@@ -835,6 +844,15 @@
         "unsafe-coerce"
       ]
     },
+    "aff-promise": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-Kq5EupbUpXeUXx4JqGQE7/RTTz/H6idzWhsocwlEFhM=",
+      "dependencies": [
+        "aff",
+        "foreign"
+      ]
+    },
     "affjax": {
       "type": "registry",
       "version": "13.0.0",
@@ -892,6 +910,25 @@
         "prelude",
         "strings",
         "tailrec"
+      ]
+    },
+    "arraybuffer": {
+      "type": "registry",
+      "version": "13.2.0",
+      "integrity": "sha256-fNsR19aRqcUis9C28MpyMigIlfX6f6Hq1up4IcTOvDU=",
+      "dependencies": [
+        "arraybuffer-types",
+        "arrays",
+        "effect",
+        "float32",
+        "functions",
+        "gen",
+        "maybe",
+        "nullable",
+        "prelude",
+        "tailrec",
+        "uint",
+        "unfoldable"
       ]
     },
     "arraybuffer-types": {
@@ -1125,6 +1162,19 @@
         "prelude"
       ]
     },
+    "encoding": {
+      "type": "registry",
+      "version": "0.0.9",
+      "integrity": "sha256-vtyUO06Jww8pFl4wRekPd1YpJl2XuQXcaNXQgHtG8Tk=",
+      "dependencies": [
+        "arraybuffer-types",
+        "effect",
+        "either",
+        "exceptions",
+        "functions",
+        "prelude"
+      ]
+    },
     "enums": {
       "type": "registry",
       "version": "6.0.1",
@@ -1213,6 +1263,16 @@
         "identity",
         "lists",
         "ordered-collections"
+      ]
+    },
+    "float32": {
+      "type": "registry",
+      "version": "2.0.0",
+      "integrity": "sha256-PRRdv0zNZ8JdohWTO3ZSLzt51ymxK4/NHtGTwuMWHtw=",
+      "dependencies": [
+        "gen",
+        "maybe",
+        "prelude"
       ]
     },
     "foldable-traversable": {
@@ -2059,6 +2119,19 @@
       "dependencies": [
         "prelude",
         "type-equality"
+      ]
+    },
+    "uint": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-fQ30YjiKz9DS6yqRdmK+WARVbJhpZDDTRcpFw675b6M=",
+      "dependencies": [
+        "effect",
+        "enums",
+        "gen",
+        "maybe",
+        "numbers",
+        "prelude"
       ]
     },
     "unfoldable": {

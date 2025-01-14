@@ -2,8 +2,11 @@ package:
   name: cheeblr
   dependencies:
     - aff
+    - aff-promise
     - affjax
     - affjax-web
+    - arraybuffer
+    - arraybuffer-types
     - arrays
     - console
     - css
@@ -12,6 +15,7 @@ package:
     - deku-dom
     - effect
     - either
+    - encoding
     - enums
     - fetch
     - fetch-yoga-json

@@ -26,6 +26,10 @@ import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
+data StorageMethod = LocalFile | BrowserStorage | HttpApi
+derive instance eqStorageMethod :: Eq StorageMethod
+derive instance ordStorageMethod :: Ord StorageMethod
+
 data InventoryResponse
   = InventoryData Inventory
   | Message String
@@ -464,6 +468,11 @@ instance showMenuItem :: Show MenuItem where
 
 instance showValidationRule :: Show ValidationRule where
   show _ = "<validation function>"
+
+instance showStorageMethod :: Show StorageMethod where
+  show LocalFile = "LocalFile"
+  show BrowserStorage = "BrowserStorage"
+  show HttpApi = "HttpApi"
 
 -- | FormValue instances
 instance formValueString :: FormValue String where
