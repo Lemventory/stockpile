@@ -2,7 +2,7 @@ module EditItem where
 
 import Prelude
 
-import API (updateInventoryInJson, fetchInventory)
+import API (readInventory, writeInventory)
 import Data.Array (all, find)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -18,8 +18,9 @@ import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Aff (launchAff, launchAff_)
 import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
 import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
-import Types (InventoryResponse(..), MenuItem(..), Inventory(..), StrainLineage(..), QueryMode(..))
+import Types (InventoryResponse(..), MenuItem(..), Inventory(..), StrainLineage(..))
 import Validation (validateMenuItem)
 
 editItem :: String -> Effect Unit
@@ -95,54 +96,64 @@ editItem targetUUID = void $ runInBody Deku.do
         , vDominantTarpene
         ]
 
+    -- Function to load item data into form
+    loadItemData :: MenuItem -> Effect Unit
+    loadItemData (MenuItem item) = do
+      let StrainLineage meta = item.strain_lineage
+      setName item.name
+      setValidName (Just true)
+      setSku (show item.sku)
+      setValidSku (Just true)
+      setBrand item.brand
+      setValidBrand (Just true)
+      setPrice (show item.price)
+      setValidPrice (Just true)
+      setQuantity (show item.quantity)
+      setValidQuantity (Just true)
+      setCategory (show item.category)
+      setValidCategory (Just true)
+      setDescription item.description
+      setTags (joinWith ", " item.tags)
+      setEffects (joinWith ", " item.effects)
+      setThc meta.thc
+      setValidThc (Just true)
+      setCbg meta.cbg
+      setValidCbg (Just true)
+      setStrain meta.strain
+      setValidStrain (Just true)
+      setCreator meta.creator
+      setValidCreator (Just true)
+      setSpecies (show meta.species)
+      setValidSpecies (Just true)
+      setDominantTarpene meta.dominant_tarpene
+      setValidDominantTarpene (Just true)
+      setTarpenes (joinWith ", " meta.tarpenes)
+      setLineage (joinWith ", " meta.lineage)
+      setLoading false
+
   D.div [] [ D.div_
     [ D.button
         [ DA.klass_ $ buttonClass "blue"
         , DL.click_ \_ -> launchAff_ do
-            result <- fetchInventory JsonMode
+            liftEffect $ Console.log "Loading item data..."
+            result <- readInventory
             liftEffect $ case result of
               Right (InventoryData (Inventory items)) -> 
                 case find (\(MenuItem item) -> show item.sku == targetUUID) items of
-                  Just (MenuItem item) -> do
-                    let StrainLineage meta = item.strain_lineage
-                    setName item.name
-                    setValidName (Just true)
-                    setSku (show item.sku)
-                    setValidSku (Just true)
-                    setBrand item.brand
-                    setValidBrand (Just true)
-                    setPrice (show item.price)
-                    setValidPrice (Just true)
-                    setQuantity (show item.quantity)
-                    setValidQuantity (Just true)
-                    setCategory (show item.category)
-                    setValidCategory (Just true)
-                    setDescription item.description
-                    setTags (joinWith ", " item.tags)
-                    setEffects (joinWith ", " item.effects)
-                    setThc meta.thc
-                    setValidThc (Just true)
-                    setCbg meta.cbg
-                    setValidCbg (Just true)
-                    setStrain meta.strain
-                    setValidStrain (Just true)
-                    setCreator meta.creator
-                    setValidCreator (Just true)
-                    setSpecies (show meta.species)
-                    setValidSpecies (Just true)
-                    setDominantTarpene meta.dominant_tarpene
-                    setValidDominantTarpene (Just true)
-                    setTarpenes (joinWith ", " meta.tarpenes)
-                    setLineage (joinWith ", " meta.lineage)
-                    setLoading false
+                  Just menuItem -> do
+                    Console.log "Found item, loading data..."
+                    loadItemData menuItem
                   Nothing -> do
+                    Console.error "Item not found"
                     setStatusMessage "Item not found"
                     setLoading false
-              Left err -> do
-                setStatusMessage $ "Error loading item: " <> err
+              Right (Message msg) -> do
+                Console.log $ "Got message: " <> msg
+                setStatusMessage msg
                 setLoading false
-              _ -> do
-                setStatusMessage "Unexpected response"
+              Left err -> do
+                Console.error $ "Error loading item: " <> err
+                setStatusMessage $ "Error loading item: " <> err
                 setLoading false
         ]
         [ text_ "Load Item" ]
@@ -205,21 +216,35 @@ editItem targetUUID = void $ runInBody Deku.do
                             }
                         }
                   
+                  liftEffect $ Console.group "Form Submission"
+                  liftEffect $ Console.log "Validating form data..."
+                  
                   case validateMenuItem formInput of
                     Left err -> liftEffect do
+                      Console.error "Validation failed:"
+                      Console.errorShow err
+                      Console.groupEnd
                       setStatusMessage $ "Validation error: " <> err
                       setSubmitting false
                     
                     Right menuItem -> do
-                      result <- updateInventoryInJson menuItem
+                      liftEffect $ Console.log "Form validated, updating inventory..."
+                      result <- writeInventory menuItem
                       liftEffect case result of
                         Right (Message msg) -> do
+                          Console.info "Update successful"
+                          Console.groupEnd
                           setStatusMessage msg
                           setSubmitting false
                         Right (InventoryData _) -> do
+                          Console.info "Item successfully updated"
+                          Console.groupEnd
                           setStatusMessage "Item successfully updated!"
                           setSubmitting false
                         Left err -> do
+                          Console.error "Update failed:"
+                          Console.errorShow err
+                          Console.groupEnd
                           setStatusMessage $ "Error updating item: " <> err
                           setSubmitting false
             ) <$> nameEvent

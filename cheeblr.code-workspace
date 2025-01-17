@@ -1,0 +1,45 @@
+{
+    "folders": [
+      {
+        "name": "Cheeblr Frontend",
+        "path": "frontend"
+      },
+      {
+        "name": "Cheeblr Backend",
+        "path": "backend"
+      },
+      {
+        "name": "Root",
+        "path": "."
+      }
+    ],
+    "settings": {
+      "files.exclude": {
+        "frontend": false,
+        "backend": false
+      },
+      "[purescript]": {
+        "editor.defaultFormatter": "nwolverson.ide-purescript"
+      },
+      "[haskell]": {
+        "editor.defaultFormatter": "haskell.haskell"
+      },
+      "purescript.sourcePath": "./frontend/src",
+      "haskell.checkProject": true,
+      "files.watcherExclude": {
+        "**/dist/**": true,
+        "**/dist-newstyle/**": true,
+        "**/.spago/**": true,
+        "**/output/**": true,
+        "**/.psci_modules/**": true
+      }
+    },
+    "extensions": {
+      "recommendations": [
+        "nwolverson.ide-purescript",
+        "nwolverson.language-purescript",
+        "haskell.haskell",
+        "justusadam.language-haskell"
+      ]
+    }
+  }
