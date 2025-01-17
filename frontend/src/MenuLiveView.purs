@@ -4,8 +4,7 @@ module MenuLiveView
 
 import Prelude
 
-import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), StrainLineage(..), Species)
-import API (fetchInventory)
+import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), StrainLineage(..), Species)
 
 import Data.Array (filter, sortBy)
 import Data.Array as Array
@@ -23,11 +22,16 @@ import Deku.Effect (useState)
 import Deku.Hooks ((<#~>))
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
-import Effect.Aff (launchAff_)
+import Effect.Aff (Aff, attempt, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import FRP.Event (subscribe)
 import FRP.Event.Time (interval)
+import Effect.Now (now)
+import Fetch (Method(..), fetch)
+import Fetch.Yoga.Json (fromJSON)
+import Foreign (Foreign)
+import Yoga.JSON (unsafeStringify, writeImpl)
 
 -- Sorting Configuration
 data SortField =  SortByOrder
@@ -40,6 +44,8 @@ data SortField =  SortByOrder
                 | SortByQuantity
 
 data SortOrder = Ascending | Descending
+
+data QueryMode = JsonMode | HttpMode
 
 type Config =
   { sortFields :: Array (Tuple SortField SortOrder) 
@@ -86,6 +92,43 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
           result -> result
   in
     compareWithPriority config.sortFields
+
+fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
+fetchInventory = case _ of
+  JsonMode -> fetchInventoryFromJson
+  HttpMode -> fetchInventoryFromHttp
+
+fetchInventoryFromJson :: Aff (Either String InventoryResponse)
+fetchInventoryFromJson = do
+  result <- attempt do
+    timestamp <- liftEffect $ show <$> now
+    let url = "/inventory.json?t=" <> timestamp
+    liftEffect $ log ("Fetching URL: " <> url)
+    coreResponse <- fetch url {}
+    inventory <- fromJSON coreResponse.json :: Aff Inventory
+    pure inventory
+
+  case result of
+    Left err -> pure $ Left $ "Fetch error: " <> show err
+    Right inventory -> pure $ Right $ InventoryData inventory
+
+
+fetchInventoryFromHttp :: Aff (Either String InventoryResponse)
+fetchInventoryFromHttp = do
+  result <- attempt do
+    let requestHeaders = { "Content-Type": "application/json" }
+    let requestBody = unsafeStringify (writeImpl { hello: "world" })
+    coreResponse <- fetch "https://httpbin.org/post"
+      { method: POST
+      , body: requestBody
+      , headers: requestHeaders
+      }
+    res <- fromJSON coreResponse.json :: Aff Foreign
+    pure $ "Received response: " <> unsafeStringify res
+
+  case result of
+    Left err -> pure $ Left $ "Fetch error: " <> show err
+    Right msg -> pure $ Right $ Message msg
 
 renderInventory :: Config -> Inventory -> Nut
 renderInventory config (Inventory items) = D.div

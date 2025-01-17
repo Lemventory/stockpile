@@ -11,6 +11,7 @@ import Data.Int (fromString)
 import Data.Int as Int
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 import Data.Number (fromString) as Number
 import Data.String (trim)
 import Deku.Attribute (Attribute)
@@ -26,19 +27,13 @@ import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
-data StorageMethod = LocalFile | BrowserStorage | HttpApi
-derive instance eqStorageMethod :: Eq StorageMethod
-derive instance ordStorageMethod :: Ord StorageMethod
-
 data InventoryResponse
   = InventoryData Inventory
   | Message String
 
-data QueryMode = JsonMode | HttpMode
-
 newtype Inventory = Inventory (Array MenuItem)
 
-data MenuItem = MenuItem
+type MenuItemRecord =
   { sort :: Int
   , sku :: UUID
   , brand :: String
@@ -54,7 +49,9 @@ data MenuItem = MenuItem
   , effects :: Array String
   , strain_lineage :: StrainLineage
   }
-derive instance genericMenuItem :: Generic MenuItem _
+
+newtype MenuItem = MenuItem MenuItemRecord
+derive instance Newtype MenuItem _
 
 data ItemCategory 
   = Flower 
@@ -468,11 +465,6 @@ instance showMenuItem :: Show MenuItem where
 
 instance showValidationRule :: Show ValidationRule where
   show _ = "<validation function>"
-
-instance showStorageMethod :: Show StorageMethod where
-  show LocalFile = "LocalFile"
-  show BrowserStorage = "BrowserStorage"
-  show HttpApi = "HttpApi"
 
 -- | FormValue instances
 instance formValueString :: FormValue String where

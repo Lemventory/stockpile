@@ -1,0 +1,66 @@
+cabal-version: 3.6
+name: cheeblr-backend
+version: 0.0.0.1
+category: web
+author: Harry Pray IV
+maintainer: harryprayiv@harryprayiv.com
+copyright: Harry Pray IV
+homepage: https://github.com/harryprayiv/cheelbr/cheeblr-backend
+bug-reports: https://github.com/harryprayiv/cheeblr/issues
+
+extra-source-files:
+    README.md
+
+common shared-properties
+    ghc-options: -Wall
+                 -O2
+
+    build-depends: base
+                , servant
+                , servant-server
+                , transformers
+                , aeson
+                , wai
+                , warp 
+
+library
+    import: shared-properties
+    exposed-modules: Main
+                  , Preamble
+                  , Capability.MonadExec
+                  , Data.BaseUrl
+                  , Data.TcpPort
+                  , Domain
+                  , Server
+                  , Server.Auth
+                  , Server.Handlers
+                  , System
+                  , System.Envy.Extended
+                  , Types
+    build-depends: refined
+                , string-conversions
+                , servant-server
+    hs-source-dirs: src
+
+executable cheeblr-backend
+    import: shared-properties
+    main-is: Main.hs
+    other-modules:  App
+    hs-source-dirs: src
+    ghc-options: -threaded
+                 -rtsopts
+                 -with-rtsopts=-N
+    -- build-depends: cheeblr-backend
+
+test-suite spec
+    import: shared-properties
+    type: exitcode-stdio-1.0
+    main-is: Spec.hs
+    hs-source-dirs: test
+    -- ghc-options: -threaded
+    build-depends: hspec
+                -- , cheeblr-backend
+                , servant-client
+                , warp >= 3.2.4
+                , http-client
+                , http-types

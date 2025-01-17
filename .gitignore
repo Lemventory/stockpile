@@ -12,3 +12,4 @@ generated-docs/
 .spago
 /script/
 /.vscode/
+/backend/dist-newstyle
