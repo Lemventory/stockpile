@@ -1,11 +1,11 @@
 {
     "folders": [
       {
-        "name": "Cheeblr Frontend",
+        "name": "frontend-ps",
         "path": "frontend"
       },
       {
-        "name": "Cheeblr Backend",
+        "name": "backend-hs",
         "path": "backend"
       },
       {
@@ -22,7 +22,7 @@
         "editor.defaultFormatter": "nwolverson.ide-purescript"
       },
       "[haskell]": {
-        "editor.defaultFormatter": "haskell.haskell"
+        "editor.defaultFormatter": "justusadam.language-haskell"
       },
       "purescript.sourcePath": "./frontend/src",
       "haskell.checkProject": true,
