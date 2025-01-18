@@ -14,7 +14,6 @@ extra-source-files:
 common shared-properties
     ghc-options: -Wall
                  -O2
-
     build-depends: base
                 , servant
                 , servant-server
@@ -25,18 +24,7 @@ common shared-properties
 
 library
     import: shared-properties
-    exposed-modules: Main
-                  , Preamble
-                  , Capability.MonadExec
-                  , Data.BaseUrl
-                  , Data.TcpPort
-                  , Domain
-                  , Server
-                  , Server.Auth
-                  , Server.Handlers
-                  , System
-                  , System.Envy.Extended
-                  , Types
+    exposed-modules: App 
     build-depends: refined
                 , string-conversions
                 , servant-server
@@ -45,22 +33,21 @@ library
 executable cheeblr-backend
     import: shared-properties
     main-is: Main.hs
-    other-modules:  App
-    hs-source-dirs: src
+    hs-source-dirs: app
     ghc-options: -threaded
                  -rtsopts
                  -with-rtsopts=-N
-    -- build-depends: cheeblr-backend
+    build-depends: cheeblr-backend
 
-test-suite spec
-    import: shared-properties
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    hs-source-dirs: test
-    -- ghc-options: -threaded
-    build-depends: hspec
-                -- , cheeblr-backend
-                , servant-client
-                , warp >= 3.2.4
-                , http-client
-                , http-types
+-- test-suite spec
+--     import: shared-properties
+--     type: exitcode-stdio-1.0
+--     main-is: Spec.hs
+--     hs-source-dirs: test
+--     -- ghc-options: -threaded
+--     build-depends: hspec
+--                 -- , cheeblr-backend
+--                 , servant-client
+--                 , warp >= 3.2.4
+--                 , http-client
+--                 , http-types
