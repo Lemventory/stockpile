@@ -21,13 +21,19 @@ common shared-properties
                 , aeson
                 , wai
                 , warp 
+                , postgresql-simple
+                , text
+                , uuid
+                , time
+                , mtl
+                , scientific
+                , vector
 
 library
     import: shared-properties
     exposed-modules: App 
     build-depends: refined
                 , string-conversions
-                , servant-server
     hs-source-dirs: src
 
 executable cheeblr-backend

@@ -58,7 +58,6 @@
         purescript-overlay.overlays.default
         (final: prev: {
           cheeblr-backend = final.haskell-nix.project' {
-            # Point to the backend directory
             src = ./backend;
             compiler-nix-name = "ghc928";
             shell.tools = {
@@ -68,6 +67,7 @@
             shell.buildInputs = with pkgs; [
               zlib
               cabal-install 
+              haskell-language-server
             ];
           };
         })
@@ -164,15 +164,19 @@
           pkgs.purs-backend-es
           pkgs.purescript-language-server
           pkgs.spago-unstable
+      
+          # Haskell tools
+          pkgs.cabal-install
+          pkgs.haskellPackages.fourmolu
+          pkgs.haskell-language-server
           pkgs.zlib
-          
-          # Shell applications
-          # lambda-gen
+
+          # Custom DevShell tools
           spago-watch
           vite
           dev
-          pkgs.cabal-install
           code-workspace
+
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [
             Cocoa
@@ -180,8 +184,14 @@
           ]));
 
         shellHook = ''
-          echo "Available commands: dev, lambda-gen, spago-watch"
-          echo "Using GHC version: $(ghc --version)"
+          echo "Available commands: spago-watch vite dev code-workspace"
+          echo ""
+          echo "Version Info:"
+          echo ""
+          echo "$(ghc --version)"
+          echo "$(cabal --version)"
+          echo "Purescript: version $(purs --version)"
+          echo "Spago: version $(spago --version)"
         '';
       };
     });

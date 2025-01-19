@@ -22,7 +22,7 @@
         "editor.defaultFormatter": "nwolverson.ide-purescript"
       },
       "[haskell]": {
-        "editor.defaultFormatter": "justusadam.language-haskell"
+        "editor.defaultFormatter": "fourmolu"
       },
       "purescript.sourcePath": "./frontend/src",
       "haskell.checkProject": true,

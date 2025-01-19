@@ -1,68 +1,26 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-
 module App where
 
-import           Data.Aeson
-import           GHC.Generics
-import           Network.Wai
-import           Network.Wai.Handler.Warp
-import           Servant
-import           System.IO
-
--- * api
-
-type ItemApi =
-  "item" :> Get '[JSON] [Item] :<|>
-  "item" :> Capture "itemId" Integer :> Get '[JSON] Item
-
-itemApi :: Proxy ItemApi
-itemApi = Proxy
-
--- * app
+import Network.Wai.Handler.Warp
+import Servant
+import Database
+import Server
+import API
 
 run :: IO ()
 run = do
-  let port = 3000
-      settings =
-        setPort port $
-        setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
-        defaultSettings
-  runSettings settings =<< mkApp
-
-mkApp :: IO Application
-mkApp = return $ serve itemApi server
-
-server :: Server ItemApi
-server =
-  getItems :<|>
-  getItemById
-
-getItems :: Handler [Item]
-getItems = return [exampleItem]
-
-getItemById :: Integer -> Handler Item
-getItemById = \ case
-  0 -> return exampleItem
-  _ -> throwError err404
-
-exampleItem :: Item
-exampleItem = Item 0 "example item"
-
--- * item
-
-data Item
-  = Item {
-    itemId :: Integer,
-    itemText :: String
-  }
-  deriving (Eq, Show, Generic)
-
-instance ToJSON Item
-instance FromJSON Item
-
-data a + b = Foo a b
-
-type X = Int + Bool
+  let config = AppConfig
+        { dbConfig = DBConfig
+            { dbHost = "localhost"
+            , dbPort = 5432
+            , dbName = "cannabis_inventory"
+            , dbUser = "postgres"
+            , dbPassword = "postgres"
+            }
+        , serverPort = 8080
+        }
+  
+  conn <- initializeDB (dbConfig config)
+  createTables conn
+  
+  putStrLn $ "Starting server on port " ++ show (serverPort config)
+  run (serverPort config) $ serve inventoryAPI (server conn)
