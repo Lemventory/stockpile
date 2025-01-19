@@ -176,7 +176,8 @@
           vite
           dev
           code-workspace
-
+          #TODO: configure: error: Library requirements (PostgreSQL) not met.
+          # Error: cabal: Failed to build postgresql-libpq-configure-0.11 (which is required by exe:cheeblr-backend from cheeblr-backend-0.0.0.1). See the build log above for details.
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [
             Cocoa
