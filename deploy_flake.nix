@@ -71,24 +71,36 @@
         inherit (haskellNix) config;
       };
 
-      # Define the declarative PostgreSQL container
-      postgresImage = pkgs.dockerTools.buildImage {
-        name = "postgresql-alpine";
-        tag = "latest";
-        fromImage = pkgs.dockerTools.pullImage {
-          imageName = "postgres";
-          imageTag = "15-alpine";
+      # PostgreSQL OCI container
+      postgresContainer = pkgs.ociTools.buildContainer {
+        args = [
+          (pkgs.writeShellScriptBin "run-postgres" ''
+            exec postgres -D /var/lib/postgresql/data \
+              -c listen_addresses='*' \
+              -c max_connections=50
+          '').outPath
+        ];
+        mounts."/var/lib/postgresql/data" = {
+          source = "/data/postgres";
         };
-        config = {
-          Cmd = [ "postgres" ];
-          Env = [
-            "POSTGRES_USER=cheeblr_user"
-            "POSTGRES_PASSWORD=securepassword"
-            "POSTGRES_DB=cheeblr"
-          ];
-          Volumes = {
-            "/var/lib/postgresql/data" = {};
-          };
+        env = {
+          POSTGRES_USER = "cheeblr_user";
+          POSTGRES_PASSWORD = "securepassword";
+          POSTGRES_DB = "cheeblr";
+        };
+      };
+
+      # Backend OCI container
+      backendContainer = pkgs.ociTools.buildContainer {
+        args = [ "${pkgs.haskellPackages.cheeblr-backend}/bin/cheeblr-backend" ];
+        mounts."/config" = {
+          source = "/etc/cheeblr/config";
+        };
+        env = {
+          DB_HOST = "127.0.0.1";
+          DB_USER = "cheeblr_user";
+          DB_PASSWORD = "securepassword";
+          DB_NAME = "cheeblr";
         };
       };
 
@@ -120,36 +132,21 @@
         '';
       };
 
-      # Define the full stack deployment with PostgreSQL, backend, and frontend
+      # Deployment script
       deploy = pkgs.writeShellApplication {
         name = "deploy";
-        runtimeInputs = [ postgresImage pkgs.docker ];
+        runtimeInputs = [ postgresContainer backendContainer pkgs.runc ];
         text = ''
-          # Start PostgreSQL container
-          docker run -d \
-            --name cheeblr-db \
-            -e POSTGRES_USER=cheeblr_user \
-            -e POSTGRES_PASSWORD=securepassword \
-            -e POSTGRES_DB=cheeblr \
-            -v cheeblr_data:/var/lib/postgresql/data \
-            -p 5432:5432 \
-            postgres:15-alpine
+          # Start PostgreSQL
+          runc run postgres-container
 
           # Start the backend
-          ./result/bin/cheeblr-backend &
-
-          # Start the frontend
-          vite
+          runc run backend-container
         '';
       };
 
     in {
-      packages.default = pkgs.haskell-nix.hix.project {
-        src = ./backend;
-        evalSystem = system;
-        inputMap = { "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP; };
-      }.flake.packages.default;
-
+      packages.default = backendContainer;
       devShell = pkgs.mkShell {
         buildInputs = [
           pkgs.esbuild
