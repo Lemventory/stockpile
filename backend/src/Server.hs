@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Server where
 
@@ -32,8 +33,9 @@ server conn = getInventory
 
     deleteMenuItem :: UUID -> Handler InventoryResponse
     deleteMenuItem sku = do
-      affected <- liftIO $ execute conn
-        "DELETE FROM menu_items WHERE sku = ?" (Only sku)
+      affected <- liftIO $ execute conn 
+        "DELETE FROM menu_items WHERE sku = ?" 
+        (Only sku)
       if affected > 0
         then return $ Message "Item deleted successfully"
         else throwError err404

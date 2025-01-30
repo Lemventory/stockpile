@@ -1,6 +1,6 @@
 module App where
 
-import Network.Wai.Handler.Warp
+import qualified Network.Wai.Handler.Warp as Warp
 import Servant
 import Database
 import Server
@@ -23,4 +23,4 @@ run = do
   createTables conn
   
   putStrLn $ "Starting server on port " ++ show (serverPort config)
-  run (serverPort config) $ serve inventoryAPI (server conn)
+  Warp.run (serverPort config) $ serve inventoryAPI (server conn)
