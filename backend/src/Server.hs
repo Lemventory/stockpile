@@ -1,39 +1,45 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Server where
 
-import Servant
-import Control.Monad.IO.Class
-import Database.PostgreSQL.Simple
-import Types
 import API
-import Database
+import Control.Monad.IO.Class
 import Data.UUID
+import qualified Data.Pool as Pool
+import Database
+import Database.PostgreSQL.Simple
+import Servant
+import Types
 
 data AppConfig = AppConfig
   { dbConfig :: DBConfig
   , serverPort :: Int
   }
 
-server :: Connection -> Server InventoryAPI
-server conn = getInventory 
-        :<|> addMenuItem
-        :<|> deleteMenuItem
+server :: Pool.Pool Connection -> Server InventoryAPI
+server pool =
+  getInventory
+    :<|> addMenuItem
+    :<|> deleteMenuItem
   where
     getInventory :: Handler InventoryResponse
     getInventory = do
-      inventory <- liftIO $ getAllMenuItems conn
+      inventory <- liftIO $ getAllMenuItems pool
       return $ InventoryData inventory
 
     addMenuItem :: MenuItem -> Handler InventoryResponse
     addMenuItem item = do
-      liftIO $ insertMenuItem conn item
+      liftIO $ insertMenuItem pool item
       return $ Message "Item added successfully"
 
     deleteMenuItem :: UUID -> Handler InventoryResponse
-    deleteMenuItem sku = do
-      affected <- liftIO $ execute conn
-        "DELETE FROM menu_items WHERE sku = ?" (Only sku)
+    deleteMenuItem uuid = do
+      affected <-
+        liftIO $ withConnection pool $ \conn ->
+          execute
+            conn
+            "DELETE FROM menu_items WHERE sku = ?"
+            (Only uuid)
       if affected > 0
         then return $ Message "Item deleted successfully"
         else throwError err404

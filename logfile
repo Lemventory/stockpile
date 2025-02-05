@@ -1,0 +1,7 @@
+2025-02-01 21:45:37.297 GMT [233174] LOG:  starting PostgreSQL 17.2 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 14.2.1 20241116, 64-bit
+2025-02-01 21:45:37.298 GMT [233174] LOG:  listening on IPv6 address "::1", port 5433
+2025-02-01 21:45:37.298 GMT [233174] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2025-02-01 21:45:37.299 GMT [233174] LOG:  listening on Unix socket "/home/bismuth/workdir/cheeblr/.postgres/.s.PGSQL.5433"
+2025-02-01 21:45:37.303 GMT [233177] LOG:  database system was shut down at 2025-02-01 21:45:02 GMT
+2025-02-01 21:45:37.307 GMT [233174] LOG:  database system is ready to accept connections
+2025-02-01 21:46:21.175 GMT [233250] FATAL:  terminating connection due to unexpected postmaster exit

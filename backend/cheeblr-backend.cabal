@@ -8,8 +8,10 @@ copyright: Harry Pray IV
 homepage: https://github.com/harryprayiv/cheelbr/cheeblr-backend
 bug-reports: https://github.com/harryprayiv/cheeblr/issues
 
-extra-source-files:
-    README.md
+flag use-pkg-config
+    description: Use pkg-config to find libpq
+    default: True
+    manual: True
 
 common shared-properties
     ghc-options: -Wall
@@ -21,17 +23,20 @@ common shared-properties
                 , aeson
                 , wai
                 , warp 
-                , postgresql-simple
+                , opaleye
+                , postgresql-simple 
+                , postgresql-libpq
                 , text
                 , uuid
                 , time
                 , mtl
                 , scientific
                 , vector
+                , resource-pool
 
 library
     import: shared-properties
-    exposed-modules: App 
+    exposed-modules: App, Database, Server, Types, API
     build-depends: refined
                 , string-conversions
     hs-source-dirs: src
@@ -40,20 +45,5 @@ executable cheeblr-backend
     import: shared-properties
     main-is: Main.hs
     hs-source-dirs: app
-    ghc-options: -threaded
-                 -rtsopts
-                 -with-rtsopts=-N
     build-depends: cheeblr-backend
-
--- test-suite spec
---     import: shared-properties
---     type: exitcode-stdio-1.0
---     main-is: Spec.hs
---     hs-source-dirs: test
---     -- ghc-options: -threaded
---     build-depends: hspec
---                 -- , cheeblr-backend
---                 , servant-client
---                 , warp >= 3.2.4
---                 , http-client
---                 , http-types
+    pkgconfig-depends: libpq
