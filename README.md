@@ -1,4 +1,4 @@
-# An Ultra-Lightweight Purescript Deku/Hyrule Point of Sale System for 🎋 Dispensaries
+# A Full Stack Purescript Deku/Hyrule Haskell and PostgreSQL Point of Sale System for 🎋 Dispensaries
 
 Current Componenents:
 1. runLiveView: Simple, Live, Configurable Real-Time Inventory Visualization that can switch between http post requests and json reads based on config parameters.
