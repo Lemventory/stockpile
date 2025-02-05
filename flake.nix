@@ -11,6 +11,7 @@
     };
 
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     iohkNix = {
       url = "github:input-output-hk/iohk-nix";
@@ -23,6 +24,7 @@
     };
 
     CHaP = {
+      url = "github:IntersectMBO/cardano-haskell-packages?rev=145cc9e8bb4cf78fb7414a73326a35efd2262eff";
       url = "github:IntersectMBO/cardano-haskell-packages?rev=145cc9e8bb4cf78fb7414a73326a35efd2262eff";
       flake = false;
     };
@@ -49,7 +51,19 @@
       };
     } // flake-utils.lib.eachSystem ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"] (system: let
       
+  outputs = { self, nixpkgs, flake-utils, iohkNix, CHaP, iogx, purescript-overlay, ... }:
+    {
+      nixosModules = {
+        postgresql = import ./nix/postgresql-service.nix;
+        default = { ... }: {
+          imports = [ self.nixosModules.postgresql ];
+        };
+      };
+    } // flake-utils.lib.eachSystem ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"] (system: let
+      
       name = "cheeblr";
+      lib = nixpkgs.lib;
+
       lib = nixpkgs.lib;
 
       overlays = [
@@ -59,6 +73,11 @@
       
       pkgs = import nixpkgs {
         inherit system overlays;
+      };
+
+      # Shell apps
+      postgresModule = import ./nix/postgres-utils.nix {
+        inherit pkgs name;
       };
 
       # Shell apps
@@ -110,6 +129,15 @@
         '';
       };
 
+
+      backup-project = pkgs.writeShellApplication {
+        name = "backup-project";
+        runtimeInputs = with pkgs; [ rsync ];
+        text = ''
+          rsync -va --delete --exclude-from='.gitignore' ~/workdir/cheeblr/ ~/plutus/workspace/scdWs/cheeblr/
+        '';
+      };
+
       dev = pkgs.writeShellApplication {
         name = "dev";
         runtimeInputs = with pkgs; [
@@ -124,10 +152,31 @@
       };
       
     in {
+    in {
       legacyPackages = pkgs;
 
       devShell = pkgs.mkShell {
         inherit name;
+        
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+          postgresql
+          zlib
+          openssl.dev
+          libiconv
+          openssl
+        ];
+
+        buildInputs = with pkgs; [
+          # Front End tools
+          esbuild
+          nodejs_20
+          nixpkgs-fmt
+          purs
+          purs-tidy
+          purs-backend-es
+          purescript-language-server
+          spago-unstable
         
         nativeBuildInputs = with pkgs; [
           pkg-config
@@ -176,10 +225,38 @@
           # DevShell tools
           rsync
           backup-project # rsync destructive script that follows .gitignore
+          # Back End tools
+          cabal-install
+          ghc
+          haskellPackages.fourmolu
+          haskell-language-server
+          hlint
+          zlib
+          pgcli
+          pkg-config
+          openssl.dev
+          libiconv
+          openssl
+          
+          # PostgreSQL tools
+          postgresModule.setupScript 
+          postgresModule.pg-start
+          postgresModule.pg-connect
+          postgresModule.pg-stop
+          
+          # pgadmin4-desktopmode
+          # dbeaver-bin
+          # pgmanage
+          pgadmin4
+
+          # DevShell tools
+          rsync
+          backup-project # rsync destructive script that follows .gitignore
           spago-watch
           vite
           dev
           code-workspace
+          
           
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [
@@ -187,6 +264,16 @@
             CoreServices
           ]));
         shellHook = ''
+                  # Set up PostgreSQL environment
+                  export PGDATA="$PWD/.postgres"
+                  export PGPORT="5432"
+                  export PGUSER="postgres"
+                  export PGPASSWORD="postgres"
+                  export PGDATABASE="${name}"
+
+                  # Run the setup script
+                  pg-setup
+                '';
                   # Set up PostgreSQL environment
                   export PGDATA="$PWD/.postgres"
                   export PGPORT="5432"

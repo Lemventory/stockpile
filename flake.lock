@@ -5,14 +5,18 @@
       "locked": {
         "lastModified": 1738397394,
         "narHash": "sha256-+uVfWgaRoQTFpmI/ZLDd/TOFgZuyiUI1jJZ2HasVj7E=",
+        "lastModified": 1738397394,
+        "narHash": "sha256-+uVfWgaRoQTFpmI/ZLDd/TOFgZuyiUI1jJZ2HasVj7E=",
         "owner": "IntersectMBO",
         "repo": "cardano-haskell-packages",
+        "rev": "145cc9e8bb4cf78fb7414a73326a35efd2262eff",
         "rev": "145cc9e8bb4cf78fb7414a73326a35efd2262eff",
         "type": "github"
       },
       "original": {
         "owner": "IntersectMBO",
         "repo": "cardano-haskell-packages",
+        "rev": "145cc9e8bb4cf78fb7414a73326a35efd2262eff",
         "rev": "145cc9e8bb4cf78fb7414a73326a35efd2262eff",
         "type": "github"
       }
@@ -348,8 +352,11 @@
       "locked": {
         "lastModified": 1738628879,
         "narHash": "sha256-fQNlSl5f6MPKLI7RmqLKHdix3YtxVkAyZ0b7XzNn1YQ=",
+        "lastModified": 1738628879,
+        "narHash": "sha256-fQNlSl5f6MPKLI7RmqLKHdix3YtxVkAyZ0b7XzNn1YQ=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
+        "rev": "901791fe0870fc8816fb52665774fb7b4d591ed9",
         "rev": "901791fe0870fc8816fb52665774fb7b4d591ed9",
         "type": "github"
       },
@@ -1014,6 +1021,22 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
+        "lastModified": 1738410390,
+        "narHash": "sha256-xvTo0Aw0+veek7hvEVLzErmJyQkEcRk6PSR4zsRQFEc=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "3a228057f5b619feb3186e986dbe76278d707b6e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }

@@ -26,12 +26,16 @@ common shared-properties
                 , opaleye
                 , postgresql-simple 
                 , postgresql-libpq
+                , opaleye
+                , postgresql-simple 
+                , postgresql-libpq
                 , text
                 , uuid
                 , time
                 , mtl
                 , scientific
                 , vector
+                , resource-pool
                 , resource-pool
 
 library
