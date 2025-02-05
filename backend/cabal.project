@@ -1,0 +1,7 @@
+packages: .
+
+package postgresql-libpq
+  flags: -use-pkg-config
+
+package postgresql-simple
+  flags: -use-pkg-config

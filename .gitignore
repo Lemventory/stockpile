@@ -2,6 +2,7 @@ bower_components/
 node_modules/
 .pulp-cache/
 output/
+.vite/
 output-es/
 generated-docs/
 .psc-package/
@@ -9,7 +10,9 @@ generated-docs/
 .purs*
 .psa*
 .spago
+.direnv
 /script/
+/script/*
 /.vscode/
 /backend/dist-newstyle
 dist
@@ -35,3 +38,5 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
+.nix-shell
+.postgres

@@ -7,11 +7,10 @@
       url = "github:input-output-hk/iogx";
       inputs.hackage.follows = "hackage";
       inputs.CHaP.follows = "CHaP";
-      inputs.haskell-nix.follows = "haskellNix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     iohkNix = {
       url = "github:input-output-hk/iohk-nix";
@@ -23,24 +22,16 @@
       flake = false;
     };
 
-    haskellNix = {
-      url = "github:input-output-hk/haskell.nix/1c329acdaac3d5a600bcaa86b1806414ccd48db6";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.hackage.follows = "hackage";
-    };
-
     CHaP = {
-      url = "github:IntersectMBO/cardano-haskell-packages?rev=35d5d7f7e7cfed87901623262ceea848239fa7f8";
+      url = "github:IntersectMBO/cardano-haskell-packages?rev=145cc9e8bb4cf78fb7414a73326a35efd2262eff";
       flake = false;
     };
 
-    # PureScript inputs
     purescript-overlay = {
       url = "github:harryprayiv/purescript-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
         
-    # Utils
     flake-utils.url = "github:numtide/flake-utils";
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -48,37 +39,33 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, haskellNix, iohkNix, CHaP, iogx, purescript-overlay, ... }:
-    flake-utils.lib.eachSystem ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"] (system: let
-      name = "cheeblr";
+  outputs = { self, nixpkgs, flake-utils, iohkNix, CHaP, iogx, purescript-overlay, ... }:
+    {
+      nixosModules = {
+        postgresql = import ./nix/postgresql-service.nix;
+        default = { ... }: {
+          imports = [ self.nixosModules.postgresql ];
+        };
+      };
+    } // flake-utils.lib.eachSystem ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"] (system: let
       
+      name = "cheeblr";
+      lib = nixpkgs.lib;
+
       overlays = [
-        haskellNix.overlay
         iohkNix.overlays.crypto
         purescript-overlay.overlays.default
-        (final: prev: {
-          cheeblr-backend = final.haskell-nix.project' {
-            src = ./backend;
-            compiler-nix-name = "ghc928";
-            shell.tools = {
-              cabal = "latest";
-              haskell-language-server = "latest";
-            };
-            shell.buildInputs = with pkgs; [
-              zlib
-              cabal-install 
-              haskell-language-server
-            ];
-          };
-        })
       ];
       
       pkgs = import nixpkgs {
         inherit system overlays;
-        inherit (haskellNix) config;
       };
 
-      # PureScript shell apps
+      # Shell apps
+      postgresModule = import ./nix/postgres-utils.nix {
+        inherit pkgs name;
+      };
+
       vite = pkgs.writeShellApplication {
         name = "vite";
         runtimeInputs = with pkgs; [ nodejs-slim ];
@@ -106,6 +93,7 @@
         runtimeInputs = with pkgs; [ entr spago-unstable ];
         text = ''find {src,test} | entr -s "spago $*" '';
       };
+
       code-workspace = pkgs.writeShellApplication {
         name = "code-workspace";
         runtimeInputs = with pkgs; [ vscodium ];
@@ -113,6 +101,15 @@
           codium cheeblr.code-workspace
         '';
       };
+
+      backup-project = pkgs.writeShellApplication {
+        name = "backup-project";
+        runtimeInputs = with pkgs; [ rsync ];
+        text = ''
+          rsync -va --delete --exclude-from='.gitignore' ~/workdir/cheeblr/ ~/plutus/workspace/scdWs/cheeblr/
+        '';
+      };
+
       dev = pkgs.writeShellApplication {
         name = "dev";
         runtimeInputs = with pkgs; [
@@ -126,74 +123,80 @@
         '';
       };
       
-      # Haskell project setup
-      hixProject = pkgs.haskell-nix.hix.project {
-        src = ./backend;
-        evalSystem = system;
-        inputMap = {"https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;};
-        projectFileName = "nix/hix.nix";
-        modules = [
-          (_: {
-            packages.cardano-crypto-praos.components.library.pkgconfig = pkgs.lib.mkForce [pkgs.libsodium-vrf];
-            packages.cardano-crypto-class.components.library.pkgconfig = pkgs.lib.mkForce [pkgs.libsodium-vrf pkgs.secp256k1];
-          })
-        ];
-      };
-      hixFlake = hixProject.flake {};
     in {
-      # packages = {
-      #   default = hixFlake.packages.default;
-      # };
-      packages = {
-        default = hixFlake.packages."cheeblr-backend:exe:cheeblr-backend" or hixFlake.packages.default;
-      } // hixFlake.packages;
-      apps = hixFlake.apps;
-      checks = hixFlake.checks;
       legacyPackages = pkgs;
 
       devShell = pkgs.mkShell {
         inherit name;
-        inputsFrom = [hixFlake.devShell];
-        buildInputs = [
-          # PureScript tools
-          pkgs.esbuild
-          pkgs.nodejs_20
-          pkgs.nixpkgs-fmt
-          pkgs.purs
-          pkgs.purs-tidy
-          pkgs.purs-backend-es
-          pkgs.purescript-language-server
-          pkgs.spago-unstable
-      
-          # Haskell tools
-          pkgs.cabal-install
-          pkgs.haskellPackages.fourmolu
-          pkgs.haskell-language-server
-          pkgs.zlib
+        
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+          postgresql
+          zlib
+          openssl.dev
+          libiconv
+          openssl
+        ];
 
-          # Custom DevShell tools
+        buildInputs = with pkgs; [
+          # Front End tools
+          esbuild
+          nodejs_20
+          nixpkgs-fmt
+          purs
+          purs-tidy
+          purs-backend-es
+          purescript-language-server
+          spago-unstable
+      
+          # Back End tools
+          cabal-install
+          ghc
+          haskellPackages.fourmolu
+          haskell-language-server
+          hlint
+          zlib
+          pgcli
+          pkg-config
+          openssl.dev
+          libiconv
+          openssl
+          
+          # PostgreSQL tools
+          postgresModule.setupScript 
+          postgresModule.pg-start
+          postgresModule.pg-connect
+          postgresModule.pg-stop
+          
+          # pgadmin4-desktopmode
+          # dbeaver-bin
+          # pgmanage
+          pgadmin4
+
+          # DevShell tools
+          rsync
+          backup-project # rsync destructive script that follows .gitignore
           spago-watch
           vite
           dev
           code-workspace
-          #TODO: configure: error: Library requirements (PostgreSQL) not met.
-          # Error: cabal: Failed to build postgresql-libpq-configure-0.11 (which is required by exe:cheeblr-backend from cheeblr-backend-0.0.0.1). See the build log above for details.
+          
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [
             Cocoa
             CoreServices
           ]));
-
         shellHook = ''
-          echo "Available commands: spago-watch vite dev code-workspace"
-          echo ""
-          echo "Version Info:"
-          echo ""
-          echo "$(ghc --version)"
-          echo "$(cabal --version)"
-          echo "Purescript: version $(purs --version)"
-          echo "Spago: version $(spago --version)"
-        '';
+                  # Set up PostgreSQL environment
+                  export PGDATA="$PWD/.postgres"
+                  export PGPORT="5432"
+                  export PGUSER="postgres"
+                  export PGPASSWORD="postgres"
+                  export PGDATABASE="${name}"
+
+                  # Run the setup script
+                  pg-setup
+                '';
       };
     });
 
