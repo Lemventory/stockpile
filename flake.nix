@@ -94,6 +94,7 @@
         text = ''find {src,test} | entr -s "spago $*" '';
       };
 
+
       code-workspace = pkgs.writeShellApplication {
         name = "code-workspace";
         runtimeInputs = with pkgs; [ vscodium ];

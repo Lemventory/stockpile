@@ -12,6 +12,10 @@ flag use-pkg-config
     description: Use pkg-config to find libpq
     default: True
     manual: True
+flag use-pkg-config
+    description: Use pkg-config to find libpq
+    default: True
+    manual: True
 
 common shared-properties
     ghc-options: -Wall
@@ -37,6 +41,7 @@ common shared-properties
 library
     import: shared-properties
     exposed-modules: App, Database, Server, Types, API
+    exposed-modules: App, Database, Server, Types, API
     build-depends: refined
                 , string-conversions
     hs-source-dirs: src
@@ -46,4 +51,5 @@ executable cheeblr-backend
     main-is: Main.hs
     hs-source-dirs: app
     build-depends: cheeblr-backend
+    pkgconfig-depends: libpq
     pkgconfig-depends: libpq
