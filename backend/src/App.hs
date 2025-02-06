@@ -1,26 +1,32 @@
 module App where
 
-import Network.Wai.Handler.Warp
-import Servant
-import Database
-import Server
 import API
+import Database
+import qualified Network.Wai.Handler.Warp as Warp
+import Network.Wai.Middleware.Cors
+import Servant
+import Server
 
 run :: IO ()
 run = do
-  let config = AppConfig
-        { dbConfig = DBConfig
-            { dbHost = "localhost"
-            , dbPort = 5432
-            , dbName = "cannabis_inventory"
-            , dbUser = "postgres"
-            , dbPassword = "postgres"
-            }
-        , serverPort = 8080
-        }
-  
-  conn <- initializeDB (dbConfig config)
-  createTables conn
-  
+  let config =
+        AppConfig
+          { dbConfig =
+              DBConfig
+                { dbHost = "localhost"
+                , dbPort = 5432
+                , dbName = "cheeblr"
+                , dbUser = "postgres"
+                , dbPassword = "postgres"
+                , poolSize = 10
+                }
+          , serverPort = 8080
+          }
+
+  pool <- initializeDB (dbConfig config)
+  createTables pool
+
   putStrLn $ "Starting server on port " ++ show (serverPort config)
-  run (serverPort config) $ serve inventoryAPI (server conn)
+  Warp.run (serverPort config) $
+    simpleCors $
+      serve inventoryAPI (server pool)

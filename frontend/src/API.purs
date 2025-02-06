@@ -34,7 +34,7 @@ writeInventory menuItem = do
     
     liftEffect $ Console.log "Creating new menu item..."
     
-    response <- fetch "/api/inventory" 
+    response <- fetch "/inventory"
       { method: POST
       , body: content
       , headers: requestHeaders
