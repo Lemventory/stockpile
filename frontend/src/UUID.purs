@@ -1,24 +1,32 @@
 module UUID where
 
 import Prelude
-import Utils (padStart, randomInt) 
 
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
 import Data.Int (hexadecimal, toStringAs)
 import Data.Int.Bits ((.|.))
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 import Data.String (joinWith)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Effect (Effect)
+import Utils (padStart, randomInt)
+import Yoga.JSON (class WriteForeign, writeImpl)
 
 
 newtype UUID = UUID String
 
+derive instance genericUUID :: Generic UUID _
+derive instance newtypeUUID :: Newtype UUID _
 instance showUUID :: Show UUID where
   show (UUID uuid) = uuid
 derive instance eqUUID :: Eq UUID
 derive instance ordUUID :: Ord UUID
+
+instance writeForeignUUID :: WriteForeign UUID where
+  writeImpl (UUID str) = writeImpl str
 
 parseUUID :: String -> Maybe UUID
 parseUUID str = 

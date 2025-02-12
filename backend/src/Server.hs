@@ -1,16 +1,20 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Server where
 
 import API
-import Control.Exception (SomeException, catch)
+import Control.Exception (SomeException, catch, try)
 import Control.Monad.IO.Class
-import qualified Data.ByteString.Lazy.Char8 as LBS -- Add this import
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Pool as Pool
 import Data.UUID
+import Data.Aeson (encode)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import Data.Text (Text, pack)
 import Database
 import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.Types (Query(..))
 import Servant
 import Types
 
@@ -34,20 +38,18 @@ server pool =
     addMenuItem item = do
       liftIO $ putStrLn "Received request to add menu item"
       liftIO $ print item
-      result <-
-        liftIO $
-          catch
-            ( do
-                insertMenuItem pool item
-                return $ Right "Item added successfully"
-            )
-            ( \(e :: SomeException) -> do
-                putStrLn $ "Error inserting item: " ++ show e
-                return $ Left (show e)
-            )
+      result <- liftIO $ try $ do
+        insertMenuItem pool item
+        let response = Message "Item added successfully"
+        liftIO $ putStrLn $ "Sending response: " ++ show (encode response)  -- Add this line
+        return response
       case result of
-        Right msg -> return $ Message msg
-        Left errMsg -> throwError err500 {errBody = LBS.pack $ "Error inserting item: " ++ errMsg}
+        Right msg -> return msg
+        Left (e :: SomeException) -> do
+          let errMsg = pack $ "Error inserting item: " <> show e
+          let response = Message errMsg
+          liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)  -- Add this line
+          return response
 
     deleteMenuItem :: UUID -> Handler InventoryResponse
     deleteMenuItem uuid = do

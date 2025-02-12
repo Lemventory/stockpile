@@ -316,7 +316,7 @@ instance Show Species where
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
-    , sku: show item.sku
+    , sku: item.sku  -- Now UUID has a WriteForeign instance
     , brand: item.brand
     , name: item.name
     , price: item.price
@@ -327,14 +327,27 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , subcategory: item.subcategory
     , description: item.description
     , tags: item.tags
+    , effects: item.effects
     , strain_lineage: item.strain_lineage
     }
 
+instance writeForeignStrainLineage :: WriteForeign StrainLineage where
+  writeImpl (StrainLineage lineage) = writeImpl
+    { thc: lineage.thc
+    , cbg: lineage.cbg
+    , strain: lineage.strain
+    , creator: lineage.creator
+    , species: show lineage.species
+    , dominant_tarpene: lineage.dominant_tarpene
+    , tarpenes: lineage.tarpenes
+    , lineage: lineage.lineage
+    , leafly_url: lineage.leafly_url
+    , img: lineage.img
+    }
+
+
 instance writeForeignInventory :: WriteForeign Inventory where
   writeImpl (Inventory items) = writeImpl items
-
-instance writeForeignStrainLineage :: WriteForeign StrainLineage where
-  writeImpl (StrainLineage lineage) = writeImpl lineage
 
 instance writeForeignSpecies :: WriteForeign Species where 
   writeImpl = writeImpl <<< show
@@ -447,12 +460,15 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
 instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
   readImpl f = do
     obj <- readImpl f
-    messageField <- readProp "message" obj >>= readImpl :: F (Maybe String)
-    case messageField of
-      Just msg -> pure $ Message msg
-      Nothing -> do
-        inventory <- readImpl f
-        pure $ InventoryData inventory
+    typeField <- readProp "type" obj >>= readImpl :: F String
+    case typeField of
+      "message" -> do
+        value <- readProp "value" obj >>= readImpl
+        pure $ Message value
+      "data" -> do
+        value <- readProp "value" obj >>= readImpl
+        pure $ InventoryData value
+      _ -> fail $ ForeignError "Invalid response type"
 
 -- | Show instances
 instance showStrainLineage :: Show StrainLineage where

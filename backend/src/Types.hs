@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-} 
 
 module Types where
 
@@ -14,6 +15,7 @@ import Database.PostgreSQL.Simple.ToField (ToField (..))
 import Database.PostgreSQL.Simple.ToRow (ToRow (..))
 import Database.PostgreSQL.Simple.Types (PGArray (..))
 import GHC.Generics
+import qualified Data.Text as T
 
 data Species
   = Indica
@@ -84,33 +86,33 @@ instance ToRow MenuItem where
     , toField (PGArray $ V.toList effects)
     ]
 
-instance FromRow MenuItem where
+instance Database.PostgreSQL.Simple.FromRow.FromRow MenuItem where
   fromRow =
     MenuItem
-      <$> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> (read <$> field)
-      <*> field
-      <*> field
-      <*> (V.fromList . fromPGArray <$> field)
-      <*> (V.fromList . fromPGArray <$> field)
+      <$> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> (read <$> Database.PostgreSQL.Simple.FromRow.field)
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> Database.PostgreSQL.Simple.FromRow.field
+      <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
+      <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
       <*> ( StrainLineage
-              <$> field
-              <*> field
-              <*> field
-              <*> field
-              <*> (read <$> field)
-              <*> field
-              <*> (V.fromList . fromPGArray <$> field)
-              <*> (V.fromList . fromPGArray <$> field)
-              <*> field
-              <*> field
+              <$> Database.PostgreSQL.Simple.FromRow.field
+              <*> Database.PostgreSQL.Simple.FromRow.field
+              <*> Database.PostgreSQL.Simple.FromRow.field
+              <*> Database.PostgreSQL.Simple.FromRow.field
+              <*> (read <$> Database.PostgreSQL.Simple.FromRow.field)
+              <*> Database.PostgreSQL.Simple.FromRow.field
+              <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
+              <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
+              <*> Database.PostgreSQL.Simple.FromRow.field
+              <*> Database.PostgreSQL.Simple.FromRow.field
           )
 
 newtype Inventory = Inventory
@@ -121,4 +123,14 @@ newtype Inventory = Inventory
 data InventoryResponse
   = InventoryData Inventory
   | Message Text
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON)
+
+instance ToJSON InventoryResponse where
+  toJSON (InventoryData inv) = object 
+    [ "type" .= T.pack "data"
+    , "value" .= inv
+    ]
+  toJSON (Message msg) = object 
+    [ "type" .= T.pack "message"
+    , "value" .= msg
+    ]

@@ -35,6 +35,10 @@ common shared-properties
                 , resource-pool
                 , wai-cors
                 , bytestring
+                , unix
+                , http-types
+                , bytestring
+                , http-types
 
 library
     import: shared-properties

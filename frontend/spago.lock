@@ -25,6 +25,7 @@
             "fetch-yoga-json",
             "lists",
             "maybe",
+            "newtype",
             "node-fs",
             "parsing",
             "prelude",
