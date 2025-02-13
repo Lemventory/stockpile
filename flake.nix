@@ -122,7 +122,11 @@
           concurrent "spago-watch build" vite
         '';
       };
-      
+
+      testbedModule = import ./nix/testbed.nix {
+        inherit pkgs name;
+      };
+
     in {
       legacyPackages = pkgs;
 
@@ -137,6 +141,7 @@
           libiconv
           openssl
           lsof
+          tmux  # Added for testbed
         ];
 
         buildInputs = with pkgs; [
@@ -173,6 +178,7 @@
           postgresModule.pg-create-schema      
           postgresModule.pg-stats              
           
+
           # pgadmin4-desktopmode
           # dbeaver-bin
           # pgmanage
@@ -180,12 +186,16 @@
 
           # DevShell tools
           rsync
-          backup-project # rsync destructive script that follows .gitignore
+          tmux
+          backup-project
           spago-watch
           vite
           dev
           code-workspace
-          
+          testbedModule.testbed
+          testbedModule.startServices
+          testbedModule.stopServices
+
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [
             Cocoa
