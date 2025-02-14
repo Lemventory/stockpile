@@ -1,15 +1,15 @@
 module App where
 
 import API
+import qualified Data.ByteString.Char8 as BS
 import Database
+import Network.HTTP.Types.Header
+import Network.HTTP.Types.Method
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.Cors
 import Servant
-import System.Posix.User (getLoginName)
 import Server
-import qualified Data.ByteString.Char8 as BS
-import Network.HTTP.Types.Method
-import Network.HTTP.Types.Header
+import System.Posix.User (getLoginName)
 
 run :: IO ()
 run = do
@@ -32,19 +32,20 @@ run = do
   createTables pool
 
   putStrLn $ "Starting server on port " ++ show (serverPort config)
-  
-  let corsPolicy = CorsResourcePolicy
-        { corsOrigins = Just ([BS.pack "http://localhost:5173"], True)  -- Changed to 5173
+
+  let
+    corsPolicy =
+      CorsResourcePolicy
+        { corsOrigins = Just ([BS.pack "http://localhost:5173", BS.pack "http://localhost:5174"], True)
         , corsMethods = [methodGet, methodPost, methodPut, methodDelete, methodOptions]
-        , corsRequestHeaders = [hContentType, hAccept, hContentLength, hAuthorization]  -- Added more headers
+        , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hContentLength]
         , corsExposedHeaders = Nothing
         , corsMaxAge = Just 3600
-        , corsVaryOrigin = True  -- Changed to True
+        , corsVaryOrigin = False
         , corsRequireOrigin = False
         , corsIgnoreFailures = False
         }
 
-      app = cors (const $ Just corsPolicy) $ 
-            serve inventoryAPI (server pool)
-  
+    app = cors (const $ Just corsPolicy) $ serve inventoryAPI (server pool)
+
   Warp.run (serverPort config) app

@@ -1,20 +1,19 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Server where
 
 import API
 import Control.Exception (SomeException, catch, try)
 import Control.Monad.IO.Class
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Pool as Pool
-import Data.UUID
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Pool as Pool
 import Data.Text (Text, pack)
+import Data.UUID
 import Database
 import Database.PostgreSQL.Simple
-import Database.PostgreSQL.Simple.Types (Query(..))
+import Database.PostgreSQL.Simple.Types (Query (..))
 import Servant
 import Types
 
@@ -41,14 +40,14 @@ server pool =
       result <- liftIO $ try $ do
         insertMenuItem pool item
         let response = Message "Item added successfully"
-        liftIO $ putStrLn $ "Sending response: " ++ show (encode response)  -- Add this line
+        liftIO $ putStrLn $ "Sending response: " ++ show (encode response)
         return response
       case result of
         Right msg -> return msg
         Left (e :: SomeException) -> do
           let errMsg = pack $ "Error inserting item: " <> show e
           let response = Message errMsg
-          liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)  -- Add this line
+          liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
 
     deleteMenuItem :: UUID -> Handler InventoryResponse
