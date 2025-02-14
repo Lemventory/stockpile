@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-} 
 
 module Types where
 
 import Data.Aeson
 import Data.Scientific
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.UUID
 import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.FromRow (FromRow (..), field)
@@ -15,7 +16,6 @@ import Database.PostgreSQL.Simple.ToField (ToField (..))
 import Database.PostgreSQL.Simple.ToRow (ToRow (..))
 import Database.PostgreSQL.Simple.Types (PGArray (..))
 import GHC.Generics
-import qualified Data.Text as T
 
 data Species
   = Indica
@@ -126,11 +126,13 @@ data InventoryResponse
   deriving (Show, Generic, FromJSON)
 
 instance ToJSON InventoryResponse where
-  toJSON (InventoryData inv) = object 
-    [ "type" .= T.pack "data"
-    , "value" .= inv
-    ]
-  toJSON (Message msg) = object 
-    [ "type" .= T.pack "message"
-    , "value" .= msg
-    ]
+  toJSON (InventoryData inv) =
+    object
+      [ "type" .= T.pack "data"
+      , "value" .= inv
+      ]
+  toJSON (Message msg) =
+    object
+      [ "type" .= T.pack "message"
+      , "value" .= msg
+      ]
