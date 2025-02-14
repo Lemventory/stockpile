@@ -10,6 +10,7 @@ package:
     - arrays
     - console
     - css
+    - debug
     - deku-core
     - deku-css
     - deku-dom

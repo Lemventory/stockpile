@@ -1,60 +1,59 @@
 module MenuLiveView
-  ( runLiveView)
-  where
+  ( runLiveView
+  ) where
 
 import Prelude
 
-import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), StrainLineage(..), Species)
-
-import Data.Array (filter, sortBy)
+import Data.Array (filter, length, sortBy)
 import Data.Array as Array
 import Data.Either (Either(..))
+import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), replace, toLower)
 import Data.String.Pattern (Replacement(..))
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
-import Deku.Core (Nut, text_)
-import Deku.DOM (img)
+import Deku.Core (Nut)
 import Deku.DOM as D
-import Deku.DOM.Attributes (alt_, klass_, src_)
+import Deku.DOM.Attributes as DA
 import Deku.Effect (useState)
 import Deku.Hooks ((<#~>))
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Aff (Aff, attempt, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
-import FRP.Event (subscribe)
-import FRP.Event.Time (interval)
+import Effect.Class.Console (log) as Console
 import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
 import Foreign (Foreign)
+import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), StrainLineage(..), Species)
 import Yoga.JSON (unsafeStringify, writeImpl)
 
--- Sorting Configuration
-data SortField =  SortByOrder
-                | SortByName 
-                | SortByCategory 
-                | SortBySubCategory 
-                | SortBySpecies
-                | SortBySKU
-                | SortByPrice 
-                | SortByQuantity
+-- | Data types
+data SortField
+  = SortByOrder
+  | SortByName
+  | SortByCategory
+  | SortBySubCategory
+  | SortBySpecies
+  | SortBySKU
+  | SortByPrice
+  | SortByQuantity
 
 data SortOrder = Ascending | Descending
 
 data QueryMode = JsonMode | HttpMode
 
 type Config =
-  { sortFields :: Array (Tuple SortField SortOrder) 
+  { sortFields :: Array (Tuple SortField SortOrder)
   , hideOutOfStock :: Boolean
   , mode :: QueryMode
   , refreshRate :: Int
   , screens :: Int
   }
 
+-- | Sorting functions
 invertOrdering :: Ordering -> Ordering
 invertOrdering LT = GT
 invertOrdering EQ = EQ
@@ -86,13 +85,14 @@ compareMenuItems config (MenuItem item1) (MenuItem item2) =
     compareWithPriority :: Array (Tuple SortField SortOrder) -> Ordering
     compareWithPriority priorities = case Array.uncons priorities of
       Nothing -> EQ
-      Just { head : priority, tail : rest } ->
+      Just { head: priority, tail: rest } ->
         case compareByField priority of
           EQ -> compareWithPriority rest
           result -> result
   in
     compareWithPriority config.sortFields
 
+-- | Data fetching
 fetchInventory :: QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory = case _ of
   JsonMode -> fetchInventoryFromJson
@@ -102,16 +102,16 @@ fetchInventoryFromJson :: Aff (Either String InventoryResponse)
 fetchInventoryFromJson = do
   result <- attempt do
     timestamp <- liftEffect $ show <$> now
-    let url = "/inventory.json?t=" <> timestamp
-    liftEffect $ log ("Fetching URL: " <> url)
+    let url = "./inventory.json?t=" <> timestamp
+    liftEffect $ Console.log ("Fetching URL: " <> url)
     coreResponse <- fetch url {}
+    liftEffect $ Console.log "Response received"
     inventory <- fromJSON coreResponse.json :: Aff Inventory
     pure inventory
 
-  case result of
-    Left err -> pure $ Left $ "Fetch error: " <> show err
-    Right inventory -> pure $ Right $ InventoryData inventory
-
+  pure case result of
+    Left err -> Left $ "Fetch error: " <> show err
+    Right inventory -> Right $ InventoryData inventory
 
 fetchInventoryFromHttp :: Aff (Either String InventoryResponse)
 fetchInventoryFromHttp = do
@@ -126,67 +126,83 @@ fetchInventoryFromHttp = do
     res <- fromJSON coreResponse.json :: Aff Foreign
     pure $ "Received response: " <> unsafeStringify res
 
-  case result of
-    Left err -> pure $ Left $ "Fetch error: " <> show err
-    Right msg -> pure $ Right $ Message msg
+  pure case result of
+    Left err -> Left $ "Fetch error: " <> show err
+    Right msg -> Right $ Message msg
 
+-- | Rendering functions
 renderInventory :: Config -> Inventory -> Nut
-renderInventory config (Inventory items) = D.div
-  [ klass_ "inventory-grid" ]
-  (map renderItem sortedItems)
-  where
-    filteredItems = if config.hideOutOfStock
-      then filter (\(MenuItem item) -> item.quantity > 0) items
+renderInventory config (Inventory items) =
+  let
+    filteredItems =
+      if config.hideOutOfStock then filter (\(MenuItem item) -> item.quantity > 0) items
       else items
+
     sortedItems = sortBy (compareMenuItems config) filteredItems
+  in
+    D.div
+      [ DA.klass_ "inventory-grid" ]
+      (map renderItem sortedItems)
 
 renderItem :: MenuItem -> Nut
-renderItem (MenuItem item) = 
+renderItem (MenuItem record) =
   let
-    StrainLineage meta = item.strain_lineage
+    StrainLineage meta = record.strain_lineage
+    className = generateClassName
+      { category: record.category
+      , subcategory: record.subcategory
+      , species: meta.species
+      }
   in
-  D.div
-    [ klass_ ("inventory-item-card " <> generateClassName 
-        { category: item.category
-        , subcategory: item.subcategory
-        , species: meta.species
-        }) 
-    ]
-    [ D.div [ klass_ "item-header" ]
-        [ D.div []
-            [ D.div [ klass_ "item-brand" ] [ text_ item.brand ]
-            , D.div [ klass_ "item-name" ] [ text_ ("'" <> item.name <> "'") ]
-            ]
-        , D.div [ klass_ "item-img" ] [ img [ alt_ "weed pic", src_ meta.img ] [] ]
-        ]
-    , D.div [ klass_ "item-category" ] [ text_ (show item.category <> " - " <> item.subcategory) ]
-    , D.div [ klass_ "item-species" ] [ text_ ("Species: " <> show meta.species) ]
-    , D.div [ klass_ "item-strain_lineage" ] [ text_ ("Strain: " <> meta.strain) ]
-    , D.div [ klass_ "item-price" ] [ text_ ("$" <> show item.price <> " (" <> item.per_package <> "" <> item.measure_unit <> ")") ]
-    , D.div [ klass_ "item-quantity" ] [ text_ ("in stock: " <> show item.quantity) ]
-    ]
+    D.div
+      [ DA.klass_ ("inventory-item-card " <> className) ]
+      [ D.div [ DA.klass_ "item-header" ]
+          [ D.div []
+              [ D.div [ DA.klass_ "item-brand" ] [ D.text_ record.brand ]
+              , D.div [ DA.klass_ "item-name" ] [ D.text_ ("'" <> record.name <> "'") ]
+              ]
+          , D.div [ DA.klass_ "item-img" ]
+              [ D.img [ DA.alt_ "product image", DA.src_ meta.img ] [] ]
+          ]
+      , D.div [ DA.klass_ "item-category" ]
+          [ D.text_ (show record.category <> " - " <> record.subcategory) ]
+      , D.div [ DA.klass_ "item-species" ]
+          [ D.text_ ("Species: " <> show meta.species) ]
+      , D.div [ DA.klass_ "item-strain_lineage" ]
+          [ D.text_ ("Strain: " <> meta.strain) ]
+      , D.div [ DA.klass_ "item-price" ]
+          [ D.text_ ("$" <> show record.price <> " (" <> record.per_package <> "" <> record.measure_unit <> ")") ]
+      , D.div [ DA.klass_ "item-quantity" ]
+          [ D.text_ ("in stock: " <> show record.quantity) ]
+      ]
 
 generateClassName :: { category :: ItemCategory, subcategory :: String, species :: Species } -> String
 generateClassName item =
-  "species-" <> toClassName (show item.species) <> 
-  " category-" <> toClassName (show item.category) <> 
-  " subcategory-" <> toClassName item.subcategory
+  "species-" <> toClassName (show item.species)
+    <> " category-"
+    <> toClassName (show item.category)
+    <> " subcategory-"
+    <> toClassName item.subcategory
 
 toClassName :: String -> String
 toClassName str = toLower (replace (Pattern " ") (Replacement "-") str)
 
+-- | Main view
 liveView :: Effect Unit
 liveView = do
   setInventory /\ inventory <- useState (Inventory [])
+  setLogging /\ logging <- useState ""
+
   let
     config =
-      { sortFields: [ SortByCategory /\ Ascending
-                    , SortBySpecies /\ Descending
-                    , SortByQuantity /\ Descending
-                    ]
-      , hideOutOfStock: true
+      { sortFields:
+          [ SortByCategory /\ Ascending
+          , SortBySpecies /\ Descending
+          , SortByQuantity /\ Descending
+          ]
+      , hideOutOfStock: false
       , mode: JsonMode
-      , refreshRate: 3000
+      , refreshRate: 5000
       , screens: 1
       }
 
@@ -194,22 +210,35 @@ liveView = do
     fetchAndUpdateInventory = launchAff_ do
       result <- fetchInventory config.mode
       liftEffect $ case result of
-        Left err -> log ("Error fetching inventory: " <> err)
-        Right (InventoryData inv) -> setInventory inv
-        Right (Message msg) -> log ("Message: " <> msg)
+        Left err -> do
+          Console.log ("Error fetching inventory: " <> err)
+          setLogging err
+        Right (InventoryData inv@(Inventory items)) -> do
+          let msg = "Received " <> show (length items) <> " items"
+          Console.log msg
+          for_ items \item ->
+            Console.log $ "Item: " <> show item
+          setLogging msg
+          setInventory inv
+        Right (Message msg) -> do
+          Console.log msg
+          setLogging msg
 
-  _ <- fetchAndUpdateInventory
-
-  do
-    { event: tickEvent} <- interval config.refreshRate
-    void $ subscribe tickEvent \_ -> do
-      fetchAndUpdateInventory
+  -- Initial fetch
+  void fetchAndUpdateInventory
 
   -- Run Deku UI
-  void $ runInBody $ Deku.do
-    D.div [] [ inventory <#~> renderInventory config ]
+  void $ runInBody Deku.do
+    D.div []
+      [ D.div
+          [ DA.klass_ "debug-log" ]
+          [ logging <#~> D.text_ ]
+      , D.div
+          [ DA.klass_ "inventory-container" ]
+          [ inventory <#~> renderInventory config ]
+      ]
 
 runLiveView :: Effect Unit
 runLiveView = do
-  log "Starting main"
+  Console.log "Starting MenuLiveView"
   liveView
