@@ -66,34 +66,6 @@
         inherit pkgs name;
       };
 
-      vite = pkgs.writeShellApplication {
-        name = "vite";
-        runtimeInputs = with pkgs; [ nodejs-slim ];
-        text = ''
-          export CHEEBLR_BASE_PATH="${self}"
-          npx vite --open
-        '';
-      };
-
-      concurrent = pkgs.writeShellApplication {
-        name = "concurrent";
-        runtimeInputs = with pkgs; [ concurrently ];
-        text = ''
-          concurrently\
-            --color "auto"\
-            --prefix "[{command}]"\
-            --handle-input\
-            --restart-tries 10\
-            "$@"
-        '';
-      };
-
-      spago-watch = pkgs.writeShellApplication {
-        name = "spago-watch";
-        runtimeInputs = with pkgs; [ entr spago-unstable ];
-        text = ''find {src,test} | entr -s "spago $*" '';
-      };
-
       code-workspace = pkgs.writeShellApplication {
         name = "code-workspace";
         runtimeInputs = with pkgs; [ vscodium ];
@@ -110,20 +82,11 @@
         '';
       };
 
-      dev = pkgs.writeShellApplication {
-        name = "dev";
-        runtimeInputs = with pkgs; [
-          nodejs-slim
-          spago-watch
-          vite
-          concurrent
-        ];
-        text = ''
-          concurrent "spago-watch build" vite
-        '';
+      frontendModule = import ./nix/frontend.nix {
+        inherit pkgs name;
       };
 
-      testbedModule = import ./nix/testbed.nix {
+      deployModule = import ./nix/deploy.nix {
         inherit pkgs name;
       };
 
@@ -188,13 +151,17 @@
           rsync
           tmux
           backup-project
-          spago-watch
-          vite
-          dev
+
+          frontendModule.vite
+          frontendModule.vite-cleanup
+          frontendModule.spago-watch
+          frontendModule.concurrent
+          frontendModule.dev
+
           code-workspace
-          testbedModule.testbed
-          testbedModule.startServices
-          testbedModule.stopServices
+          deployModule.testbed
+          deployModule.deploy
+          deployModule.withdraw
 
         ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
           (with pkgs.darwin.apple_sdk.frameworks; [

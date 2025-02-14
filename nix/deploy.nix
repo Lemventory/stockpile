@@ -2,7 +2,7 @@
 { pkgs, lib ? pkgs.lib, name }:
 
 let
-  startServices = pkgs.writeShellScriptBin "start-services" ''
+  deploy = pkgs.writeShellScriptBin "deploy" ''
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -75,7 +75,7 @@ let
     tmux attach-session -t ${name}
   '';
 
-  stopServices = pkgs.writeShellScriptBin "stop-services" ''
+  withdraw = pkgs.writeShellScriptBin "withdraw" ''
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -115,5 +115,5 @@ let
   '';
 
 in {
-  inherit startServices stopServices testbed;
+  inherit deploy withdraw testbed;
 }

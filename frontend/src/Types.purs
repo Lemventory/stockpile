@@ -512,9 +512,9 @@ instance formValueItemCategory :: FormValue ItemCategory where
 instance formValueSpecies :: FormValue Species where
   fromFormValue str = case str of
     "Indica" -> ValidationSuccess Indica
-    "IndicaDominant" -> ValidationSuccess IndicaDominantHybrid
+    "IndicaDominantHybrid" -> ValidationSuccess IndicaDominantHybrid
     "Hybrid" -> ValidationSuccess Hybrid
-    "SativaDominant" -> ValidationSuccess SativaDominantHybrid
+    "SativaDominantHybrid" -> ValidationSuccess SativaDominantHybrid
     "Sativa" -> ValidationSuccess Sativa
     _ -> ValidationError "Invalid species value"
 
