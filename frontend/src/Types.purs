@@ -51,18 +51,20 @@ type MenuItemRecord =
   }
 
 newtype MenuItem = MenuItem MenuItemRecord
+
 derive instance Newtype MenuItem _
 
-data ItemCategory 
-  = Flower 
-  | PreRolls 
-  | Vaporizers 
-  | Edibles 
-  | Drinks 
-  | Concentrates 
-  | Topicals 
-  | Tinctures 
+data ItemCategory
+  = Flower
+  | PreRolls
+  | Vaporizers
+  | Edibles
+  | Drinks
+  | Concentrates
+  | Topicals
+  | Tinctures
   | Accessories
+
 derive instance eqItemCategory :: Eq ItemCategory
 derive instance ordItemCategory :: Ord ItemCategory
 
@@ -78,14 +80,16 @@ data StrainLineage = StrainLineage
   , leafly_url :: String
   , img :: String
   }
+
 derive instance genericStrainLineage :: Generic StrainLineage _
 
-data Species 
-  = Indica 
-  | IndicaDominantHybrid 
-  | Hybrid 
-  | SativaDominantHybrid 
-  | Sativa 
+data Species
+  = Indica
+  | IndicaDominantHybrid
+  | Hybrid
+  | SativaDominantHybrid
+  | Sativa
+
 derive instance eqItemSpecies :: Eq Species
 derive instance ordItemSpecies :: Ord Species
 
@@ -98,10 +102,10 @@ type HTMLFormField (r :: Row Type) =
   | r
   )
 
-formField 
+formField
   :: forall r
-   . Array (Poll (Attribute (HTMLFormField r))) 
-  -> Array Nut 
+   . Array (Poll (Attribute (HTMLFormField r)))
+  -> Array Nut
   -> Nut
 formField = elementify Nothing "div"
 
@@ -118,7 +122,7 @@ formFieldValidation
 formFieldValidation = map \rule ->
   attributeAtYourOwnRisk "data-validation" (show rule)
 
-type MenuItemFormInput = 
+type MenuItemFormInput =
   { name :: String
   , sku :: String
   , brand :: String
@@ -131,7 +135,7 @@ type MenuItemFormInput =
   , strainLineage :: StrainLineageFormInput
   }
 
-type StrainLineageFormInput = 
+type StrainLineageFormInput =
   { thc :: String
   , cbg :: String
   , strain :: String
@@ -157,7 +161,7 @@ type FieldConfigRow r =
   | r
   )
 
-type DropdownConfig = 
+type DropdownConfig =
   { label :: String
   , options :: Array { value :: String, label :: String }
   , defaultValue :: String
@@ -168,7 +172,7 @@ type TextFieldConfig r =
   | FieldConfigRow r
   )
 
-type NumberFieldConfig r = 
+type NumberFieldConfig r =
   ( min :: Number
   , max :: Number
   | FieldConfigRow r
@@ -181,8 +185,8 @@ fromFieldConfigRecord :: forall r. FieldConfigRecord r -> Record (FieldConfigRow
 fromFieldConfigRecord (FieldConfigRecord record) = record
 
 -- | Core validation types and type classes
-data ValidationResult a = 
-  ValidationSuccess a 
+data ValidationResult a
+  = ValidationSuccess a
   | ValidationError String
 
 newtype ValidationRule = ValidationRule (String -> Boolean)
@@ -199,7 +203,7 @@ class FieldValidator a where
   validateField :: String -> Either String a
   validationError :: Proxy a -> String
 
-type ValidationPreset = 
+type ValidationPreset =
   { validation :: ValidationRule
   , errorMessage :: String
   , formatInput :: String -> String
@@ -223,7 +227,7 @@ instance Enum ItemCategory where
   succ Topicals = Just Tinctures
   succ Tinctures = Just Accessories
   succ Accessories = Nothing
-  
+
   pred PreRolls = Just Flower
   pred Vaporizers = Just PreRolls
   pred Edibles = Just Vaporizers
@@ -249,7 +253,7 @@ instance BoundedEnum ItemCategory where
   fromEnum Topicals = 6
   fromEnum Tinctures = 7
   fromEnum Accessories = 8
-  
+
   toEnum 0 = Just Flower
   toEnum 1 = Just PreRolls
   toEnum 2 = Just Vaporizers
@@ -278,7 +282,7 @@ instance Enum Species where
   succ Hybrid = Just SativaDominantHybrid
   succ SativaDominantHybrid = Just Sativa
   succ Sativa = Nothing
-  
+
   pred IndicaDominantHybrid = Just Indica
   pred Hybrid = Just IndicaDominantHybrid
   pred SativaDominantHybrid = Just Hybrid
@@ -296,7 +300,7 @@ instance BoundedEnum Species where
   fromEnum Hybrid = 2
   fromEnum SativaDominantHybrid = 3
   fromEnum Sativa = 4
-  
+
   toEnum 0 = Just Indica
   toEnum 1 = Just IndicaDominantHybrid
   toEnum 2 = Just Hybrid
@@ -311,12 +315,11 @@ instance Show Species where
   show SativaDominantHybrid = "SativaDominantHybrid"
   show Sativa = "Sativa"
 
-
 -- | WriteForeign instances
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
-    , sku: item.sku  -- Now UUID has a WriteForeign instance
+    , sku: item.sku -- Now UUID has a WriteForeign instance
     , brand: item.brand
     , name: item.name
     , price: item.price
@@ -345,11 +348,10 @@ instance writeForeignStrainLineage :: WriteForeign StrainLineage where
     , img: lineage.img
     }
 
-
 instance writeForeignInventory :: WriteForeign Inventory where
   writeImpl (Inventory items) = writeImpl items
 
-instance writeForeignSpecies :: WriteForeign Species where 
+instance writeForeignSpecies :: WriteForeign Species where
   writeImpl = writeImpl <<< show
 
 instance writeForeignFieldConfigRecord :: WriteForeign (FieldConfigRecord r) where
@@ -358,7 +360,7 @@ instance writeForeignFieldConfigRecord :: WriteForeign (FieldConfigRecord r) whe
     , placeholder: config.placeholder
     , validation: config.validation
     , errorMessage: config.errorMessage
-    , formatInput: "<format function>" 
+    , formatInput: "<format function>"
     }
 
 instance writeForeignInventoryResponse :: WriteForeign InventoryResponse where
@@ -424,7 +426,7 @@ instance readForeignInventory :: ReadForeign Inventory where
 instance readForeignSpecies :: ReadForeign Species where
   readImpl json = do
     str <- readImpl json
-    case str of 
+    case str of
       "Indica" -> pure Indica
       "IndicaDominantHybrid" -> pure IndicaDominantHybrid
       "Hybrid" -> pure Hybrid
@@ -471,13 +473,23 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
       _ -> fail $ ForeignError "Invalid response type"
 
 -- | Show instances
-instance showStrainLineage :: Show StrainLineage where
-  show (StrainLineage lineage) = 
-    "StrainLineage " <> show lineage
-    
+derive instance Generic MenuItem _
+
 instance showMenuItem :: Show MenuItem where
-  show (MenuItem item) = 
-    "MenuItem " <> show item
+  show (MenuItem item) =
+    "{ name: " <> show item.name
+      <> ", brand: "
+      <> show item.brand
+      <> ", quantity: "
+      <> show item.quantity
+      <> " }"
+
+instance showStrainLineage :: Show StrainLineage where
+  show (StrainLineage lineage) =
+    "{ strain: " <> show lineage.strain
+      <> ", species: "
+      <> show lineage.species
+      <> " }"
 
 instance showValidationRule :: Show ValidationRule where
   show _ = "<validation function>"
@@ -541,15 +553,15 @@ instance fieldValidatorString :: FieldValidator String where
 
 instance fieldValidatorNumber :: FieldValidator Number where
   validateField str = case Number.fromString (trim str) of
-    Just n -> if n >= 0.0 
-              then Right n 
-              else Left "Must be a positive number"
+    Just n ->
+      if n >= 0.0 then Right n
+      else Left "Must be a positive number"
     Nothing -> Left "Must be a valid number"
   validationError _ = "Must be a valid number"
 
 instance fieldValidatorInt :: FieldValidator Int where
   validateField str = case fromString (trim str) of
-    Just n -> Right n 
+    Just n -> Right n
     Nothing -> Left "Must be a valid integer"
   validationError _ = "Must be a valid integer"
 
