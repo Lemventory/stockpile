@@ -24,34 +24,36 @@ padStart targetLength str =
   let
     paddingLength = max 0 (targetLength - length str) -- Ensure no negative padding
     padding = replicate paddingLength "0" -- Create an Array String
-  in joinWith "" padding <> str
+  in
+    joinWith "" padding <> str
 
 parseCommaList :: String -> Array String
-parseCommaList str = 
-  if str == "" 
-    then []
-    else 
-      str 
-      # split (Pattern ",") 
-      # map trim 
+parseCommaList str =
+  if str == "" then []
+  else
+    str
+      # split (Pattern ",")
+      # map trim
       # filter (_ /= "")
 
 formatDollarAmount :: String -> String
-formatDollarAmount str = 
+formatDollarAmount str =
   if str == "" then ""
   else case Number.fromString str of
-    Just n -> 
-      let 
+    Just n ->
+      let
         fixed = show n
         parts = split (Pattern ".") fixed
-      in case Array.length parts of
-        1 -> fixed <> ".00"
-        2 -> 
-          let decimals = fromMaybe "" $ parts !! 1
-          in if String.length decimals >= 2 
-             then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
-             else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
-        _ -> str
+      in
+        case Array.length parts of
+          1 -> fixed <> ".00"
+          2 ->
+            let
+              decimals = fromMaybe "" $ parts !! 1
+            in
+              if String.length decimals >= 2 then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
+              else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
+          _ -> str
     Nothing -> str
 
 getAllEnumValues :: ∀ a. BoundedEnum a => Bounded a => Array a

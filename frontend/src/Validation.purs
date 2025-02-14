@@ -1,5 +1,5 @@
 module Validation where
-  
+
 import Prelude
 import Types (class FieldValidator, class FormValue, FieldConfigRow, HTMLFormField, ItemCategory, MenuItem(..), MenuItemFormInput, NumberFieldConfig, StrainLineage(..), StrainLineageFormInput, TextFieldConfig, ValidationPreset, ValidationResult(..), ValidationRule(..), fromFormValue, runValidation, validationError)
 
@@ -23,13 +23,14 @@ requireValid field = case _ of
   ValidationError err -> Left $ field <> ": " <> err
 
 requiredField :: forall a. FormValue a => FieldValidator a => ValidationRule
-requiredField = ValidationRule \str -> 
+requiredField = ValidationRule \str ->
   let
     validate :: String -> Either String a
     validate = validateField
-  in case validate str of
-    Right _ -> true
-    Left _ -> false
+  in
+    case validate str of
+      Right _ -> true
+      Left _ -> false
 
 nonEmpty :: ValidationRule
 nonEmpty = ValidationRule (_ /= "")
@@ -49,7 +50,7 @@ percentage = ValidationRule \str -> case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFla
   Left _ -> false
   Right validRegex -> test validRegex str
 
-dollarAmount :: ValidationRule 
+dollarAmount :: ValidationRule
 dollarAmount = ValidationRule \str -> case Number.fromString str of
   Just n -> n >= 0.0
   Nothing -> false
@@ -78,27 +79,26 @@ maxLength :: Int -> ValidationRule
 maxLength n = ValidationRule \str -> String.length str <= n
 
 allOf :: Array ValidationRule -> ValidationRule
-allOf rules = ValidationRule \str -> 
+allOf rules = ValidationRule \str ->
   all (\(ValidationRule rule) -> rule str) rules
-
 
 -- | Validation presets
 requiredText :: ValidationPreset
 requiredText =
-  { validation: allOf [nonEmpty, alphanumeric]
+  { validation: allOf [ nonEmpty, alphanumeric ]
   , errorMessage: "Required, text only"
   , formatInput: trim
   }
 
 requiredTextWithLimit :: Int -> ValidationPreset
 requiredTextWithLimit limit =
-  { validation: allOf [nonEmpty, alphanumeric, maxLength limit]
+  { validation: allOf [ nonEmpty, alphanumeric, maxLength limit ]
   , errorMessage: "Required, text only (max " <> show limit <> " chars)"
   , formatInput: trim
   }
 
 percentageField :: ValidationPreset
-percentageField = 
+percentageField =
   { validation: percentage
   , errorMessage: "Required format: XX.XX%"
   , formatInput: trim
@@ -106,20 +106,20 @@ percentageField =
 
 moneyField :: ValidationPreset
 moneyField =
-  { validation: allOf [nonEmpty, dollarAmount]
+  { validation: allOf [ nonEmpty, dollarAmount ]
   , errorMessage: "Required, valid dollar amount"
   , formatInput: formatDollarAmount
   }
 
 numberField :: ValidationPreset
 numberField =
-  { validation: allOf [nonEmpty, positiveInteger]
+  { validation: allOf [ nonEmpty, positiveInteger ]
   , errorMessage: "Required, positive whole number"
   , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
 commaListField :: ValidationPreset
-commaListField = 
+commaListField =
   { validation: commaList
   , errorMessage: "Must be a comma-separated list"
   , formatInput: trim
@@ -135,22 +135,23 @@ multilineText =
 -- | Form validation
 validateForm :: forall r. Record (FieldConfigRow r) -> MenuItemFormInput -> Either String MenuItem
 validateForm _ input = do
-  name <- validateTextField 
+  name <- validateTextField
     { label: "Name"
     , maxLength: 50
     , placeholder: "Enter name"
     , defaultValue: ""
-    , validation: allOf [nonEmpty, alphanumeric]
+    , validation: allOf [ nonEmpty, alphanumeric ]
     , errorMessage: "Required, text only (max 50 chars)"
     , formatInput: trim
-    } input.name
+    }
+    input.name
 
   sku <- requireValid "SKU" $ fromFormValue input.sku
   brand <- requireValid "Brand" $ fromFormValue input.brand
   price <- requireValid "Price" $ fromFormValue input.price
   quantity <- requireValid "Quantity" $ fromFormValue input.quantity
   category <- requireValid "Category" $ fromFormValue input.category
-  
+
   strainLineage <- validateStrainLineage input.strainLineage
 
   pure $ MenuItem
@@ -170,46 +171,44 @@ validateForm _ input = do
     , strain_lineage: strainLineage
     }
 
-validateTextField :: forall r. Record (TextFieldConfig r) -> String -> Either String String 
+validateTextField :: forall r. Record (TextFieldConfig r) -> String -> Either String String
 validateTextField config input = do
   let ValidationRule validate = config.validation
-  if not (validate input)
-    then Left config.errorMessage
-    else if String.length input > config.maxLength
-      then Left $ "Must be less than " <> show config.maxLength <> " characters"
-      else Right $ config.formatInput input
+  if not (validate input) then Left config.errorMessage
+  else if String.length input > config.maxLength then Left $ "Must be less than " <> show config.maxLength <> " characters"
+  else Right $ config.formatInput input
 
 validateNumberField :: forall r. Record (NumberFieldConfig r) -> String -> Either String Number
 validateNumberField config input =
   case validateField input of
     Right value ->
-      if value >= config.min && value <= config.max
-      then Right value
+      if value >= config.min && value <= config.max then Right value
       else Left $ "Must be between " <> show config.min <> " and " <> show config.max
     Left err -> Left err
 
-validateFormField :: forall r a
+validateFormField
+  :: forall r a
    . FormValue a
   => FieldValidator a
   => Record (HTMLFormField r)
   -> ValidationResult a
-validateFormField field = 
-  let validationResult = fromFormValue field.value
-  in case validationResult of
-    ValidationSuccess value -> 
-      if runValidation field.validation field.value
-      then ValidationSuccess value
-      else ValidationError (validationError (Proxy :: Proxy a))
-    ValidationError err -> ValidationError err
+validateFormField field =
+  let
+    validationResult = fromFormValue field.value
+  in
+    case validationResult of
+      ValidationSuccess value ->
+        if runValidation field.validation field.value then ValidationSuccess value
+        else ValidationError (validationError (Proxy :: Proxy a))
+      ValidationError err -> ValidationError err
 
 validateField :: forall a. FormValue a => FieldValidator a => String -> Either String a
 validateField str = do
   let trimmed = trim str
-  if trimmed == ""
-    then Left (validationError (Proxy :: Proxy a))
-    else case fromFormValue trimmed of
-      ValidationSuccess value -> Right value
-      ValidationError err -> Left err
+  if trimmed == "" then Left (validationError (Proxy :: Proxy a))
+  else case fromFormValue trimmed of
+    ValidationSuccess value -> Right value
+    ValidationError err -> Left err
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
@@ -219,7 +218,7 @@ validateMenuItem input = do
   price <- validateField input.price :: Either String Number
   quantity <- validateField input.quantity :: Either String Int
   category <- validateField input.category :: Either String ItemCategory
-  
+
   strainLineage <- validateStrainLineage input.strainLineage
 
   pure $ MenuItem

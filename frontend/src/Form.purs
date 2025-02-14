@@ -23,122 +23,136 @@ import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
-makeField config setValue setValid validEvent = 
+makeField config setValue setValid validEvent =
   D.div_
-    [ D.div 
+    [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ config.label ]
-        , if config.label == "Description"
-            then D.textarea
-                [ DA.placeholder_ config.placeholder
-                , DA.cols_ "40" 
-                , DA.rows_ "4"
-                , DL.keyup_ \evt -> do
-                    let targetEvent = toEvent evt
-                    for_ 
-                      (target targetEvent >>= Input.fromEventTarget)
-                      \inputElement -> do
-                        v <- Input.value inputElement
-                        let formatted = config.formatInput v
-                        setValue formatted
-                        setValid (Just (runValidation config.validation formatted))
-                , DL.input_ \evt -> do
-                    for_ 
-                      (target evt >>= Input.fromEventTarget)
-                      \inputElement -> do
-                        v <- Input.value inputElement
-                        let formatted = config.formatInput v
-                        setValue formatted
-                        setValid (Just (runValidation config.validation formatted))
-                , DA.klass_ (inputKls <> " resize-y")
-                ]
-                [ text_ config.defaultValue ]
-            else D.input
-                [ DA.placeholder_ config.placeholder
-                , DA.value_ config.defaultValue
-                , DL.keyup_ \evt -> do
-                    let targetEvent = toEvent evt
-                    for_ 
-                      (target targetEvent >>= Input.fromEventTarget)
-                      \inputElement -> do
-                        v <- Input.value inputElement
-                        let formatted = config.formatInput v
-                        setValue formatted
-                        setValid (Just (runValidation config.validation formatted))
-                , DL.input_ \evt -> do
-                    for_ 
-                      (target evt >>= Input.fromEventTarget)
-                      \inputElement -> do
-                        v <- Input.value inputElement
-                        let formatted = config.formatInput v
-                        setValue formatted
-                        setValid (Just (runValidation config.validation formatted))
-                , DA.klass_ inputKls
-                ]
-                []
+        , if config.label == "Description" then D.textarea
+            [ DA.placeholder_ config.placeholder
+            , DA.cols_ "40"
+            , DA.rows_ "4"
+            , DL.keyup_ \evt -> do
+                let targetEvent = toEvent evt
+                for_
+                  (target targetEvent >>= Input.fromEventTarget)
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+            , DL.input_ \evt -> do
+                for_
+                  (target evt >>= Input.fromEventTarget)
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+            , DA.klass_ (inputKls <> " resize-y")
+            ]
+            [ text_ config.defaultValue ]
+          else D.input
+            [ DA.placeholder_ config.placeholder
+            , DA.value_ config.defaultValue
+            , DL.keyup_ \evt -> do
+                let targetEvent = toEvent evt
+                for_
+                  (target targetEvent >>= Input.fromEventTarget)
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+            , DL.input_ \evt -> do
+                for_
+                  (target evt >>= Input.fromEventTarget)
+                  \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+            , DA.klass_ inputKls
+            ]
+            []
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
-            [ text (map (\mValid -> case mValid of 
-                Just false -> config.errorMessage
-                _ -> "") validEvent)
+            [ text
+                ( map
+                    ( \mValid -> case mValid of
+                        Just false -> config.errorMessage
+                        _ -> ""
+                    )
+                    validEvent
+                )
             ]
         ]
     ]
 
 makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
-makeDropdown config setValue setValid validEvent = 
+makeDropdown config setValue setValid validEvent =
   D.div_
-    [ D.div 
+    [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ config.label ]
         , D.select
             [ DA.klass_ inputKls
             , DL.change_ \evt -> do
-                for_ 
+                for_
                   (target evt >>= Select.fromEventTarget)
                   \selectElement -> do
                     v <- Select.value selectElement
                     setValue v
                     setValid (Just (v /= ""))
             ]
-            (config.options <#> \opt ->
-              D.option
-                [ DA.value_ opt.value ]
-                [ text_ opt.label ]
+            ( config.options <#> \opt ->
+                D.option
+                  [ DA.value_ opt.value ]
+                  [ text_ opt.label ]
             )
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
-            [ text (map (\mValid -> case mValid of 
-                Just false -> "Please select an option"
-                _ -> "") validEvent)
+            [ text
+                ( map
+                    ( \mValid -> case mValid of
+                        Just false -> "Please select an option"
+                        _ -> ""
+                    )
+                    validEvent
+                )
             ]
         ]
     ]
 
-makeEnumDropdown :: ∀ a. BoundedEnum a => Bounded a => Show a => 
-  { label :: String, enumType :: a } -> DropdownConfig
-makeEnumDropdown { label } = 
+makeEnumDropdown
+  :: ∀ a
+   . BoundedEnum a
+  => Bounded a
+  => Show a
+  => { label :: String, enumType :: a }
+  -> DropdownConfig
+makeEnumDropdown { label } =
   { label
-  , options: 
+  , options:
       { value: "", label: "Select..." } :
-      map (\val -> { value: show val, label: show val }) 
+        map (\val -> { value: show val, label: show val })
           (getAllEnumValues :: Array a)
   , defaultValue: ""
   }
 
 makeArrayField :: String -> (Array String -> Effect Unit) -> Nut
-makeArrayField label setValue = 
+makeArrayField label setValue =
   D.div_
-    [ D.div 
+    [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ label ]
         , D.input
             [ DA.placeholder_ "Add items (comma-separated)"
             , DL.keyup_ \evt -> do
-                for_ 
+                for_
                   ((target >=> Input.fromEventTarget) (toEvent evt))
                   \inputElement -> do
                     v <- Input.value inputElement
@@ -161,20 +175,20 @@ makeFieldConfig label placeholder defaultValue preset =
   }
 
 categoryConfig :: DropdownConfig
-categoryConfig = makeEnumDropdown 
+categoryConfig = makeEnumDropdown
   { label: "Category"
   , enumType: (bottom :: ItemCategory)
   }
 
 speciesConfig :: DropdownConfig
-speciesConfig = makeEnumDropdown 
+speciesConfig = makeEnumDropdown
   { label: "Species"
   , enumType: (bottom :: Species)
   }
 
 skuConfig :: String -> FieldConfig
 skuConfig defaultValue = makeFieldConfig "SKU" "Enter UUID" defaultValue
-  { validation: allOf [nonEmpty, validUUID]
+  { validation: allOf [ nonEmpty, validUUID ]
   , errorMessage: "Required, must be a valid UUID"
   , formatInput: trim
   }
@@ -188,31 +202,31 @@ brandConfig defaultValue = makeFieldConfig "Brand" "Enter brand name" defaultVal
   (requiredTextWithLimit 30)
 
 priceConfig :: String -> FieldConfig
-priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue 
+priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue
   moneyField
 
 quantityConfig :: String -> FieldConfig
-quantityConfig defaultValue = makeFieldConfig "Quantity" "Enter quantity" defaultValue 
+quantityConfig defaultValue = makeFieldConfig "Quantity" "Enter quantity" defaultValue
   numberField
 
 thcConfig :: String -> FieldConfig
-thcConfig defaultValue = makeFieldConfig "THC %" "Enter THC percentage" defaultValue 
+thcConfig defaultValue = makeFieldConfig "THC %" "Enter THC percentage" defaultValue
   percentageField
 
 cbgConfig :: String -> FieldConfig
-cbgConfig defaultValue = makeFieldConfig "CBG %" "Enter CBG percentage" defaultValue 
+cbgConfig defaultValue = makeFieldConfig "CBG %" "Enter CBG percentage" defaultValue
   percentageField
 
 strainConfig :: String -> FieldConfig
-strainConfig defaultValue = makeFieldConfig "Strain" "Enter strain name" defaultValue 
+strainConfig defaultValue = makeFieldConfig "Strain" "Enter strain name" defaultValue
   requiredText
 
 creatorConfig :: String -> FieldConfig
-creatorConfig defaultValue = makeFieldConfig "Creator" "Enter creator name" defaultValue 
+creatorConfig defaultValue = makeFieldConfig "Creator" "Enter creator name" defaultValue
   requiredText
 
 dominantTarpeneConfig :: String -> FieldConfig
-dominantTarpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue 
+dominantTarpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue
   requiredText
 
 descriptionConfig :: String -> FieldConfig
@@ -232,7 +246,8 @@ lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-sep
 
 -- | Styling
 inputKls :: String
-inputKls = """
+inputKls =
+  """
   rounded-md border-gray-300 shadow-sm
   border-2 mr-2 border-solid
   focus:border-indigo-500 focus:ring-indigo-500
@@ -241,7 +256,8 @@ inputKls = """
 
 buttonClass :: String -> String
 buttonClass color =
-  replaceAll (Pattern "COLOR") (Replacement color) """
+  replaceAll (Pattern "COLOR") (Replacement color)
+    """
     mb-3 inline-flex items-center rounded-md
     border border-transparent bg-COLOR-600 px-3 py-2
     text-sm font-medium leading-4 text-white shadow-sm

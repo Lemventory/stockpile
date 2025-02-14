@@ -28,8 +28,8 @@ handleWriteInventory path menuItem = do
   case readJSON_ currentContent of
     Nothing -> pure $ Left "Failed to parse current inventory"
     Just (Inventory items) -> do
-      let 
-        newInventory = Inventory (items <> [menuItem])
+      let
+        newInventory = Inventory (items <> [ menuItem ])
         content = writeJSON newInventory
       FS.writeTextFile UTF8 path content
       pure $ Right "Successfully created item"
@@ -40,19 +40,21 @@ handleUpdateInventory path updatedItem = do
   case readJSON_ currentContent of
     Nothing -> pure $ Left "Failed to parse current inventory"
     Just (Inventory items) -> do
-      let 
+      let
         newItems :: Array MenuItem
-        newItems = map (\(MenuItem item) -> 
-          let
-            updatedSku :: UUID
-            updatedSku = (unwrap updatedItem).sku
+        newItems = map
+          ( \(MenuItem item) ->
+              let
+                updatedSku :: UUID
+                updatedSku = (unwrap updatedItem).sku
 
-            currentSku :: UUID
-            currentSku = item.sku
-          in
-            if currentSku == updatedSku 
-            then updatedItem 
-            else MenuItem item) items
+                currentSku :: UUID
+                currentSku = item.sku
+              in
+                if currentSku == updatedSku then updatedItem
+                else MenuItem item
+          )
+          items
 
         newInventory :: Inventory
         newInventory = Inventory newItems
@@ -70,7 +72,7 @@ handleDeleteInventory path itemId = do
   case readJSON_ currentContent of
     Nothing -> pure $ Left "Failed to parse current inventory"
     Just (Inventory items) -> do
-      let 
+      let
         newItems = filter (\(MenuItem item) -> show item.sku /= itemId) items
         newInventory = Inventory newItems
         content = writeJSON newInventory
