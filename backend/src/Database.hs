@@ -55,7 +55,7 @@ connectWithRetry DBConfig {..} = go 5
 
       catch
         (connect connInfo)
-        (\e -> handleConnError e retriesLeft)
+        (`handleConnError` retriesLeft)
 
     handleConnError :: SqlError -> Int -> IO Connection
     handleConnError e retriesLeft

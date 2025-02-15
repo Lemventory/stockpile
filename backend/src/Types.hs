@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-} 
 
 module Types where
 
 import Data.Aeson
 import Data.Scientific
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.UUID
 import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.FromRow (FromRow (..), field)
@@ -15,7 +16,6 @@ import Database.PostgreSQL.Simple.ToField (ToField (..))
 import Database.PostgreSQL.Simple.ToRow (ToRow (..))
 import Database.PostgreSQL.Simple.Types (PGArray (..))
 import GHC.Generics
-import qualified Data.Text as T
 
 data Species
   = Indica
@@ -49,7 +49,10 @@ data StrainLineage = StrainLineage
   , leafly_url :: Text
   , img :: Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic)
+
+instance ToJSON StrainLineage
+instance FromJSON StrainLineage
 
 data MenuItem = MenuItem
   { sort :: Int
@@ -67,7 +70,10 @@ data MenuItem = MenuItem
   , effects :: V.Vector Text
   , strain_lineage :: StrainLineage
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic)
+
+instance ToJSON MenuItem
+instance FromJSON MenuItem
 
 instance ToRow MenuItem where
   toRow MenuItem {..} =
@@ -86,51 +92,63 @@ instance ToRow MenuItem where
     , toField (PGArray $ V.toList effects)
     ]
 
-instance Database.PostgreSQL.Simple.FromRow.FromRow MenuItem where
+instance FromRow MenuItem where
   fromRow =
     MenuItem
-      <$> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> (read <$> Database.PostgreSQL.Simple.FromRow.field)
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> Database.PostgreSQL.Simple.FromRow.field
-      <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
-      <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> (read <$> field)
+      <*> field
+      <*> field
+      <*> (V.fromList . fromPGArray <$> field)
+      <*> (V.fromList . fromPGArray <$> field)
       <*> ( StrainLineage
-              <$> Database.PostgreSQL.Simple.FromRow.field
-              <*> Database.PostgreSQL.Simple.FromRow.field
-              <*> Database.PostgreSQL.Simple.FromRow.field
-              <*> Database.PostgreSQL.Simple.FromRow.field
-              <*> (read <$> Database.PostgreSQL.Simple.FromRow.field)
-              <*> Database.PostgreSQL.Simple.FromRow.field
-              <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
-              <*> (V.fromList . fromPGArray <$> Database.PostgreSQL.Simple.FromRow.field)
-              <*> Database.PostgreSQL.Simple.FromRow.field
-              <*> Database.PostgreSQL.Simple.FromRow.field
+              <$> field
+              <*> field
+              <*> field
+              <*> field
+              <*> (read <$> field)
+              <*> field
+              <*> (V.fromList . fromPGArray <$> field)
+              <*> (V.fromList . fromPGArray <$> field)
+              <*> field
+              <*> field
           )
 
 newtype Inventory = Inventory
   { items :: V.Vector MenuItem
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic)
+
+-- Custom ToJSON instance to ensure items are serialized as an array
+instance ToJSON Inventory where
+  toJSON (Inventory {items = items}) = toJSON items
+
+instance FromJSON Inventory where
+  parseJSON v = Inventory <$> parseJSON v
 
 data InventoryResponse
   = InventoryData Inventory
   | Message Text
-  deriving (Show, Generic, FromJSON)
+  deriving (Show, Generic)
 
+-- Custom ToJSON instance to match PureScript expectations
 instance ToJSON InventoryResponse where
-  toJSON (InventoryData inv) = object 
-    [ "type" .= T.pack "data"
-    , "value" .= inv
-    ]
-  toJSON (Message msg) = object 
-    [ "type" .= T.pack "message"
-    , "value" .= msg
-    ]
+  toJSON (InventoryData inv) =
+    object
+      [ "type" .= T.pack "data"
+      , "value" .= toJSON inv -- This will use our custom Inventory instance
+      ]
+  toJSON (Message msg) =
+    object
+      [ "type" .= T.pack "message"
+      , "value" .= msg
+      ]
+
+instance FromJSON InventoryResponse

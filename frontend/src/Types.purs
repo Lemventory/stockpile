@@ -464,12 +464,12 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
     obj <- readImpl f
     typeField <- readProp "type" obj >>= readImpl :: F String
     case typeField of
-      "message" -> do
-        value <- readProp "value" obj >>= readImpl
-        pure $ Message value
       "data" -> do
         value <- readProp "value" obj >>= readImpl
         pure $ InventoryData value
+      "message" -> do
+        value <- readProp "value" obj >>= readImpl
+        pure $ Message value
       _ -> fail $ ForeignError "Invalid response type"
 
 -- | Show instances
