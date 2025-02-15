@@ -23,7 +23,7 @@
     };
 
     CHaP = {
-      url = "github:IntersectMBO/cardano-haskell-packages?rev=145cc9e8bb4cf78fb7414a73326a35efd2262eff";
+      url = "github:IntersectMBO/cardano-haskell-packages?rev=4a6ecceb08b7980b0368907537a47215cae2e61f";
       flake = false;
     };
 
@@ -159,7 +159,6 @@
           frontendModule.dev
 
           code-workspace
-          deployModule.testbed
           deployModule.deploy
           deployModule.withdraw
 
@@ -175,6 +174,7 @@
             export PGUSER="$(whoami)"
             export PGPASSWORD="postgres"
             export PGDATABASE="${name}"
+            code-workspace
           '';
       };
     });
