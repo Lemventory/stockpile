@@ -319,7 +319,7 @@ instance Show Species where
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
-    , sku: item.sku -- Now UUID has a WriteForeign instance
+    , sku: item.sku
     , brand: item.brand
     , name: item.name
     , price: item.price
