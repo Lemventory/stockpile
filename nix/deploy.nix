@@ -88,32 +88,9 @@ let
     echo "Stopping database..."
     pg-stop
     
-    echo "Cleaning up..."
-    pg-cleanup
-    
-    echo "All services stopped and cleaned up."
-  '';
-
-  # Main testbed script that provides instructions
-  testbed = pkgs.writeShellScriptBin "testbed" ''
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    echo "Cheeblr Development Environment"
-    echo "------------------------------"
-    echo "Available commands:"
-    echo "  start-services  - Start all services for testing"
-    echo "  stop-services   - Stop all services and cleanup"
-    echo ""
-    echo "Usage:"
-    echo "1. Run 'start-services' to begin testing"
-    echo "2. Test your application"
-    echo "3. Run 'stop-services' when finished"
-    echo ""
-    echo "Note: Use Ctrl-b d to detach from tmux without stopping services"
-    echo "      Use Ctrl-b z to zoom/unzoom the current pane"
+    echo "All services stopped."
   '';
 
 in {
-  inherit deploy withdraw testbed;
+  inherit deploy withdraw;
 }
