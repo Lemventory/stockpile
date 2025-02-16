@@ -26,6 +26,8 @@ package:
     - node-fs
     - parsing
     - prelude
+    - routing
+    - routing-duplex
     - transformers
     - tuples
     - uuid

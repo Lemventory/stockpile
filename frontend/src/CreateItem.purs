@@ -6,8 +6,7 @@ import Types (InventoryResponse(..))
 import API (writeInventory)
 import UUID (genUUID)
 import Validation (validateMenuItem)
-import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
-
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
 import Data.Array (all)
 import Data.Either (Either(..))
 import Data.Int (fromString)
@@ -82,6 +81,26 @@ createItem = do
 
     setDominantTarpene /\ dominantTarpeneEvent <- useState ""
     setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false :: Maybe Boolean)
+
+    -- New state hooks
+    setSort /\ sortEvent <- useState ""
+    setValidSort /\ validSortEvent <- useState (Just false :: Maybe Boolean)
+
+    setMeasureUnit /\ measureUnitEvent <- useState ""
+    setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false :: Maybe Boolean)
+
+    setPerPackage /\ perPackageEvent <- useState ""
+    setValidPerPackage /\ validPerPackageEvent <- useState (Just false :: Maybe Boolean)
+
+    setSubcategory /\ subcategoryEvent <- useState ""
+    setValidSubcategory /\ validSubcategoryEvent <- useState (Just false :: Maybe Boolean)
+
+    -- New strain lineage state hooks
+    setLeaflyUrl /\ leaflyUrlEvent <- useState ""
+    setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false :: Maybe Boolean)
+
+    setImg /\ imgEvent <- useState ""
+    setValidImg /\ validImgEvent <- useState (Just false :: Maybe Boolean)
 
     let
       -- Form validation check (excluding optional fields)
@@ -163,6 +182,10 @@ createItem = do
           , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
           , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
           , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+          , makeField (sortConfig "") setSort setValidSort validSortEvent
+          , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+          , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+          , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
           , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
           , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
           , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
@@ -175,74 +198,87 @@ createItem = do
           , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
           , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
           , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
+          , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+          , makeField (imgConfig "") setImg setValidImg validImgEvent
+          
           ]
       , D.button
           [ DA.klass_ $ buttonClass "green"
           , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
           , DL.runOn DL.click $
-              ( \name sku brand price quantity category description tags effects thc cbg strain creator species dominant_tarpene tarpenes lineage -> do
-                  setSubmitting true
-                  void $ setFiber =<< launchAff do
-                    let
-                      formInput =
-                        { name
-                        , sku
-                        , brand
-                        , price: ensureNumber price
-                        , quantity: ensureInt quantity
-                        , category
-                        , description
-                        , tags
-                        , effects
-                        , strainLineage:
-                            { thc
-                            , cbg
-                            , strain
-                            , creator
-                            , species
-                            , dominant_tarpene
-                            , tarpenes
-                            , lineage
-                            }
-                        }
+            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
+                setSubmitting true
+                void $ setFiber =<< launchAff do
+                  let
+                    formInput =
+                      { sort: ensureInt sort
+                      , name
+                      , sku
+                      , brand
+                      , price: ensureNumber price
+                      , measure_unit: measureUnit
+                      , per_package: perPackage
+                      , quantity: ensureInt quantity
+                      , category
+                      , subcategory
+                      , description
+                      , tags
+                      , effects
+                      , strain_lineage:
+                          { thc
+                          , cbg
+                          , strain
+                          , creator
+                          , species
+                          , dominant_tarpene: dominantTarpene
+                          , tarpenes
+                          , lineage
+                          , leafly_url: leaflyUrl
+                          , img
+                          }
+                      }
 
-                    liftEffect $ Console.group "Form Submission"
-                    liftEffect $ Console.log "Form data:"
-                    liftEffect $ Console.logShow formInput
+                  liftEffect $ Console.group "Form Submission"
+                  liftEffect $ Console.log "Form data:"
+                  liftEffect $ Console.logShow formInput
 
-                    case validateMenuItem formInput of
-                      Left err -> liftEffect do
-                        Console.error "Form validation failed:"
-                        Console.errorShow err
-                        Console.groupEnd
-                        setStatusMessage $ "Validation error: " <> err
-                        setSubmitting false
+                  case validateMenuItem formInput of
+                    Left err -> liftEffect do
+                      Console.error "Form validation failed:"
+                      Console.errorShow err
+                      Console.groupEnd
+                      setStatusMessage $ "Validation error: " <> err
+                      setSubmitting false
 
-                      Right menuItem -> do
-                        liftEffect $ Console.info "Form validated successfully:"
-                        liftEffect $ Console.logShow menuItem
-                        result <- writeInventory menuItem
-                        liftEffect case result of
-                          Right (Message msg) -> do
-                            Console.info "Submission successful"
-                            setStatusMessage msg
-                            resetForm
-                          Right (InventoryData _) -> do
-                            Console.info "Item added to inventory"
-                            setStatusMessage "Item successfully added to inventory!"
-                            resetForm
-                          Left err -> do
-                            Console.error "API Error:"
-                            Console.errorShow err
-                            setStatusMessage $ "Error saving item: " <> err
-                        liftEffect $ Console.groupEnd
-                        liftEffect $ setSubmitting false
-              ) <$> nameEvent
+                    Right menuItem -> do
+                      liftEffect $ Console.info "Form validated successfully:"
+                      liftEffect $ Console.logShow menuItem
+                      result <- writeInventory menuItem
+                      liftEffect case result of
+                        Right (Message msg) -> do
+                          Console.info "Submission successful"
+                          setStatusMessage msg
+                          resetForm
+                        Right (InventoryData _) -> do
+                          Console.info "Item added to inventory"
+                          setStatusMessage "Item successfully added to inventory!"
+                          resetForm
+                        Left err -> do
+                          Console.error "API Error:"
+                          Console.errorShow err
+                          setStatusMessage $ "Error saving item: " <> err
+                      liftEffect $ Console.groupEnd
+                      liftEffect $ setSubmitting false
+              ) <$> sortEvent
+                <*> nameEvent
                 <*> skuEvent
                 <*> brandEvent
                 <*> priceEvent
+                <*> measureUnitEvent   
+                <*> perPackageEvent     
                 <*> quantityEvent
                 <*> categoryEvent
+                <*> subcategoryEvent
                 <*> descriptionEvent
                 <*> tagsEvent
                 <*> effectsEvent
@@ -251,9 +287,11 @@ createItem = do
                 <*> strainEvent
                 <*> creatorEvent
                 <*> speciesEvent
-                <*> dominantTarpeneEvent
+                <*> dominantTarpeneEvent  
                 <*> tarpenesEvent
                 <*> lineageEvent
+                <*> leaflyUrlEvent        
+                <*> imgEvent
           ]
           [ text $ map
               ( \submitting ->

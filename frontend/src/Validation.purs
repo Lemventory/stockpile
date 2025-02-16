@@ -15,6 +15,7 @@ import Data.String.Regex.Flags (noFlags)
 import Type.Proxy (Proxy(..))
 import UUID (UUID, parseUUID)
 import Utils (formatDollarAmount, parseCommaList)
+import Types
 
 -- | Basic validation rules
 requireValid :: forall a. String -> ValidationResult a -> Either String a
@@ -152,7 +153,7 @@ validateForm _ input = do
   quantity <- requireValid "Quantity" $ fromFormValue input.quantity
   category <- requireValid "Category" $ fromFormValue input.category
 
-  strainLineage <- validateStrainLineage input.strainLineage
+  strainLineage <- validateStrainLineage input.strain_lineage
 
   pure $ MenuItem
     { sort: 0
@@ -210,28 +211,58 @@ validateField str = do
     ValidationSuccess value -> Right value
     ValidationError err -> Left err
 
+validateStringField :: String -> ValidationRule -> String -> Either String String
+validateStringField fieldName (ValidationRule rule) value =
+  if rule value
+    then Right value
+    else Left $ fieldName <> " validation failed"
+
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
-  sku <- validateField input.sku :: Either String UUID
-  name <- validateField input.name :: Either String String
-  brand <- validateField input.brand :: Either String String
-  price <- validateField input.price :: Either String Number
-  quantity <- validateField input.quantity :: Either String Int
-  category <- validateField input.category :: Either String ItemCategory
+  sort <- validateStringField "Sort" positiveInteger input.sort
+  sku <- validateStringField "SKU" (allOf [nonEmpty, validUUID]) input.sku
+  brand <- validateStringField "Brand" (allOf [nonEmpty, alphanumeric]) input.brand
+  name <- validateStringField "Name" (allOf [nonEmpty, alphanumeric]) input.name
+  price <- validateStringField "Price" dollarAmount input.price
+  measure_unit <- validateStringField "Measure Unit" nonEmpty input.measure_unit
+  per_package <- validateStringField "Per Package" nonEmpty input.per_package
+  quantity <- validateStringField "Quantity" positiveInteger input.quantity
+  category <- validateStringField "Category" nonEmpty input.category
+  subcategory <- validateStringField "Subcategory" nonEmpty input.subcategory
+  
+  -- Validate strain lineage
+  strainLineage <- validateStrainLineage input.strain_lineage
 
-  strainLineage <- validateStrainLineage input.strainLineage
-
+  -- Convert validated strings to final types
+  sortNum <- case fromString sort of
+    Just n -> Right n
+    Nothing -> Left "Invalid sort number"
+    
+  skuUUID <- case parseUUID sku of
+    Just uuid -> Right uuid
+    Nothing -> Left "Invalid UUID format"
+    
+  priceNum <- case Number.fromString price of
+    Just n -> Right n
+    Nothing -> Left "Invalid price format"
+    
+  quantityNum <- case fromString quantity of
+    Just n -> Right n
+    Nothing -> Left "Invalid quantity format"
+    
+  categoryType <- validateCategory category
+  
   pure $ MenuItem
-    { sort: 0
-    , sku
+    { sort: sortNum
+    , sku: skuUUID
     , brand
     , name
-    , price
-    , measure_unit: "units"
-    , per_package: show quantity
-    , quantity
-    , category
-    , subcategory: show category
+    , price: priceNum
+    , measure_unit
+    , per_package
+    , quantity: quantityNum
+    , category: categoryType
+    , subcategory
     , description: input.description
     , tags: parseCommaList input.tags
     , effects: parseCommaList input.effects
@@ -240,22 +271,48 @@ validateMenuItem input = do
 
 validateStrainLineage :: StrainLineageFormInput -> Either String StrainLineage
 validateStrainLineage input = do
-  thc <- requireValid "THC" $ fromFormValue input.thc
-  cbg <- requireValid "CBG" $ fromFormValue input.cbg
-  strain <- requireValid "Strain" $ fromFormValue input.strain
-  creator <- requireValid "Creator" $ fromFormValue input.creator
-  species <- requireValid "Species" $ fromFormValue input.species
-  dominant_tarpene <- requireValid "Dominant Terpene" $ fromFormValue input.dominant_tarpene
+  thc <- validateStringField "THC" percentage input.thc
+  cbg <- validateStringField "CBG" percentage input.cbg
+  strain <- validateStringField "Strain" (allOf [nonEmpty, alphanumeric]) input.strain
+  creator <- validateStringField "Creator" (allOf [nonEmpty, alphanumeric]) input.creator
+  species <- validateStringField "Species" nonEmpty input.species
+  dominant_tarpene <- validateStringField "Dominant Terpene" (allOf [nonEmpty, alphanumeric]) input.dominant_tarpene
+  leafly_url <- validateStringField "Leafly URL" nonEmpty input.leafly_url
+  img <- validateStringField "Image URL" nonEmpty input.img
+
+  speciesType <- validateSpecies species
 
   pure $ StrainLineage
     { thc
     , cbg
     , strain
     , creator
-    , species
+    , species: speciesType
     , dominant_tarpene
     , tarpenes: parseCommaList input.tarpenes
     , lineage: parseCommaList input.lineage
-    , leafly_url: ""
-    , img: ""
+    , leafly_url
+    , img
     }
+
+validateCategory :: String -> Either String ItemCategory
+validateCategory = case _ of
+  "Flower" -> Right Flower
+  "PreRolls" -> Right PreRolls
+  "Vaporizers" -> Right Vaporizers
+  "Edibles" -> Right Edibles
+  "Drinks" -> Right Drinks
+  "Concentrates" -> Right Concentrates
+  "Topicals" -> Right Topicals
+  "Tinctures" -> Right Tinctures
+  "Accessories" -> Right Accessories
+  _ -> Left "Invalid category"
+
+validateSpecies :: String -> Either String Species
+validateSpecies = case _ of
+  "Indica" -> Right Indica
+  "IndicaDominantHybrid" -> Right IndicaDominantHybrid
+  "Hybrid" -> Right Hybrid
+  "SativaDominantHybrid" -> Right SativaDominantHybrid
+  "Sativa" -> Right Sativa
+  _ -> Left "Invalid species"

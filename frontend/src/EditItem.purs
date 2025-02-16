@@ -19,19 +19,19 @@ import Effect (Effect)
 import Effect.Aff (launchAff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (buttonClass, makeDropdown, makeField, brandConfig, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, lineageConfig, nameConfig, priceConfig, quantityConfig, skuConfig, speciesConfig, strainConfig, tagsConfig, tarpenesConfig, thcConfig)
-import Types (InventoryResponse(..), MenuItem(..), Inventory(..), StrainLineage(..))
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig) 
+import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Validation (validateMenuItem)
 
 editItem :: String -> Effect Unit
 editItem targetUUID = void $ runInBody Deku.do
-  -- Status and loading state
+
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setLoading /\ loadingEvent <- useState true
   setFiber /\ _ <- useState (pure unit)
 
-  -- Form field states
+  -- Form fields state
   setName /\ nameEvent <- useState ""
   setValidName /\ validNameEvent <- useState (Just false :: Maybe Boolean)
 
@@ -47,17 +47,27 @@ editItem targetUUID = void $ runInBody Deku.do
   setQuantity /\ quantityEvent <- useState ""
   setValidQuantity /\ validQuantityEvent <- useState (Just false :: Maybe Boolean)
 
+  setSort /\ sortEvent <- useState ""
+  setValidSort /\ validSortEvent <- useState (Just false :: Maybe Boolean)
+
+  setMeasureUnit /\ measureUnitEvent <- useState ""
+  setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false :: Maybe Boolean)
+
+  setPerPackage /\ perPackageEvent <- useState ""
+  setValidPerPackage /\ validPerPackageEvent <- useState (Just false :: Maybe Boolean)
+
   setCategory /\ categoryEvent <- useState ""
   setValidCategory /\ validCategoryEvent <- useState (Just false :: Maybe Boolean)
 
-  -- Optional fields
+  setSubcategory /\ subcategoryEvent <- useState ""
+  setValidSubcategory /\ validSubcategoryEvent <- useState (Just false :: Maybe Boolean)
+
   setDescription /\ descriptionEvent <- useState ""
   setTags /\ tagsEvent <- useState ""
   setEffects /\ effectsEvent <- useState ""
   setTarpenes /\ tarpenesEvent <- useState ""
   setLineage /\ lineageEvent <- useState ""
 
-  -- StrainLineage fields
   setThc /\ thcEvent <- useState ""
   setValidThc /\ validThcEvent <- useState (Just false :: Maybe Boolean)
 
@@ -76,6 +86,12 @@ editItem targetUUID = void $ runInBody Deku.do
   setDominantTarpene /\ dominantTarpeneEvent <- useState ""
   setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false :: Maybe Boolean)
 
+  setLeaflyUrl /\ leaflyUrlEvent <- useState ""
+  setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false :: Maybe Boolean)
+
+  setImg /\ imgEvent <- useState ""
+  setValidImg /\ validImgEvent <- useState (Just false :: Maybe Boolean)
+
   let
     isFormValid = ado
       vName <- validNameEvent
@@ -83,13 +99,19 @@ editItem targetUUID = void $ runInBody Deku.do
       vBrand <- validBrandEvent
       vPrice <- validPriceEvent
       vQuantity <- validQuantityEvent
+      vSort <- validSortEvent
+      vMeasureUnit <- validMeasureUnitEvent
+      vPerPackage <- validPerPackageEvent
       vCategory <- validCategoryEvent
+      vSubcategory <- validSubcategoryEvent
       vThc <- validThcEvent
       vCbg <- validCbgEvent
       vStrain <- validStrainEvent
       vCreator <- validCreatorEvent
       vSpecies <- validSpeciesEvent
       vDominantTarpene <- validDominantTarpeneEvent
+      vLeaflyUrl <- validLeaflyUrlEvent
+      vImg <- validImgEvent
       in
         all (fromMaybe false)
           [ vName
@@ -97,16 +119,21 @@ editItem targetUUID = void $ runInBody Deku.do
           , vBrand
           , vPrice
           , vQuantity
+          , vSort
+          , vMeasureUnit
+          , vPerPackage
           , vCategory
+          , vSubcategory
           , vThc
           , vCbg
           , vStrain
           , vCreator
           , vSpecies
           , vDominantTarpene
+          , vLeaflyUrl
+          , vImg
           ]
 
-    -- Function to load item data into form
     loadItemData :: MenuItem -> Effect Unit
     loadItemData (MenuItem item) = do
       let StrainLineage meta = item.strain_lineage
@@ -120,8 +147,16 @@ editItem targetUUID = void $ runInBody Deku.do
       setValidPrice (Just true)
       setQuantity (show item.quantity)
       setValidQuantity (Just true)
+      setSort (show item.sort)
+      setValidSort (Just true)
+      setMeasureUnit item.measure_unit
+      setValidMeasureUnit (Just true)
+      setPerPackage item.per_package
+      setValidPerPackage (Just true)
       setCategory (show item.category)
       setValidCategory (Just true)
+      setSubcategory item.subcategory
+      setValidSubcategory (Just true)
       setDescription item.description
       setTags (joinWith ", " item.tags)
       setEffects (joinWith ", " item.effects)
@@ -139,6 +174,10 @@ editItem targetUUID = void $ runInBody Deku.do
       setValidDominantTarpene (Just true)
       setTarpenes (joinWith ", " meta.tarpenes)
       setLineage (joinWith ", " meta.lineage)
+      setLeaflyUrl meta.leafly_url
+      setValidLeaflyUrl (Just true)
+      setImg meta.img
+      setValidImg (Just true)
       setLoading false
 
   D.div []
@@ -186,7 +225,11 @@ editItem targetUUID = void $ runInBody Deku.do
             , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
             , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
             , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+            , makeField (sortConfig "") setSort setValidSort validSortEvent
+            , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+            , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
             , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
+            , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
             , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
             , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
             , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
@@ -198,34 +241,42 @@ editItem targetUUID = void $ runInBody Deku.do
             , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
             , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
             , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
+            , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+            , makeField (imgConfig "") setImg setValidImg validImgEvent
             ]
         , D.button
             [ DA.klass_ $ buttonClass "green"
             , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
             , DL.runOn DL.click $
-                ( \name sku brand price quantity category description tags effects thc cbg strain creator species dominant_tarpene tarpenes lineage -> do
+                ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
                     setSubmitting true
                     void $ setFiber =<< launchAff do
                       let
                         formInput =
-                          { name
+                          { sort
+                          , name
                           , sku
                           , brand
                           , price
+                          , measure_unit: measureUnit
+                          , per_package: perPackage
                           , quantity
                           , category
+                          , subcategory
                           , description
                           , tags
                           , effects
-                          , strainLineage:
+                          , strain_lineage:
                               { thc
                               , cbg
                               , strain
                               , creator
                               , species
-                              , dominant_tarpene
+                              , dominant_tarpene: dominantTarpene
                               , tarpenes
                               , lineage
+                              , leafly_url: leaflyUrl
+                              , img
                               }
                           }
 
@@ -260,12 +311,16 @@ editItem targetUUID = void $ runInBody Deku.do
                               Console.groupEnd
                               setStatusMessage $ "Error updating item: " <> err
                               setSubmitting false
-                ) <$> nameEvent
+                ) <$> sortEvent
+                  <*> nameEvent
                   <*> skuEvent
                   <*> brandEvent
                   <*> priceEvent
+                  <*> measureUnitEvent
+                  <*> perPackageEvent
                   <*> quantityEvent
                   <*> categoryEvent
+                  <*> subcategoryEvent
                   <*> descriptionEvent
                   <*> tagsEvent
                   <*> effectsEvent
@@ -277,6 +332,8 @@ editItem targetUUID = void $ runInBody Deku.do
                   <*> dominantTarpeneEvent
                   <*> tarpenesEvent
                   <*> lineageEvent
+                  <*> leaflyUrlEvent
+                  <*> imgEvent
             ]
             [ text $ map
                 ( \submitting ->

@@ -123,16 +123,20 @@ formFieldValidation = map \rule ->
   attributeAtYourOwnRisk "data-validation" (show rule)
 
 type MenuItemFormInput =
-  { name :: String
+  { sort :: String
   , sku :: String
   , brand :: String
+  , name :: String
   , price :: String
+  , measure_unit :: String
+  , per_package :: String
   , quantity :: String
   , category :: String
+  , subcategory :: String
   , description :: String
   , tags :: String
   , effects :: String
-  , strainLineage :: StrainLineageFormInput
+  , strain_lineage :: StrainLineageFormInput
   }
 
 type StrainLineageFormInput =
@@ -144,6 +148,8 @@ type StrainLineageFormInput =
   , dominant_tarpene :: String
   , tarpenes :: String
   , lineage :: String
+  , leafly_url :: String
+  , img :: String
   }
 
 -- | Field configuration types

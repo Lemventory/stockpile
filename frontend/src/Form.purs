@@ -16,7 +16,7 @@ import Effect (Effect)
 import FRP.Poll (Poll)
 import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset, runValidation)
 import Utils (getAllEnumValues, parseCommaList)
-import Validation (allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
+import Validation (alphanumeric, allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -243,6 +243,40 @@ tarpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-
 
 lineageConfig :: String -> FieldConfig
 lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue commaListField
+
+sortConfig :: String -> FieldConfig
+sortConfig defaultValue = makeFieldConfig "Sort Order" "Enter sort position" defaultValue numberField
+
+measureUnitConfig :: String -> FieldConfig
+measureUnitConfig defaultValue = makeFieldConfig "Measure Unit" "Enter unit (g, mg, etc)" defaultValue
+  { validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Required, valid unit"
+  , formatInput: trim
+  }
+
+perPackageConfig :: String -> FieldConfig
+perPackageConfig defaultValue = makeFieldConfig "Per Package" "Enter amount per package" defaultValue numberField
+
+subcategoryConfig :: String -> FieldConfig
+subcategoryConfig defaultValue = makeFieldConfig "Subcategory" "Enter subcategory" defaultValue
+  { validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Required, text only"
+  , formatInput: trim
+  }
+
+leaflyUrlConfig :: String -> FieldConfig
+leaflyUrlConfig defaultValue = makeFieldConfig "Leafly URL" "Enter Leafly URL" defaultValue
+  { validation: nonEmpty
+  , errorMessage: "Required"
+  , formatInput: trim
+  }
+
+imgConfig :: String -> FieldConfig
+imgConfig defaultValue = makeFieldConfig "Image URL" "Enter image URL" defaultValue
+  { validation: nonEmpty
+  , errorMessage: "Required"
+  , formatInput: trim
+  }
 
 -- | Styling
 inputKls :: String
