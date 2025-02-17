@@ -8,7 +8,7 @@ import Routing.Duplex (RouteDuplex', root, segment, string)
 import Routing.Duplex.Generic as G
 import Routing.Duplex.Generic.Syntax ((/))
 
-data Route 
+data Route
   = LiveView
   | Create
   | Edit String

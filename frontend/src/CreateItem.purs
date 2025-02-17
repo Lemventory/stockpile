@@ -200,82 +200,82 @@ createItem = do
           , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
           , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
           , makeField (imgConfig "") setImg setValidImg validImgEvent
-          
+
           ]
       , D.button
           [ DA.klass_ $ buttonClass "green"
           , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
           , DL.runOn DL.click $
-            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
-                setSubmitting true
-                void $ setFiber =<< launchAff do
-                  let
-                    formInput =
-                      { sort: ensureInt sort
-                      , name
-                      , sku
-                      , brand
-                      , price: ensureNumber price
-                      , measure_unit: measureUnit
-                      , per_package: perPackage
-                      , quantity: ensureInt quantity
-                      , category
-                      , subcategory
-                      , description
-                      , tags
-                      , effects
-                      , strain_lineage:
-                          { thc
-                          , cbg
-                          , strain
-                          , creator
-                          , species
-                          , dominant_tarpene: dominantTarpene
-                          , tarpenes
-                          , lineage
-                          , leafly_url: leaflyUrl
-                          , img
-                          }
-                      }
+              ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
+                  setSubmitting true
+                  void $ setFiber =<< launchAff do
+                    let
+                      formInput =
+                        { sort: ensureInt sort
+                        , name
+                        , sku
+                        , brand
+                        , price: ensureNumber price
+                        , measure_unit: measureUnit
+                        , per_package: perPackage
+                        , quantity: ensureInt quantity
+                        , category
+                        , subcategory
+                        , description
+                        , tags
+                        , effects
+                        , strain_lineage:
+                            { thc
+                            , cbg
+                            , strain
+                            , creator
+                            , species
+                            , dominant_tarpene: dominantTarpene
+                            , tarpenes
+                            , lineage
+                            , leafly_url: leaflyUrl
+                            , img
+                            }
+                        }
 
-                  liftEffect $ Console.group "Form Submission"
-                  liftEffect $ Console.log "Form data:"
-                  liftEffect $ Console.logShow formInput
+                    liftEffect $ Console.group "Form Submission"
+                    liftEffect $ Console.log "Form data:"
+                    liftEffect $ Console.logShow formInput
 
-                  case validateMenuItem formInput of
-                    Left err -> liftEffect do
-                      Console.error "Form validation failed:"
-                      Console.errorShow err
-                      Console.groupEnd
-                      setStatusMessage $ "Validation error: " <> err
-                      setSubmitting false
+                    case validateMenuItem formInput of
+                      Left err -> liftEffect do
+                        Console.error "Form validation failed:"
+                        Console.errorShow err
+                        Console.groupEnd
+                        setStatusMessage $ "Validation error: " <> err
+                        setSubmitting false
 
-                    Right menuItem -> do
-                      liftEffect $ Console.info "Form validated successfully:"
-                      liftEffect $ Console.logShow menuItem
-                      result <- writeInventory menuItem
-                      liftEffect case result of
-                        Right (Message msg) -> do
-                          Console.info "Submission successful"
-                          setStatusMessage msg
-                          resetForm
-                        Right (InventoryData _) -> do
-                          Console.info "Item added to inventory"
-                          setStatusMessage "Item successfully added to inventory!"
-                          resetForm
-                        Left err -> do
-                          Console.error "API Error:"
-                          Console.errorShow err
-                          setStatusMessage $ "Error saving item: " <> err
-                      liftEffect $ Console.groupEnd
-                      liftEffect $ setSubmitting false
+                      Right menuItem -> do
+                        liftEffect $ Console.info "Form validated successfully:"
+                        liftEffect $ Console.logShow menuItem
+                        result <- writeInventory menuItem
+                        liftEffect case result of
+                          Right (Message msg) -> do
+                            Console.info "Submission successful"
+                            setStatusMessage msg
+                            resetForm
+                          Right (InventoryData _) -> do
+                            Console.info "Item added to inventory"
+                            setStatusMessage "Item successfully added to inventory!"
+                            resetForm
+                          Left err -> do
+                            Console.error "API Error:"
+                            Console.errorShow err
+                            setStatusMessage $ "Error saving item: " <> err
+                        liftEffect $ Console.groupEnd
+                        liftEffect $ setSubmitting false
               ) <$> sortEvent
                 <*> nameEvent
                 <*> skuEvent
                 <*> brandEvent
                 <*> priceEvent
-                <*> measureUnitEvent   
-                <*> perPackageEvent     
+                <*> measureUnitEvent
+                <*> perPackageEvent
                 <*> quantityEvent
                 <*> categoryEvent
                 <*> subcategoryEvent
@@ -287,10 +287,10 @@ createItem = do
                 <*> strainEvent
                 <*> creatorEvent
                 <*> speciesEvent
-                <*> dominantTarpeneEvent  
+                <*> dominantTarpeneEvent
                 <*> tarpenesEvent
                 <*> lineageEvent
-                <*> leaflyUrlEvent        
+                <*> leaflyUrlEvent
                 <*> imgEvent
           ]
           [ text $ map

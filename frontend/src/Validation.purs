@@ -213,23 +213,22 @@ validateField str = do
 
 validateStringField :: String -> ValidationRule -> String -> Either String String
 validateStringField fieldName (ValidationRule rule) value =
-  if rule value
-    then Right value
-    else Left $ fieldName <> " validation failed"
+  if rule value then Right value
+  else Left $ fieldName <> " validation failed"
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
   sort <- validateStringField "Sort" positiveInteger input.sort
-  sku <- validateStringField "SKU" (allOf [nonEmpty, validUUID]) input.sku
-  brand <- validateStringField "Brand" (allOf [nonEmpty, alphanumeric]) input.brand
-  name <- validateStringField "Name" (allOf [nonEmpty, alphanumeric]) input.name
+  sku <- validateStringField "SKU" (allOf [ nonEmpty, validUUID ]) input.sku
+  brand <- validateStringField "Brand" (allOf [ nonEmpty, alphanumeric ]) input.brand
+  name <- validateStringField "Name" (allOf [ nonEmpty, alphanumeric ]) input.name
   price <- validateStringField "Price" dollarAmount input.price
   measure_unit <- validateStringField "Measure Unit" nonEmpty input.measure_unit
   per_package <- validateStringField "Per Package" nonEmpty input.per_package
   quantity <- validateStringField "Quantity" positiveInteger input.quantity
   category <- validateStringField "Category" nonEmpty input.category
   subcategory <- validateStringField "Subcategory" nonEmpty input.subcategory
-  
+
   -- Validate strain lineage
   strainLineage <- validateStrainLineage input.strain_lineage
 
@@ -237,21 +236,21 @@ validateMenuItem input = do
   sortNum <- case fromString sort of
     Just n -> Right n
     Nothing -> Left "Invalid sort number"
-    
+
   skuUUID <- case parseUUID sku of
     Just uuid -> Right uuid
     Nothing -> Left "Invalid UUID format"
-    
+
   priceNum <- case Number.fromString price of
     Just n -> Right n
     Nothing -> Left "Invalid price format"
-    
+
   quantityNum <- case fromString quantity of
     Just n -> Right n
     Nothing -> Left "Invalid quantity format"
-    
+
   categoryType <- validateCategory category
-  
+
   pure $ MenuItem
     { sort: sortNum
     , sku: skuUUID
@@ -273,10 +272,10 @@ validateStrainLineage :: StrainLineageFormInput -> Either String StrainLineage
 validateStrainLineage input = do
   thc <- validateStringField "THC" percentage input.thc
   cbg <- validateStringField "CBG" percentage input.cbg
-  strain <- validateStringField "Strain" (allOf [nonEmpty, alphanumeric]) input.strain
-  creator <- validateStringField "Creator" (allOf [nonEmpty, alphanumeric]) input.creator
+  strain <- validateStringField "Strain" (allOf [ nonEmpty, alphanumeric ]) input.strain
+  creator <- validateStringField "Creator" (allOf [ nonEmpty, alphanumeric ]) input.creator
   species <- validateStringField "Species" nonEmpty input.species
-  dominant_tarpene <- validateStringField "Dominant Terpene" (allOf [nonEmpty, alphanumeric]) input.dominant_tarpene
+  dominant_tarpene <- validateStringField "Dominant Terpene" (allOf [ nonEmpty, alphanumeric ]) input.dominant_tarpene
   leafly_url <- validateStringField "Leafly URL" nonEmpty input.leafly_url
   img <- validateStringField "Image URL" nonEmpty input.img
 

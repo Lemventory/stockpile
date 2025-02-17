@@ -12,5 +12,5 @@ main :: Effect Unit
 main = do
   log "Starting main"
   runLiveView
-  -- createItem  
+-- createItem  
 -- editItem "8eacb499-76e6-42cb-aa05-103713dd2bd6"
