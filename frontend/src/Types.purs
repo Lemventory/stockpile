@@ -24,6 +24,11 @@ import Foreign.Index (readProp)
 import Type.Proxy (Proxy(..))
 import UUID (UUID, parseUUID)
 import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
+import Foreign (Foreign, F, ForeignError(..), fail, typeOf)
+import Foreign.Index (readProp)
+import Data.List.NonEmpty (NonEmptyList)
+import Control.Monad.Except.Trans (ExceptT)
+import Data.Identity (Identity)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -424,9 +429,14 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
       , strain_lineage
       }
 
+-- instance readForeignInventory :: ReadForeign Inventory where
+--   readImpl json = do
+--     items <- readImpl json :: F (Array MenuItem)
+--     pure $ Inventory items
+
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do
-    items <- readImpl json :: ExceptT (NonEmptyList ForeignError) Identity (Array MenuItem)
+    items <- readImpl json :: F (Array MenuItem)
     pure $ Inventory items
 
 instance readForeignSpecies :: ReadForeign Species where
@@ -465,18 +475,42 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
       , img
       }
 
+-- instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
+--   readImpl f = do
+--     obj <- readImpl f
+--     typeField <- readProp "type" obj >>= readImpl :: F String
+--     case typeField of
+--       "data" -> do
+--         value <- readProp "value" obj >>= readImpl
+--         pure $ InventoryData value
+--       "message" -> do
+--         value <- readProp "value" obj >>= readImpl
+--         pure $ Message value
+--       _ -> fail $ ForeignError "Invalid response type"
+
 instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
   readImpl f = do
     obj <- readImpl f
-    typeField <- readProp "type" obj >>= readImpl :: F String
-    case typeField of
-      "data" -> do
-        value <- readProp "value" obj >>= readImpl
-        pure $ InventoryData value
-      "message" -> do
-        value <- readProp "value" obj >>= readImpl
-        pure $ Message value
-      _ -> fail $ ForeignError "Invalid response type"
+    case obj of
+      -- Try parsing as a direct inventory array first
+      array | isArray array -> do
+        inventory <- readImpl array :: F Inventory
+        pure $ InventoryData inventory
+
+      -- Otherwise try parsing as a wrapped response
+      _ -> do
+        typeField <- readProp "type" obj >>= readImpl :: F String
+        case typeField of
+          "data" -> do
+            value <- readProp "value" obj >>= readImpl :: F Inventory
+            pure $ InventoryData value
+          "message" -> do
+            value <- readProp "value" obj >>= readImpl :: F String
+            pure $ Message value
+          _ -> fail $ ForeignError "Invalid response type"
+    where
+    isArray :: Foreign -> Boolean
+    isArray value = typeOf value == "array"
 
 -- | Show instances
 derive instance Generic MenuItem _

@@ -63,7 +63,7 @@ connectWithRetry DBConfig {..} = go 5
           hPutStrLn stderr $ "Failed to connect to database after 5 attempts: " ++ show e
           throwIO e
       | otherwise = do
-          hPutStrLn stderr $ "Database connection attempt failed, retrying in 5 seconds..."
+          hPutStrLn stderr "Database connection attempt failed, retrying in 5 seconds..."
           threadDelay 5000000
           go (retriesLeft - 1)
 
