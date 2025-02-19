@@ -9,23 +9,22 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (joinWith)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
-import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.DOM.Listeners as DL
+import Effect.Class (liftEffect)
 import Deku.Do as Deku
-import Deku.Effect (useState)
+import Deku.Hooks (useState)
 import Deku.Toplevel (runInBody)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
-import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Deku.DOM.Listeners as DL
 import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
 import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Validation (validateMenuItem)
 
 editItem :: String -> Effect Unit
-editItem targetUUID = void $ runInBody do
+editItem targetUUID = void $ runInBody Deku.do
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setLoading /\ loadingEvent <- useState true
@@ -132,83 +131,95 @@ editItem targetUUID = void $ runInBody do
           , vImg
           ]
 
-  pure $ D.div_
-    [ D.div_
-        [ text $ pure $ void $ launchAff_ do
-            result <- readInventory
-            liftEffect $ case result of
-              Right (InventoryData (Inventory items)) ->
-                case find (\(MenuItem item) -> show item.sku == targetUUID) items of
-                  Just (MenuItem item) -> do
-                    Console.log "Found item, loading data..."
-                    let StrainLineage meta = item.strain_lineage
+    handleLoadResult :: Either String InventoryResponse -> Effect Unit
+    handleLoadResult = case _ of
+      Right (InventoryData (Inventory items)) ->
+        case find (\(MenuItem item) -> show item.sku == targetUUID) items of
+          Just (MenuItem item) -> do
+            Console.log "Found item, loading data..."
+            let StrainLineage meta = item.strain_lineage
 
-                    setName item.name
-                    setValidName (Just true)
-                    setSku (show item.sku)
-                    setValidSku (Just true)
-                    setBrand item.brand
-                    setValidBrand (Just true)
-                    setPrice (show item.price)
-                    setValidPrice (Just true)
-                    setQuantity (show item.quantity)
-                    setValidQuantity (Just true)
-                    setSort (show item.sort)
-                    setValidSort (Just true)
-                    setMeasureUnit item.measure_unit
-                    setValidMeasureUnit (Just true)
-                    setPerPackage item.per_package
-                    setValidPerPackage (Just true)
-                    setCategory (show item.category)
-                    setValidCategory (Just true)
-                    setSubcategory item.subcategory
-                    setValidSubcategory (Just true)
-                    setDescription item.description
-                    setTags (joinWith ", " item.tags)
-                    setEffects (joinWith ", " item.effects)
-                    setThc meta.thc
-                    setValidThc (Just true)
-                    setCbg meta.cbg
-                    setValidCbg (Just true)
-                    setStrain meta.strain
-                    setValidStrain (Just true)
-                    setCreator meta.creator
-                    setValidCreator (Just true)
-                    setSpecies (show meta.species)
-                    setValidSpecies (Just true)
-                    setDominantTarpene meta.dominant_tarpene
-                    setValidDominantTarpene (Just true)
-                    setTarpenes (joinWith ", " meta.tarpenes)
-                    setLineage (joinWith ", " meta.lineage)
-                    setLeaflyUrl meta.leafly_url
-                    setValidLeaflyUrl (Just true)
-                    setImg meta.img
-                    setValidImg (Just true)
-                    setLoading false
-                  Nothing -> do
-                    Console.error "Item not found"
-                    setStatusMessage "Item not found"
-                    setLoading false
-              Right (Message msg) -> do
-                Console.log $ "Got message: " <> msg
-                setStatusMessage msg
-                setLoading false
-              Left err -> do
-                Console.error $ "Error loading item: " <> err
-                setStatusMessage $ "Error loading item: " <> err
-                setLoading false
+            setName item.name
+            setValidName (Just true)
+            setSku (show item.sku)
+            setValidSku (Just true)
+            setBrand item.brand
+            setValidBrand (Just true)
+            setPrice (show item.price)
+            setValidPrice (Just true)
+            setQuantity (show item.quantity)
+            setValidQuantity (Just true)
+            setSort (show item.sort)
+            setValidSort (Just true)
+            setMeasureUnit item.measure_unit
+            setValidMeasureUnit (Just true)
+            setPerPackage item.per_package
+            setValidPerPackage (Just true)
+            setCategory (show item.category)
+            setValidCategory (Just true)
+            setSubcategory item.subcategory
+            setValidSubcategory (Just true)
+            setDescription item.description
+            setTags (joinWith ", " item.tags)
+            setEffects (joinWith ", " item.effects)
+            setThc meta.thc
+            setValidThc (Just true)
+            setCbg meta.cbg
+            setValidCbg (Just true)
+            setStrain meta.strain
+            setValidStrain (Just true)
+            setCreator meta.creator
+            setValidCreator (Just true)
+            setSpecies (show meta.species)
+            setValidSpecies (Just true)
+            setDominantTarpene meta.dominant_tarpene
+            setValidDominantTarpene (Just true)
+            setTarpenes (joinWith ", " meta.tarpenes)
+            setLineage (joinWith ", " meta.lineage)
+            setLeaflyUrl meta.leafly_url
+            setValidLeaflyUrl (Just true)
+            setImg meta.img
+            setValidImg (Just true)
+            setLoading false
+          Nothing -> do
+            Console.error "Item not found"
+            setStatusMessage "Item not found"
+            setLoading false
+      Right (Message msg) -> do
+        Console.log $ "Got message: " <> msg
+        setStatusMessage msg
+        setLoading false
+      Left err -> do
+        Console.error $ "Error loading item: " <> err
+        setStatusMessage $ "Error loading item: " <> err
+        setLoading false
+
+  D.div_
+    [ D.div
+        [ DA.klass_ "init-load"
+        , DL.click_ \_ -> launchAff_ do
+            result <- readInventory
+            liftEffect $ handleLoadResult result
+        ]
+        []
+    , D.div
+        [ DA.klass_ "loading-state" ]
+        [ D.div_
+            [ text $ map
+                (\loading -> if loading then "Loading..." else "")
+                loadingEvent
+            ]
+        ]
+    , D.div
+        [ DA.klass_ "errors-state" ]
+        [ D.div_
+            [ text statusMessageEvent ]
         ]
     , D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
         [ D.h2
             [ DA.klass_ "text-2xl font-bold mb-6" ]
             [ text_ "Edit Menu Item" ]
-        , D.div
-            [ DA.klass_ "mb-4" ]
-            [ text $ map
-                (\loading -> if loading then "Loading..." else "")
-                loadingEvent
-            ]
         , makeField (nameConfig "") setName setValidName validNameEvent
         , makeField (skuConfig targetUUID) setSku setValidSku validSkuEvent
         , makeField (brandConfig "") setBrand setValidBrand validBrandEvent

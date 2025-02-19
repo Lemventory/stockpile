@@ -15,10 +15,6 @@
     {
       "name": "Helpers",
       "path": "script"
-    },
-    {
-      "name": "Root",
-      "path": "."
     }
   ],
   "settings": {
@@ -38,7 +34,9 @@
       "editor.fontFamily": "Hasklig",
       "editor.fontSize": 14
     },
-    "purescript.sourcePath": "./frontend/src",
+    "purescript.addSpagoSources": true,
+    "purescript.workspace.multiRootMode": true,
+    "purescript.sourcePath": "src",
     "haskell.checkProject": true,
     "files.watcherExclude": {
       "**/dist/**": true,
