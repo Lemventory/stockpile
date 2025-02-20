@@ -2,22 +2,28 @@ module Utils where
 
 import Prelude
 
-import Data.Int (floor, toNumber)
-import Effect (Effect)
-import Effect.Random (random)
 import Data.Array (catMaybes, filter, range, replicate, (!!))
-import Data.String (Pattern(..), joinWith, length, split, take, trim)
 import Data.Array (length) as Array
 import Data.Enum (class BoundedEnum, fromEnum, toEnum)
+import Data.Int (floor, fromString, toNumber) as Int
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
+import Data.String (Pattern(..), joinWith, length, split, take, trim)
 import Data.String (length) as String
+import Effect (Effect)
+import Effect.Random (random)
 
 -- | Generate a random integer in a given range (inclusive)
 randomInt :: Int -> Int -> Effect Int
 randomInt min max = do
   r <- random
-  pure $ floor $ r * toNumber (max - min + 1) + toNumber min
+  pure $ Int.floor $ r * Int.toNumber (max - min + 1) + Int.toNumber min
+
+ensureNumber :: String -> String
+ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
+
+ensureInt :: String -> String
+ensureInt str = fromMaybe "0" $ map show $ Int.fromString $ trim str
 
 padStart :: Int -> String -> String
 padStart targetLength str =

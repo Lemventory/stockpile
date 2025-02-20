@@ -2,17 +2,10 @@ module CreateItem where
 
 import Prelude
 
-import Types (InventoryResponse(..))
 import API (writeInventory)
-import UUID (genUUID)
-import Validation (validateMenuItem)
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
 import Data.Array (all)
 import Data.Either (Either(..))
-import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number as Number
-import Data.String (trim)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
 import Deku.DOM as D
@@ -25,6 +18,11 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Types (InventoryResponse(..))
+import UUID (genUUID)
+import Utils (ensureInt, ensureNumber)
+import Validation (validateMenuItem)
 
 createItem :: Effect Unit
 createItem = do
@@ -164,12 +162,6 @@ createItem = do
         setValidDominantTarpene (Just false)
         setTarpenes ""
         setLineage ""
-
-      ensureNumber :: String -> String
-      ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
-
-      ensureInt :: String -> String
-      ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
 
     D.div_
       [ D.div
