@@ -174,7 +174,7 @@
             export PGUSER="$(whoami)"
             export PGPASSWORD="postgres"
             export PGDATABASE="${name}"
-            code-workspace
+            # code-workspace
           '';
       };
     });

@@ -15,6 +15,10 @@
     {
       "name": "Helpers",
       "path": "script"
+    },
+    {
+      "name": "Root",
+      "path": "./"
     }
   ],
   "settings": {
