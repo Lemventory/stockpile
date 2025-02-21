@@ -1,11 +1,732 @@
 {-
-Generated: 2025-02-19 15:08:25
-Hash: 7135f2941e43a0b184c9865b7107f0c0993b7e9b045479c1928f7a5e936694c7
+Generated: 2025-02-21 12:15:05
+Hash: 848ead2ef77073f69900f78f66488cd5bcec4b613d73078b056f5048a0419d08
 -}
 
 {-
-COMPILE_STATUS: true
+COMPILE_STATUS: false
+COMPILE_ERROR:
+Reading Spago workspace configuration...
+
+✓ Selecting package to build: cheeblr
+
+Downloading dependencies...
+Building...
+[1 of 2] Compiling EditItem
+[WARNING 1/1 UnusedName] src/EditItem.purs:178:34
+
+  178    useHot Beginning \(setState /\ event) ->
+                                        ^^^^^
+
+  Name event was introduced but not used.
+  in value declaration editItem
+
+[ERROR 1/1 TypesDoNotUnify] src/EditItem.purs:181:13
+
+                   v
+  181            [ DL.runOn DL.load \_ -> do
+  182                setState Loading
+  183                launchAff_ do
+       ...
+  193                        Right (Message msg) -> liftEffect $ setState $ Error msg
+  194                        Left err -> liftEffect $ setState $ Error err
+  195                      Left err -> liftEffect $ setState $ Error $ show err
+                                                                              ^
+
+  Could not match type
+    Function t2
+  with type
+    Poll
+  while trying to match type t0
+                               (Attribute
+                                  ( load :: Event
+                                  | t1
+                                  )
+                               )
+    with type Poll
+                (Attribute
+                   ( __tag :: ... "HTMLSpanElement"
+                   , __tag :: ... "HTMLElement"
+                   , __tag :: ... "HTMLOrSVGElement"
+                   , __tag :: ... "ElementContentEditable"
+                   , __tag :: ... "GlobalEventHandlers"
+                   , __tag :: ... "Element"
+                   , __tag :: ... "ARIAMixin"
+                   , __tag :: ... "Slottable"
+                   , __tag :: ... "ChildNode"
+                   , __tag :: ... "NonDocumentTypeChildNode"
+                   , __tag :: ... "ParentNode"
+                   , __tag :: ... "Node"
+                   , __tag :: ... "EventTarget"
+                   , abort :: Event
+                   , accesskey :: String
+                   , animationcancel :: Event
+                   , animationend :: Event
+                   , animationiteration :: Event
+                   , animationstart :: Event
+                   , ariaActivedescendant :: String
+                   , ariaAtomic :: String
+                   , ariaAutocomplete :: String
+                   , ariaBraillelabel :: String
+                   , ariaBrailleroledescription :: String
+                   , ariaBusy :: String
+                   , ariaChecked :: String
+                   , ariaColcount :: String
+                   , ariaColindex :: String
+                   , ariaColindextext :: String
+                   , ariaColspan :: String
+                   , ariaControls :: String
+                   , ariaCurrent :: String
+                   , ariaDescribedby :: String
+                   , ariaDescription :: String
+                   , ariaDetails :: String
+                   , ariaDisabled :: String
+                   , ariaErrormessage :: String
+                   , ariaExpanded :: String
+                   , ariaFlowto :: String
+                   , ariaHaspopup :: String
+                   , ariaHidden :: String
+                   , ariaInvalid :: String
+                   , ariaKeyshortcuts :: String
+                   , ariaLabel :: String
+                   , ariaLabelledby :: String
+                   , ariaLevel :: String
+                   , ariaLive :: String
+                   , ariaModal :: String
+                   , ariaMultiline :: String
+                   , ariaMultiselectable :: String
+                   , ariaOrientation :: String
+                   , ariaOwns :: String
+                   , ariaPlaceholder :: String
+                   , ariaPosinset :: String
+                   , ariaPressed :: String
+                   , ariaReadonly :: String
+                   , ariaRequired :: String
+                   , ariaRoledescription :: String
+                   , ariaRowcount :: String
+                   , ariaRowindex :: String
+                   , ariaRowindextext :: String
+                   , ariaRowspan :: String
+                   , ariaSelected :: String
+                   , ariaSetsize :: String
+                   , ariaSort :: String
+                   , ariaValuemax :: String
+                   , ariaValuemin :: String
+                   , ariaValuenow :: String
+                   , ariaValuetext :: String
+                   , autocapitalize :: String
+                   , autofocus :: String
+                   , auxclick :: PointerEvent
+                   , beforeinput :: Event
+                   , beforematch :: Event
+                   , beforetoggle :: Event
+                   , blur :: FocusEvent
+                   , click :: PointerEvent
+                   , compositionend :: CompositionEvent
+                   , compositionstart :: CompositionEvent
+                   , compositionupdate :: CompositionEvent
+                   , contenteditable :: String
+                   , contextmenu :: PointerEvent
+                   , dblclick :: MouseEvent
+                   , dir :: String
+                   , domActivate :: UIEvent
+                   , domAttrModified :: Event
+                   , domFocusIn :: FocusEvent
+                   , domFocusOut :: FocusEvent
+                   , domNodeInserted :: Event
+                   , domNodeInsertedIntoDocument :: Event
+                   , domNodeRemoved :: Event
+                   , domNodeRemovedFromDocument :: Event
+                   , domSubtreeModified :: Event
+                   , drag :: DragEvent
+                   , dragend :: DragEvent
+                   , dragenter :: DragEvent
+                   , draggable :: String
+                   , dragleave :: DragEvent
+                   , dragover :: DragEvent
+                   , dragstart :: DragEvent
+                   , drop :: DragEvent
+                   , enterkeyhint :: String
+                   , error :: Event
+                   , error :: Event
+                   , focus :: FocusEvent
+                   , focusin :: FocusEvent
+                   , focusout :: FocusEvent
+                   , gotpointercapture :: PointerEvent
+                   , hidden :: String
+                   , id :: String
+                   , input :: Event
+                   , inputmode :: String
+                   , is :: String
+                   , itemid :: String
+                   , itemprop :: String
+                   , itemref :: String
+                   , itemscope :: String
+                   , itemtype :: String
+                   , keydown :: KeyboardEvent
+                   , keypress :: KeyboardEvent
+                   , keyup :: KeyboardEvent
+                   , klass :: String
+                   , lang :: String
+                   , load :: Event
+                   , load :: Event
+                   , lostpointercapture :: PointerEvent
+                   , mousedown :: MouseEvent
+                   , mouseenter :: MouseEvent
+                   , mouseleave :: MouseEvent
+                   , mousemove :: MouseEvent
+                   , mouseout :: MouseEvent
+                   , mouseover :: MouseEvent
+                   , mouseup :: MouseEvent
+                   , nonce :: String
+                   , pointercancel :: PointerEvent
+                   , pointerdown :: PointerEvent
+                   , pointerenter :: PointerEvent
+                   , pointerleave :: PointerEvent
+                   , pointermove :: PointerEvent
+                   , pointerout :: PointerEvent
+                   , pointerover :: PointerEvent
+                   , pointerrawupdate :: PointerEvent
+                   , pointerup :: PointerEvent
+                   , popover :: String
+                   , popovertarget :: String
+                   , popovertargetaction :: String
+                   , role :: String
+                   , select :: Event
+                   , slot :: String
+                   , spellcheck :: String
+                   , style :: String
+                   , tabindex :: String
+                   , textInput :: Event
+                   , title :: String
+                   , touchcancel :: TouchEvent
+                   , touchend :: TouchEvent
+                   , touchmove :: TouchEvent
+                   , touchstart :: TouchEvent
+                   , transitioncancel :: Event
+                   , transitionend :: Event
+                   , transitionrun :: Event
+                   , transitionstart :: Event
+                   , translate :: String
+                   , unload :: Event
+                   , wheel :: Event
+                   , writingsuggestions :: String
+                   )
+                )
+  while checking that expression (runOn load) (\$63 ->
+                                                 case $63 of
+                                                   _ -> ...
+                                              )
+    has type Poll
+               (Attribute
+                  ( __tag :: ... "HTMLSpanElement"
+                  , __tag :: ... "HTMLElement"
+                  , __tag :: ... "HTMLOrSVGElement"
+                  , __tag :: ... "ElementContentEditable"
+                  , __tag :: ... "GlobalEventHandlers"
+                  , __tag :: ... "Element"
+                  , __tag :: ... "ARIAMixin"
+                  , __tag :: ... "Slottable"
+                  , __tag :: ... "ChildNode"
+                  , __tag :: ... "NonDocumentTypeChildNode"
+                  , __tag :: ... "ParentNode"
+                  , __tag :: ... "Node"
+                  , __tag :: ... "EventTarget"
+                  , abort :: Event
+                  , accesskey :: String
+                  , animationcancel :: Event
+                  , animationend :: Event
+                  , animationiteration :: Event
+                  , animationstart :: Event
+                  , ariaActivedescendant :: String
+                  , ariaAtomic :: String
+                  , ariaAutocomplete :: String
+                  , ariaBraillelabel :: String
+                  , ariaBrailleroledescription :: String
+                  , ariaBusy :: String
+                  , ariaChecked :: String
+                  , ariaColcount :: String
+                  , ariaColindex :: String
+                  , ariaColindextext :: String
+                  , ariaColspan :: String
+                  , ariaControls :: String
+                  , ariaCurrent :: String
+                  , ariaDescribedby :: String
+                  , ariaDescription :: String
+                  , ariaDetails :: String
+                  , ariaDisabled :: String
+                  , ariaErrormessage :: String
+                  , ariaExpanded :: String
+                  , ariaFlowto :: String
+                  , ariaHaspopup :: String
+                  , ariaHidden :: String
+                  , ariaInvalid :: String
+                  , ariaKeyshortcuts :: String
+                  , ariaLabel :: String
+                  , ariaLabelledby :: String
+                  , ariaLevel :: String
+                  , ariaLive :: String
+                  , ariaModal :: String
+                  , ariaMultiline :: String
+                  , ariaMultiselectable :: String
+                  , ariaOrientation :: String
+                  , ariaOwns :: String
+                  , ariaPlaceholder :: String
+                  , ariaPosinset :: String
+                  , ariaPressed :: String
+                  , ariaReadonly :: String
+                  , ariaRequired :: String
+                  , ariaRoledescription :: String
+                  , ariaRowcount :: String
+                  , ariaRowindex :: String
+                  , ariaRowindextext :: String
+                  , ariaRowspan :: String
+                  , ariaSelected :: String
+                  , ariaSetsize :: String
+                  , ariaSort :: String
+                  , ariaValuemax :: String
+                  , ariaValuemin :: String
+                  , ariaValuenow :: String
+                  , ariaValuetext :: String
+                  , autocapitalize :: String
+                  , autofocus :: String
+                  , auxclick :: PointerEvent
+                  , beforeinput :: Event
+                  , beforematch :: Event
+                  , beforetoggle :: Event
+                  , blur :: FocusEvent
+                  , click :: PointerEvent
+                  , compositionend :: CompositionEvent
+                  , compositionstart :: CompositionEvent
+                  , compositionupdate :: CompositionEvent
+                  , contenteditable :: String
+                  , contextmenu :: PointerEvent
+                  , dblclick :: MouseEvent
+                  , dir :: String
+                  , domActivate :: UIEvent
+                  , domAttrModified :: Event
+                  , domFocusIn :: FocusEvent
+                  , domFocusOut :: FocusEvent
+                  , domNodeInserted :: Event
+                  , domNodeInsertedIntoDocument :: Event
+                  , domNodeRemoved :: Event
+                  , domNodeRemovedFromDocument :: Event
+                  , domSubtreeModified :: Event
+                  , drag :: DragEvent
+                  , dragend :: DragEvent
+                  , dragenter :: DragEvent
+                  , draggable :: String
+                  , dragleave :: DragEvent
+                  , dragover :: DragEvent
+                  , dragstart :: DragEvent
+                  , drop :: DragEvent
+                  , enterkeyhint :: String
+                  , error :: Event
+                  , error :: Event
+                  , focus :: FocusEvent
+                  , focusin :: FocusEvent
+                  , focusout :: FocusEvent
+                  , gotpointercapture :: PointerEvent
+                  , hidden :: String
+                  , id :: String
+                  , input :: Event
+                  , inputmode :: String
+                  , is :: String
+                  , itemid :: String
+                  , itemprop :: String
+                  , itemref :: String
+                  , itemscope :: String
+                  , itemtype :: String
+                  , keydown :: KeyboardEvent
+                  , keypress :: KeyboardEvent
+                  , keyup :: KeyboardEvent
+                  , klass :: String
+                  , lang :: String
+                  , load :: Event
+                  , load :: Event
+                  , lostpointercapture :: PointerEvent
+                  , mousedown :: MouseEvent
+                  , mouseenter :: MouseEvent
+                  , mouseleave :: MouseEvent
+                  , mousemove :: MouseEvent
+                  , mouseout :: MouseEvent
+                  , mouseover :: MouseEvent
+                  , mouseup :: MouseEvent
+                  , nonce :: String
+                  , pointercancel :: PointerEvent
+                  , pointerdown :: PointerEvent
+                  , pointerenter :: PointerEvent
+                  , pointerleave :: PointerEvent
+                  , pointermove :: PointerEvent
+                  , pointerout :: PointerEvent
+                  , pointerover :: PointerEvent
+                  , pointerrawupdate :: PointerEvent
+                  , pointerup :: PointerEvent
+                  , popover :: String
+                  , popovertarget :: String
+                  , popovertargetaction :: String
+                  , role :: String
+                  , select :: Event
+                  , slot :: String
+                  , spellcheck :: String
+                  , style :: String
+                  , tabindex :: String
+                  , textInput :: Event
+                  , title :: String
+                  , touchcancel :: TouchEvent
+                  , touchend :: TouchEvent
+                  , touchmove :: TouchEvent
+                  , touchstart :: TouchEvent
+                  , transitioncancel :: Event
+                  , transitionend :: Event
+                  , transitionrun :: Event
+                  , transitionstart :: Event
+                  , translate :: String
+                  , unload :: Event
+                  , wheel :: Event
+                  , writingsuggestions :: String
+                  )
+               )
+  in value declaration editItem
+  where t1 is an unknown type
+        t0 is an unknown type
+        t2 is an unknown type
+
+           Src   Lib   All
+Warnings     1     0     1
+Errors       1     0     1
+
+✘ Failed to build.
+
 -}
+
+-- FILE: frontend/src/EditItem.purs
+module EditItem where
+
+import Prelude
+
+import API (readInventory, updateInventory)
+import Data.Array (all, find)
+import Data.Either (Either(..))
+import Data.Int (fromString)
+import Data.List (Pattern(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number as Number
+import Data.String (joinWith, split, trim)
+import Data.Tuple.Nested ((/\))
+import Deku.Control (text, text_)
+import Deku.Core (fixed, useHot)
+import Deku.Core as Core
+import Deku.DOM as D
+import Deku.DOM.Attributes as DA
+import Deku.DOM.Listeners as DL
+import Deku.Do as Deku
+import Deku.Hooks (useState, (<#~>))
+import Deku.Toplevel (runInBody)
+import Effect (Effect)
+import Effect.Aff (error, joinFiber, killFiber, launchAff, launchAff_, try)
+import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
+import Effect.Ref as Ref
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
+import Utils (ensureInt, ensureNumber)
+import Validation (validateMenuItem)
+
+data UIState
+  = Beginning
+  | Loading
+  | Loaded MenuItem
+  | Error String
+
+editItem :: String -> Effect Unit
+editItem targetUUID = void $ runInBody Deku.do
+  setUIState /\ uiState <- useState Beginning
+  setSubmitting /\ submittingEvent <- useState false
+
+  setName /\ nameEvent <- useState ""
+  setValidName /\ validNameEvent <- useState (Just false)
+
+  setSku /\ skuEvent <- useState targetUUID
+  setValidSku /\ validSkuEvent <- useState (Just true)
+
+  setBrand /\ brandEvent <- useState ""
+  setValidBrand /\ validBrandEvent <- useState (Just false)
+
+  setPrice /\ priceEvent <- useState ""
+  setValidPrice /\ validPriceEvent <- useState (Just false)
+
+  setQuantity /\ quantityEvent <- useState ""
+  setValidQuantity /\ validQuantityEvent <- useState (Just false)
+
+  setSort /\ sortEvent <- useState ""
+  setValidSort /\ validSortEvent <- useState (Just false)
+
+  setMeasureUnit /\ measureUnitEvent <- useState ""
+  setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false)
+
+  setPerPackage /\ perPackageEvent <- useState ""
+  setValidPerPackage /\ validPerPackageEvent <- useState (Just false)
+
+  setCategory /\ categoryEvent <- useState ""
+  setValidCategory /\ validCategoryEvent <- useState (Just false)
+
+  setSubcategory /\ subcategoryEvent <- useState ""
+  setValidSubcategory /\ validSubcategoryEvent <- useState (Just false)
+
+  setDescription /\ descriptionEvent <- useState ""
+  setTags /\ tagsEvent <- useState ""
+  setEffects /\ effectsEvent <- useState ""
+
+  setThc /\ thcEvent <- useState ""
+  setValidThc /\ validThcEvent <- useState (Just false)
+
+  setCbg /\ cbgEvent <- useState ""
+  setValidCbg /\ validCbgEvent <- useState (Just false)
+
+  setStrain /\ strainEvent <- useState ""
+  setValidStrain /\ validStrainEvent <- useState (Just false)
+
+  setCreator /\ creatorEvent <- useState ""
+  setValidCreator /\ validCreatorEvent <- useState (Just false)
+
+  setSpecies /\ speciesEvent <- useState ""
+  setValidSpecies /\ validSpeciesEvent <- useState (Just false)
+
+  setDominantTarpene /\ dominantTarpeneEvent <- useState ""
+  setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false)
+
+  setTarpenes /\ tarpenesEvent <- useState ""
+  setLineage /\ lineageEvent <- useState ""
+
+  setLeaflyUrl /\ leaflyUrlEvent <- useState ""
+  setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false)
+
+  setImg /\ imgEvent <- useState ""
+  setValidImg /\ validImgEvent <- useState (Just false)
+
+  let
+    isFormValid = ado
+      vName <- validNameEvent
+      vSku <- validSkuEvent
+      vBrand <- validBrandEvent
+      vPrice <- validPriceEvent
+      vQuantity <- validQuantityEvent
+      vSort <- validSortEvent
+      vMeasureUnit <- validMeasureUnitEvent
+      vPerPackage <- validPerPackageEvent
+      vCategory <- validCategoryEvent
+      vSubcategory <- validSubcategoryEvent
+      vThc <- validThcEvent
+      vCbg <- validCbgEvent
+      vStrain <- validStrainEvent
+      vCreator <- validCreatorEvent
+      vSpecies <- validSpeciesEvent
+      vDominantTarpene <- validDominantTarpeneEvent
+      vLeaflyUrl <- validLeaflyUrlEvent
+      vImg <- validImgEvent
+      in all (fromMaybe false)
+        [ vName, vSku, vBrand, vPrice, vQuantity, vSort
+        , vMeasureUnit, vPerPackage, vCategory, vSubcategory
+        , vThc, vCbg, vStrain, vCreator, vSpecies
+        , vDominantTarpene, vLeaflyUrl, vImg
+        ]
+
+    updateFormFields :: MenuItem -> Effect Unit
+    updateFormFields (MenuItem item) = do
+      let StrainLineage meta = item.strain_lineage
+      setName item.name
+      setValidName (Just true)
+      setSku (show item.sku)
+      setValidSku (Just true)
+      setBrand item.brand
+      setValidBrand (Just true)
+      setPrice (show item.price)
+      setValidPrice (Just true)
+      setCategory (show item.category)
+      setValidCategory (Just true)
+      setSubcategory item.subcategory
+      setValidSubcategory (Just true)
+      setQuantity (show item.quantity)
+      setValidQuantity (Just true)
+      setSort (show item.sort)
+      setValidSort (Just true)
+      setMeasureUnit item.measure_unit
+      setValidMeasureUnit (Just true)
+      setPerPackage item.per_package
+      setValidPerPackage (Just true)
+      setDescription item.description
+      setTags (joinWith ", " item.tags)
+      setEffects (joinWith ", " item.effects)
+      setThc meta.thc
+      setValidThc (Just true)
+      setCbg meta.cbg
+      setValidCbg (Just true)
+      setStrain meta.strain
+      setValidStrain (Just true)
+      setCreator meta.creator
+      setValidCreator (Just true)
+      setSpecies (show meta.species)
+      setValidSpecies (Just true)
+      setDominantTarpene meta.dominant_tarpene
+      setValidDominantTarpene (Just true)
+      setTarpenes (joinWith ", " meta.tarpenes)
+      setLineage (joinWith ", " meta.lineage)
+      setLeaflyUrl meta.leafly_url
+      setValidLeaflyUrl (Just true)
+      setImg meta.img
+      setValidImg (Just true)
+
+  useHot Beginning \(setState /\ event) ->
+    D.div_
+      [ D.span
+          [ DL.runOn DL.load \_ -> do
+              setState Loading
+              launchAff_ do
+                  result <- try readInventory
+                  case result of
+                    Right res -> case res of
+                      Right (InventoryData (Inventory items)) ->
+                        liftEffect case find (\(MenuItem item) -> show item.sku == targetUUID) items of
+                          Just menuItem -> do
+                            updateFormFields menuItem
+                            setState $ Loaded menuItem
+                          Nothing -> setState Beginning
+                      Right (Message msg) -> liftEffect $ setState $ Error msg
+                      Left err -> liftEffect $ setState $ Error err
+                    Left err -> liftEffect $ setState $ Error $ show err
+            ]
+            []
+        ]
+
+  D.div
+    [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
+    [ D.div_
+        [ uiState <#~> case _ of
+            Beginning -> text_ "Item not found"
+            Loading -> text_ "Loading..."
+            Error msg -> text_ $ "Error: " <> msg
+            Loaded _ -> D.div_
+              [ D.h2
+                  [ DA.klass_ "text-2xl font-bold mb-6" ]
+                  [ text_ "Edit Menu Item" ]
+              , makeField (nameConfig "") setName setValidName validNameEvent
+              , makeField (skuConfig targetUUID) setSku setValidSku validSkuEvent
+              , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
+              , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
+              , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+              , makeField (sortConfig "") setSort setValidSort validSortEvent
+              , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+              , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+              , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
+              , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
+              , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
+              , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
+              , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
+              , makeField (thcConfig "") setThc setValidThc validThcEvent
+              , makeField (cbgConfig "") setCbg setValidCbg validCbgEvent
+              , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
+              , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
+              , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
+              , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
+              , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
+              , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
+              , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+              , makeField (imgConfig "") setImg setValidImg validImgEvent
+
+              , D.button
+                  [ DA.klass_ $ buttonClass "green"
+                  , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+                  , DL.click_ \_ -> do
+                      sort <- sortEvent
+                      name <- nameEvent
+                      sku <- skuEvent
+                      brand <- brandEvent
+                      price <- priceEvent
+                      measureUnit <- measureUnitEvent
+                      perPackage <- perPackageEvent
+                      quantity <- quantityEvent
+                      category <- categoryEvent
+                      subcategory <- subcategoryEvent
+                      description <- descriptionEvent
+                      tags <- tagsEvent
+                      effects <- effectsEvent
+                      thc <- thcEvent
+                      cbg <- cbgEvent
+                      strain <- strainEvent
+                      creator <- creatorEvent
+                      species <- speciesEvent
+                      dominantTarpene <- dominantTarpeneEvent
+                      tarpenes <- tarpenesEvent
+                      lineage <- lineageEvent
+                      leaflyUrl <- leaflyUrlEvent
+                      img <- imgEvent
+                      submitting <- submittingEvent
+
+                      when (not submitting) do
+                        setSubmitting true
+                        launchAff_ do
+                          let formInput =
+                                { sort: ensureInt sort
+                                , name
+                                , sku
+                                , brand
+                                , price: ensureNumber price
+                                , measure_unit: measureUnit
+                                , per_package: perPackage
+                                , quantity: ensureInt quantity
+                                , category
+                                , subcategory
+                                , description
+                                , tags: split (Pattern ",") >>> map trim $ tags
+                                , effects: split (Pattern ",") >>> map trim $ effects
+                                , strain_lineage:
+                                    { thc
+                                    , cbg
+                                    , strain
+                                    , creator
+                                    , species
+                                    , dominant_tarpene: dominantTarpene
+                                    , tarpenes: split (Pattern ",") >>> map trim $ tarpenes
+                                    , lineage: split (Pattern ",") >>> map trim $ lineage
+                                    , leafly_url: leaflyUrl
+                                    , img
+                                    }
+                                }
+
+                          case validateMenuItem formInput of
+                            Left err -> liftEffect do
+                              Console.error "Form validation failed:"
+                              Console.errorShow err
+                              setUIState $ Error $ "Validation error: " <> err
+                              setSubmitting false
+
+                            Right menuItem -> do
+                              result <- try $ updateInventory menuItem
+                              case result of
+                                Right (Right (Message msg)) -> liftEffect do
+                                  Console.info "Update successful"
+                                  setUIState $ Error msg
+                                Right (Right (InventoryData _)) -> liftEffect do
+                                  Console.info "Item updated in inventory"
+                                  setUIState $ Error "Item successfully updated!"
+                                Right (Left err) -> liftEffect do
+                                  Console.error "API Error:"
+                                  Console.errorShow err
+                                  setUIState $ Error err
+                                Left err -> liftEffect do
+                                  Console.error "API Error:"
+                                  Console.errorShow err
+                                  setUIState $ Error $ show err
+                              liftEffect $ setSubmitting false
+                  ]
+                  [ text $ map
+                      (\submitting -> if submitting then "Updating..." else "Update")
+                      submittingEvent
+                  ]
+              ]
+        ]
+    ]-- END FILE
 
 -- FILE: frontend/src/API.purs
 module API where
@@ -112,17 +833,10 @@ module CreateItem where
 
 import Prelude
 
-import Types (InventoryResponse(..))
 import API (writeInventory)
-import UUID (genUUID)
-import Validation (validateMenuItem)
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
 import Data.Array (all)
 import Data.Either (Either(..))
-import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number as Number
-import Data.String (trim)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
 import Deku.DOM as D
@@ -135,6 +849,11 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Types (InventoryResponse(..))
+import UUID (genUUID)
+import Utils (ensureInt, ensureNumber)
+import Validation (validateMenuItem)
 
 createItem :: Effect Unit
 createItem = do
@@ -274,12 +993,6 @@ createItem = do
         setValidDominantTarpene (Just false)
         setTarpenes ""
         setLineage ""
-
-      ensureNumber :: String -> String
-      ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
-
-      ensureInt :: String -> String
-      ensureInt str = fromMaybe "0" $ map show $ fromString $ trim str
 
     D.div_
       [ D.div
@@ -497,351 +1210,6 @@ fetchInventoryFromHttp config = do
       liftEffect $ Console.error $ "API fetch error details: " <> show err
       pure $ Left $ "API fetch error: " <> show err
     Right response -> pure $ Right response-- END FILE
-
--- FILE: frontend/src/EditItem.purs
-module EditItem where
-
-import Prelude
-
-import API (readInventory, updateInventory)
-import Data.Array (all, find)
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (joinWith)
-import Data.Tuple.Nested ((/\))
-import Deku.Control (text, text_)
-import Deku.Core (Nut)
-import Deku.DOM as D
-import Deku.DOM.Attributes as DA
-import Deku.Core (Hook)
-import Effect.Class (liftEffect)
-import Deku.Do as Deku
-import Deku.Hooks (useState)
-import Deku.Toplevel (runInBody)
-import Effect (Effect)
-import Effect.Aff (launchAff_)
-import Effect.Class (liftEffect)
-import Effect.Class.Console as Console
-import Deku.DOM.Listeners as DL
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
-import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
-import Validation (validateMenuItem)
-
-editItem :: String -> Effect Unit
-editItem targetUUID = void $ runInBody Deku.do
-  setStatusMessage /\ statusMessageEvent <- useState ""
-  setSubmitting /\ submittingEvent <- useState false
-  setLoading /\ loadingEvent <- useState true
-
-  setName /\ nameEvent <- useState ""
-  setValidName /\ validNameEvent <- useState (Just false :: Maybe Boolean)
-
-  setSku /\ skuEvent <- useState targetUUID
-  setValidSku /\ validSkuEvent <- useState (Just true :: Maybe Boolean)
-
-  setBrand /\ brandEvent <- useState ""
-  setValidBrand /\ validBrandEvent <- useState (Just false :: Maybe Boolean)
-
-  setPrice /\ priceEvent <- useState ""
-  setValidPrice /\ validPriceEvent <- useState (Just false :: Maybe Boolean)
-
-  setQuantity /\ quantityEvent <- useState ""
-  setValidQuantity /\ validQuantityEvent <- useState (Just false :: Maybe Boolean)
-
-  setSort /\ sortEvent <- useState ""
-  setValidSort /\ validSortEvent <- useState (Just false :: Maybe Boolean)
-
-  setMeasureUnit /\ measureUnitEvent <- useState ""
-  setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false :: Maybe Boolean)
-
-  setPerPackage /\ perPackageEvent <- useState ""
-  setValidPerPackage /\ validPerPackageEvent <- useState (Just false :: Maybe Boolean)
-
-  setCategory /\ categoryEvent <- useState ""
-  setValidCategory /\ validCategoryEvent <- useState (Just false :: Maybe Boolean)
-
-  setSubcategory /\ subcategoryEvent <- useState ""
-  setValidSubcategory /\ validSubcategoryEvent <- useState (Just false :: Maybe Boolean)
-
-  setDescription /\ descriptionEvent <- useState ""
-  setTags /\ tagsEvent <- useState ""
-  setEffects /\ effectsEvent <- useState ""
-  setTarpenes /\ tarpenesEvent <- useState ""
-  setLineage /\ lineageEvent <- useState ""
-
-  setThc /\ thcEvent <- useState ""
-  setValidThc /\ validThcEvent <- useState (Just false :: Maybe Boolean)
-
-  setCbg /\ cbgEvent <- useState ""
-  setValidCbg /\ validCbgEvent <- useState (Just false :: Maybe Boolean)
-
-  setStrain /\ strainEvent <- useState ""
-  setValidStrain /\ validStrainEvent <- useState (Just false :: Maybe Boolean)
-
-  setCreator /\ creatorEvent <- useState ""
-  setValidCreator /\ validCreatorEvent <- useState (Just false :: Maybe Boolean)
-
-  setSpecies /\ speciesEvent <- useState ""
-  setValidSpecies /\ validSpeciesEvent <- useState (Just false :: Maybe Boolean)
-
-  setDominantTarpene /\ dominantTarpeneEvent <- useState ""
-  setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false :: Maybe Boolean)
-
-  setLeaflyUrl /\ leaflyUrlEvent <- useState ""
-  setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false :: Maybe Boolean)
-
-  setImg /\ imgEvent <- useState ""
-  setValidImg /\ validImgEvent <- useState (Just false :: Maybe Boolean)
-
-  let
-    isFormValid = ado
-      vName <- validNameEvent
-      vSku <- validSkuEvent
-      vBrand <- validBrandEvent
-      vPrice <- validPriceEvent
-      vQuantity <- validQuantityEvent
-      vSort <- validSortEvent
-      vMeasureUnit <- validMeasureUnitEvent
-      vPerPackage <- validPerPackageEvent
-      vCategory <- validCategoryEvent
-      vSubcategory <- validSubcategoryEvent
-      vThc <- validThcEvent
-      vCbg <- validCbgEvent
-      vStrain <- validStrainEvent
-      vCreator <- validCreatorEvent
-      vSpecies <- validSpeciesEvent
-      vDominantTarpene <- validDominantTarpeneEvent
-      vLeaflyUrl <- validLeaflyUrlEvent
-      vImg <- validImgEvent
-      in
-        all (fromMaybe false)
-          [ vName
-          , vSku
-          , vBrand
-          , vPrice
-          , vQuantity
-          , vSort
-          , vMeasureUnit
-          , vPerPackage
-          , vCategory
-          , vSubcategory
-          , vThc
-          , vCbg
-          , vStrain
-          , vCreator
-          , vSpecies
-          , vDominantTarpene
-          , vLeaflyUrl
-          , vImg
-          ]
-
-    handleLoadResult :: Either String InventoryResponse -> Effect Unit
-    handleLoadResult = case _ of
-      Right (InventoryData (Inventory items)) ->
-        case find (\(MenuItem item) -> show item.sku == targetUUID) items of
-          Just (MenuItem item) -> do
-            Console.log "Found item, loading data..."
-            let StrainLineage meta = item.strain_lineage
-
-            setName item.name
-            setValidName (Just true)
-            setSku (show item.sku)
-            setValidSku (Just true)
-            setBrand item.brand
-            setValidBrand (Just true)
-            setPrice (show item.price)
-            setValidPrice (Just true)
-            setQuantity (show item.quantity)
-            setValidQuantity (Just true)
-            setSort (show item.sort)
-            setValidSort (Just true)
-            setMeasureUnit item.measure_unit
-            setValidMeasureUnit (Just true)
-            setPerPackage item.per_package
-            setValidPerPackage (Just true)
-            setCategory (show item.category)
-            setValidCategory (Just true)
-            setSubcategory item.subcategory
-            setValidSubcategory (Just true)
-            setDescription item.description
-            setTags (joinWith ", " item.tags)
-            setEffects (joinWith ", " item.effects)
-            setThc meta.thc
-            setValidThc (Just true)
-            setCbg meta.cbg
-            setValidCbg (Just true)
-            setStrain meta.strain
-            setValidStrain (Just true)
-            setCreator meta.creator
-            setValidCreator (Just true)
-            setSpecies (show meta.species)
-            setValidSpecies (Just true)
-            setDominantTarpene meta.dominant_tarpene
-            setValidDominantTarpene (Just true)
-            setTarpenes (joinWith ", " meta.tarpenes)
-            setLineage (joinWith ", " meta.lineage)
-            setLeaflyUrl meta.leafly_url
-            setValidLeaflyUrl (Just true)
-            setImg meta.img
-            setValidImg (Just true)
-            setLoading false
-          Nothing -> do
-            Console.error "Item not found"
-            setStatusMessage "Item not found"
-            setLoading false
-      Right (Message msg) -> do
-        Console.log $ "Got message: " <> msg
-        setStatusMessage msg
-        setLoading false
-      Left err -> do
-        Console.error $ "Error loading item: " <> err
-        setStatusMessage $ "Error loading item: " <> err
-        setLoading false
-
-  D.div_
-    [ D.div
-        [ DA.klass_ "init-load"
-        , DL.click_ \_ -> launchAff_ do
-            result <- readInventory
-            liftEffect $ handleLoadResult result
-        ]
-        []
-    , D.div
-        [ DA.klass_ "loading-state" ]
-        [ D.div_
-            [ text $ map
-                (\loading -> if loading then "Loading..." else "")
-                loadingEvent
-            ]
-        ]
-    , D.div
-        [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
-        [ D.h2
-            [ DA.klass_ "text-2xl font-bold mb-6" ]
-            [ text_ "Edit Menu Item" ]
-        , makeField (nameConfig "") setName setValidName validNameEvent
-        , makeField (skuConfig targetUUID) setSku setValidSku validSkuEvent
-        , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
-        , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
-        , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
-        , makeField (sortConfig "") setSort setValidSort validSortEvent
-        , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
-        , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
-        , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
-        , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
-        , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
-        , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
-        , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
-        , makeField (thcConfig "") setThc setValidThc validThcEvent
-        , makeField (cbgConfig "") setCbg setValidCbg validCbgEvent
-        , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
-        , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
-        , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
-        , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
-        , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
-        , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
-        , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
-        , makeField (imgConfig "") setImg setValidImg validImgEvent
-        ]
-    , D.button
-        [ DA.klass_ $ buttonClass "green"
-        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
-        , DL.runOn DL.click $
-            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img submitting -> do
-                when (not submitting) do
-                  setSubmitting true
-                  void $ launchAff_ do
-                    let
-                      formInput =
-                        { sort
-                        , name
-                        , sku
-                        , brand
-                        , price
-                        , measure_unit: measureUnit
-                        , per_package: perPackage
-                        , quantity
-                        , category
-                        , subcategory
-                        , description
-                        , tags
-                        , effects
-                        , strain_lineage:
-                            { thc
-                            , cbg
-                            , strain
-                            , creator
-                            , species
-                            , dominant_tarpene: dominantTarpene
-                            , tarpenes
-                            , lineage
-                            , leafly_url: leaflyUrl
-                            , img
-                            }
-                        }
-
-                    liftEffect $ Console.group "Form Submission"
-                    liftEffect $ Console.log "Form data:"
-                    liftEffect $ Console.logShow formInput
-
-                    case validateMenuItem formInput of
-                      Left err -> liftEffect do
-                        Console.error "Form validation failed:"
-                        Console.errorShow err
-                        Console.groupEnd
-                        setStatusMessage $ "Validation error: " <> err
-                        setSubmitting false
-
-                      Right menuItem -> do
-                        liftEffect $ Console.info "Form validated successfully:"
-                        liftEffect $ Console.logShow menuItem
-                        result <- updateInventory menuItem
-                        liftEffect case result of
-                          Right (Message msg) -> do
-                            Console.info "Update successful"
-                            setStatusMessage msg
-                          Right (InventoryData _) -> do
-                            Console.info "Item updated in inventory"
-                            setStatusMessage "Item successfully updated!"
-                          Left err -> do
-                            Console.error "API Error:"
-                            Console.errorShow err
-                            setStatusMessage $ "Error updating item: " <> err
-                        liftEffect $ Console.groupEnd
-                        liftEffect $ setSubmitting false
-            ) <$> sortEvent
-              <*> nameEvent
-              <*> skuEvent
-              <*> brandEvent
-              <*> priceEvent
-              <*> measureUnitEvent
-              <*> perPackageEvent
-              <*> quantityEvent
-              <*> categoryEvent
-              <*> subcategoryEvent
-              <*> descriptionEvent
-              <*> tagsEvent
-              <*> effectsEvent
-              <*> thcEvent
-              <*> cbgEvent
-              <*> strainEvent
-              <*> creatorEvent
-              <*> speciesEvent
-              <*> dominantTarpeneEvent
-              <*> tarpenesEvent
-              <*> lineageEvent
-              <*> leaflyUrlEvent
-              <*> imgEvent
-              <*> submittingEvent
-        ]
-        [ text $ map
-            (\submitting -> if submitting then "Updating..." else "Update")
-            submittingEvent
-        ]
-    , D.div
-        [ DA.klass_ "mt-4 text-center" ]
-        [ text statusMessageEvent ]
-    ]-- END FILE
 
 -- FILE: frontend/src/Form.purs
 module Form where
@@ -1217,7 +1585,7 @@ defaultViewConfig =
       , SortBySpecies /\ Descending
       , SortByQuantity /\ Descending
       ]
-  , hideOutOfStock: false
+  , hideOutOfStock: true
   , mode: HttpMode
   , refreshRate: 5000
   , screens: 1
@@ -2012,21 +2380,27 @@ module Utils where
 
 import Prelude
 
-import Data.Int (floor, toNumber)
-import Effect (Effect)
-import Effect.Random (random)
 import Data.Array (catMaybes, filter, range, replicate, (!!))
-import Data.String (Pattern(..), joinWith, length, split, take, trim)
 import Data.Array (length) as Array
 import Data.Enum (class BoundedEnum, fromEnum, toEnum)
+import Data.Int (floor, fromString, toNumber) as Int
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
+import Data.String (Pattern(..), joinWith, length, split, take, trim)
 import Data.String (length) as String
+import Effect (Effect)
+import Effect.Random (random)
 
 randomInt :: Int -> Int -> Effect Int
 randomInt min max = do
   r <- random
-  pure $ floor $ r * toNumber (max - min + 1) + toNumber min
+  pure $ Int.floor $ r * Int.toNumber (max - min + 1) + Int.toNumber min
+
+ensureNumber :: String -> String
+ensureNumber str = fromMaybe "0.0" $ map show $ Number.fromString $ trim str
+
+ensureInt :: String -> String
+ensureInt str = fromMaybe "0" $ map show $ Int.fromString $ trim str
 
 padStart :: Int -> String -> String
 padStart targetLength str =
