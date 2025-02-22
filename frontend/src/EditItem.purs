@@ -9,15 +9,15 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (joinWith)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text, text_)
+import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners (runOn)
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
 import Deku.Hooks (useState, (<#~>))
-import Deku.Toplevel (runInBody)
 import Effect (Effect)
-import Effect.Aff (launchAff, launchAff_)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
@@ -31,94 +31,94 @@ data UIState
   | Loaded MenuItem
   | Error String
 
-editItem :: String -> Effect Unit
-editItem targetUUID = void $ runInBody Deku.do
-  setUIState /\ uiState <- useState Beginning
+editItem :: String -> Nut
+editItem targetUUID = Deku.do
+  setUIState /\ uiStateEvent <- useState Beginning
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setFiber /\ _ <- useState (pure unit)
 
   setName /\ nameEvent <- useState ""
-  setValidName /\ validName <- useState (Just false)
+  setValidName /\ validNameEvent <- useState (Just false)
 
   setSku /\ skuEvent <- useState targetUUID
-  setValidSku /\ validSku <- useState (Just true)
+  setValidSku /\ validSkuEvent <- useState (Just true)
 
   setBrand /\ brandEvent <- useState ""
-  setValidBrand /\ validBrand <- useState (Just false)
+  setValidBrand /\ validBrandEvent <- useState (Just false)
 
   setPrice /\ priceEvent <- useState ""
-  setValidPrice /\ validPrice <- useState (Just false)
+  setValidPrice /\ validPriceEvent <- useState (Just false)
 
   setQuantity /\ quantityEvent <- useState ""
-  setValidQuantity /\ validQuantity <- useState (Just false)
+  setValidQuantity /\ validQuantityEvent <- useState (Just false)
 
   setSort /\ sortEvent <- useState ""
-  setValidSort /\ validSort <- useState (Just false)
+  setValidSort /\ validSortEvent <- useState (Just false)
 
   setMeasureUnit /\ measureUnitEvent <- useState ""
-  setValidMeasureUnit /\ validMeasureUnit <- useState (Just false)
+  setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false)
 
   setPerPackage /\ perPackageEvent <- useState ""
-  setValidPerPackage /\ validPerPackage <- useState (Just false)
+  setValidPerPackage /\ validPerPackageEvent <- useState (Just false)
 
   setCategory /\ categoryEvent <- useState ""
-  setValidCategory /\ validCategory <- useState (Just false)
+  setValidCategory /\ validCategoryEvent <- useState (Just false)
 
   setSubcategory /\ subcategoryEvent <- useState ""
-  setValidSubcategory /\ validSubcategory <- useState (Just false)
+  setValidSubcategory /\ validSubcategoryEvent <- useState (Just false)
 
   setDescription /\ descriptionEvent <- useState ""
   setTags /\ tagsEvent <- useState ""
   setEffects /\ effectsEvent <- useState ""
 
   setThc /\ thcEvent <- useState ""
-  setValidThc /\ validThc <- useState (Just false)
+  setValidThc /\ validThcEvent <- useState (Just false)
 
   setCbg /\ cbgEvent <- useState ""
-  setValidCbg /\ validCbg <- useState (Just false)
+  setValidCbg /\ validCbgEvent <- useState (Just false)
 
   setStrain /\ strainEvent <- useState ""
-  setValidStrain /\ validStrain <- useState (Just false)
+  setValidStrain /\ validStrainEvent <- useState (Just false)
 
   setCreator /\ creatorEvent <- useState ""
-  setValidCreator /\ validCreator <- useState (Just false)
+  setValidCreator /\ validCreatorEvent <- useState (Just false)
 
   setSpecies /\ speciesEvent <- useState ""
-  setValidSpecies /\ validSpecies <- useState (Just false)
+  setValidSpecies /\ validSpeciesEvent <- useState (Just false)
 
   setDominantTarpene /\ dominantTarpeneEvent <- useState ""
-  setValidDominantTarpene /\ validDominantTarpene <- useState (Just false)
+  setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false)
 
   setTarpenes /\ tarpenesEvent <- useState ""
   setLineage /\ lineageEvent <- useState ""
 
   setLeaflyUrl /\ leaflyUrlEvent <- useState ""
-  setValidLeaflyUrl /\ validLeaflyUrl <- useState (Just false)
+  setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false)
 
   setImg /\ imgEvent <- useState ""
-  setValidImg /\ validImg <- useState (Just false)
+  setValidImg /\ validImgEvent <- useState (Just false)
 
   let
     isFormValid = ado
-      vName <- validName
-      vSku <- validSku
-      vBrand <- validBrand
-      vPrice <- validPrice
-      vQuantity <- validQuantity
-      vSort <- validSort
-      vMeasureUnit <- validMeasureUnit
-      vPerPackage <- validPerPackage
-      vCategory <- validCategory
-      vSubcategory <- validSubcategory
-      vThc <- validThc
-      vCbg <- validCbg
-      vStrain <- validStrain
-      vCreator <- validCreator
-      vSpecies <- validSpecies
-      vDominantTarpene <- validDominantTarpene
-      vLeaflyUrl <- validLeaflyUrl
-      vImg <- validImg
+      vName <- validNameEvent
+      vSku <- validSkuEvent
+      vBrand <- validBrandEvent
+      vPrice <- validPriceEvent
+      vQuantity <- validQuantityEvent
+      vSort <- validSortEvent
+      vMeasureUnit <- validMeasureUnitEvent
+      vPerPackage <- validPerPackageEvent
+      vCategory <- validCategoryEvent
+      vSubcategory <- validSubcategoryEvent
+      vThc <- validThcEvent
+      vCbg <- validCbgEvent
+      vStrain <- validStrainEvent
+      vCreator <- validCreatorEvent
+      vSpecies <- validSpeciesEvent
+      vDominantTarpene <- validDominantTarpeneEvent
+      vLeaflyUrl <- validLeaflyUrlEvent
+      vImg <- validImgEvent
       in
         all (fromMaybe false)
           [ vName
@@ -193,7 +193,7 @@ editItem targetUUID = void $ runInBody Deku.do
             [ DA.klass_ "load-container"
             , DL.load_ \_ -> do
                 setUIState Loading
-                launchAff_ do
+                void $ launchAff do
                   result <- readInventory
                   liftEffect case result of
                     Right (InventoryData (Inventory items)) ->
@@ -206,7 +206,7 @@ editItem targetUUID = void $ runInBody Deku.do
                     Left err -> setUIState $ Error err
             ]
             []
-        , uiState <#~> case _ of
+        , uiStateEvent <#~> case _ of
             Beginning -> text_ "Item not found"
             Loading -> text_ "Loading..."
             Error msg -> text_ $ "Error: " <> msg
@@ -214,30 +214,29 @@ editItem targetUUID = void $ runInBody Deku.do
               [ D.h2
                   [ DA.klass_ "text-2xl font-bold mb-6" ]
                   [ text_ "Edit Menu Item" ]
-              , makeField (nameConfig "") setName setValidName validName
-              , makeField (skuConfig targetUUID) setSku setValidSku validSku
-              , makeField (brandConfig "") setBrand setValidBrand validBrand
-              , makeField (priceConfig "") setPrice setValidPrice validPrice
-              , makeField (quantityConfig "") setQuantity setValidQuantity validQuantity
-              , makeField (sortConfig "") setSort setValidSort validSort
-              , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnit
-              , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackage
-              , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategory
-              , makeDropdown categoryConfig setCategory setValidCategory validCategory
+              , makeField (nameConfig "") setName setValidName validNameEvent
+              , makeField (skuConfig targetUUID) setSku setValidSku validSkuEvent
+              , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
+              , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
+              , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+              , makeField (sortConfig "") setSort setValidSort validSortEvent
+              , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+              , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+              , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
+              , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
               , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
               , makeField (tagsConfig "") setTags (const $ pure unit) (pure $ Just true)
               , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
-              , makeField (thcConfig "") setThc setValidThc validThc
-              , makeField (cbgConfig "") setCbg setValidCbg validCbg
-              , makeField (strainConfig "") setStrain setValidStrain validStrain
-              , makeField (creatorConfig "") setCreator setValidCreator validCreator
-              , makeDropdown speciesConfig setSpecies setValidSpecies validSpecies
-              , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpene
+              , makeField (thcConfig "") setThc setValidThc validThcEvent
+              , makeField (cbgConfig "") setCbg setValidCbg validCbgEvent
+              , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
+              , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
+              , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
+              , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
               , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
               , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
-              , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrl
-              , makeField (imgConfig "") setImg setValidImg validImg
-
+              , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+              , makeField (imgConfig "") setImg setValidImg validImgEvent
               ]
         , D.button
             [ DA.klass_ $ buttonClass "green"
@@ -295,11 +294,9 @@ editItem targetUUID = void $ runInBody Deku.do
                             Right (Message msg) -> do
                               Console.info "Submission successful"
                               setStatusMessage msg
-                            -- resetForm
                             Right (InventoryData _) -> do
-                              Console.info "Item added to inventory"
-                              setStatusMessage "Item successfully added to inventory!"
-                            -- resetForm
+                              Console.info "Item updated in inventory"
+                              setStatusMessage "Item successfully updated!"
                             Left err -> do
                               Console.error "API Error:"
                               Console.errorShow err
@@ -331,9 +328,7 @@ editItem targetUUID = void $ runInBody Deku.do
                   <*> imgEvent
             ]
             [ text $ map
-                ( \submitting ->
-                    if submitting then "Submitting..." else "Submit"
-                )
+                (\isSubmitting -> if isSubmitting then "Submitting..." else "Submit")
                 submittingEvent
             ]
         , D.div

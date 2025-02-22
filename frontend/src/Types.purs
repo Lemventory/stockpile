@@ -2,33 +2,26 @@ module Types where
 
 import Prelude
 
-import Control.Monad.Except (ExceptT)
 import Data.Either (Either(..))
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
 import Data.Generic.Rep (class Generic)
-import Data.Identity (Identity)
 import Data.Int (fromString)
 import Data.Int as Int
-import Data.List.NonEmpty (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Number (fromString) as Number
 import Data.String (trim)
+import Data.Tuple (Tuple)
 import Deku.Attribute (Attribute)
 import Deku.Control (elementify)
 import Deku.Core (Nut, attributeAtYourOwnRisk)
 import Effect (Effect)
 import FRP.Poll (Poll)
-import Foreign (Foreign, ForeignError(..), F, fail)
-import Foreign.Index (readProp)
-import Type.Proxy (Proxy(..))
-import UUID (UUID, parseUUID)
-import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 import Foreign (Foreign, F, ForeignError(..), fail, typeOf)
 import Foreign.Index (readProp)
-import Data.List.NonEmpty (NonEmptyList)
-import Control.Monad.Except.Trans (ExceptT)
-import Data.Identity (Identity)
+import Type.Proxy (Proxy(..))
+import Types.UUID (UUID, parseUUID)
+import Yoga.JSON (class ReadForeign, class WriteForeign, readImpl, writeImpl)
 
 newtype ForeignRequestBody = ForeignRequestBody Foreign
 
@@ -97,6 +90,46 @@ data Species
 
 derive instance eqItemSpecies :: Eq Species
 derive instance ordItemSpecies :: Ord Species
+
+-- | Sorting types
+data SortField
+  = SortByOrder
+  | SortByName
+  | SortByCategory
+  | SortBySubCategory
+  | SortBySpecies
+  | SortBySKU
+  | SortByPrice
+  | SortByQuantity
+
+data SortOrder = Ascending | Descending
+
+-- | Data fetching mode
+data QueryMode = JsonMode | HttpMode
+
+derive instance eqQueryMode :: Eq QueryMode
+derive instance ordQueryMode :: Ord QueryMode
+
+instance Show QueryMode where
+  show JsonMode = "JsonMode"
+  show HttpMode = "HttpMode"
+
+-- | Configuration type for fetcher
+type FetchConfig =
+  { apiEndpoint :: String -- Backend API endpoint
+  , jsonPath :: String -- Path to JSON file
+  , corsHeaders :: Boolean -- Whether to include CORS headers
+  }
+
+-- | Unified configuration for LiveView
+type LiveViewConfig =
+  { sortFields :: Array (Tuple SortField SortOrder)
+  , hideOutOfStock :: Boolean
+  , mode :: QueryMode
+  , refreshRate :: Int
+  , screens :: Int
+  , fetchConfig :: FetchConfig
+  }
 
 -- | Form input types
 type HTMLFormField (r :: Row Type) =

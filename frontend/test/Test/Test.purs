@@ -10,7 +10,7 @@ import Effect.Aff (Aff)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Types (Inventory(..), InventoryResponse(..), MenuItem(..))
-import UUID (UUID)
+import Types.UUID (UUID)
 import Yoga.JSON (readJSON_, writeJSON)
 
 -- Read current inventory

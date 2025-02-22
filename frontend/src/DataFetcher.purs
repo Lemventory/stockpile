@@ -9,24 +9,7 @@ import Effect.Class.Console as Console
 import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
-import Types (Inventory, InventoryResponse(..))
-
--- | Data fetching mode
-data QueryMode = JsonMode | HttpMode
-
-derive instance eqQueryMode :: Eq QueryMode
-derive instance ordQueryMode :: Ord QueryMode
-
-instance Show QueryMode where
-  show JsonMode = "JsonMode"
-  show HttpMode = "HttpMode"
-
--- | Configuration type for fetcher
-type FetchConfig =
-  { apiEndpoint :: String -- Backend API endpoint
-  , jsonPath :: String -- Path to JSON file
-  , corsHeaders :: Boolean -- Whether to include CORS headers
-  }
+import Types (FetchConfig, Inventory, InventoryResponse(..), QueryMode(..))
 
 defaultConfig :: FetchConfig
 defaultConfig =

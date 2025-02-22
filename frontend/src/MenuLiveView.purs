@@ -1,6 +1,4 @@
-module MenuLiveView
-  ( runLiveView
-  ) where
+module MenuLiveView where
 
 import Prelude
 
@@ -16,40 +14,23 @@ import Deku.Control (text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.Effect (useState)
-import Deku.Hooks ((<#~>))
-import Deku.Toplevel (runInBody)
-import Effect (Effect)
+import Deku.DOM.Listeners as DL
+import Deku.Do as Deku
+import Deku.Hooks (useState, (<#~>))
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import MenuLiveView.DataFetcher (FetchConfig, QueryMode(..), defaultConfig, fetchInventory)
-import Types (Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), StrainLineage(..), Species)
+import MenuLiveView.DataFetcher (defaultConfig, fetchInventory)
+import Types (FetchConfig, Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), SortField(..), SortOrder(..), Species, StrainLineage(..))
 
--- | Sorting types
-data SortField
-  = SortByOrder
-  | SortByName
-  | SortByCategory
-  | SortBySubCategory
-  | SortBySpecies
-  | SortBySKU
-  | SortByPrice
-  | SortByQuantity
-
-data SortOrder = Ascending | Descending
-
--- | Unified configuration
-type Config =
-  { sortFields :: Array (Tuple SortField SortOrder)
-  , hideOutOfStock :: Boolean
-  , mode :: QueryMode
-  , refreshRate :: Int
-  , screens :: Int
-  , fetchConfig :: FetchConfig
-  }
-
-defaultViewConfig :: Config
+defaultViewConfig
+  :: { sortFields :: Array (Tuple SortField SortOrder)
+     , hideOutOfStock :: Boolean
+     , mode :: QueryMode
+     , refreshRate :: Int
+     , screens :: Int
+     , fetchConfig :: FetchConfig
+     }
 defaultViewConfig =
   { sortFields:
       [ SortByCategory /\ Ascending
@@ -66,62 +47,61 @@ defaultViewConfig =
       }
   }
 
--- | Main view logic
-liveView :: Effect Unit
-liveView = do
+runLiveView :: Nut
+runLiveView = Deku.do
   setInventory /\ inventory <- useState (Inventory [])
   setLoading /\ loading <- useState true
   setError /\ error <- useState ""
 
-  let
-    config = defaultViewConfig
+  let config = defaultViewConfig
 
-    fetchAndUpdateInventory :: Effect Unit
-    fetchAndUpdateInventory = launchAff_ do
-      liftEffect $ setLoading true
-      liftEffect $ setError ""
-      liftEffect $ Console.log $ "Fetching inventory with mode: " <> show config.mode
+  D.div
+    [ DA.klass_ "page-container" ]
+    [ D.div
+        [ DA.klass_ "load-container"
+        , DL.load_ \_ -> do
+            setLoading true
+            launchAff_ do
+              result <- fetchInventory config.fetchConfig config.mode
+              liftEffect $ case result of
+                Left err -> do
+                  Console.error $ "Error fetching inventory: " <> err
+                  setError err
+                  setLoading false
+                Right (InventoryData inv@(Inventory items)) -> do
+                  Console.log $ "Received " <> show (length items) <> " items"
+                  setInventory inv
+                  setLoading false
+                Right (Message msg) -> do
+                  Console.log msg
+                  setError msg
+                  setLoading false
+        ]
+        []
+    , D.div
+        [ DA.klass_ "status-container" ]
+        [ loading <#~> \isLoading ->
+            if isLoading then text_ "Loading..."
+            else text_ ""
+        , error <#~> \err ->
+            if err /= "" then text_ ("Error: " <> err)
+            else text_ ""
+        ]
+    , D.div
+        [ DA.klass_ "inventory-container" ]
+        [ inventory <#~> renderInventory config ]
+    ]
 
-      result <- fetchInventory config.fetchConfig config.mode
-
-      liftEffect $ case result of
-        Left err -> do
-          Console.error $ "Error fetching inventory: " <> err
-          setError err
-          setLoading false
-
-        Right (InventoryData inv@(Inventory items)) -> do
-          Console.log $ "Received " <> show (length items) <> " items"
-          setInventory inv
-          setLoading false
-
-        Right (Message msg) -> do
-          Console.log msg
-          setError msg
-          setLoading false
-
-  -- Initial fetch
-  void fetchAndUpdateInventory
-
-  -- Run Deku UI
-  void $ runInBody Deku.do
-    D.div []
-      [ D.div
-          [ DA.klass_ "status-container" ]
-          [ loading <#~> \isLoading ->
-              if isLoading then text_ "Loading..."
-              else text_ ""
-          , error <#~> \err ->
-              if err /= "" then text_ ("Error: " <> err)
-              else text_ ""
-          ]
-      , D.div
-          [ DA.klass_ "inventory-container" ]
-          [ inventory <#~> renderInventory config ]
-      ]
-
--- | Rendering functions
-renderInventory :: Config -> Inventory -> Nut
+renderInventory
+  :: { sortFields :: Array (Tuple SortField SortOrder)
+     , hideOutOfStock :: Boolean
+     , mode :: QueryMode
+     , refreshRate :: Int
+     , screens :: Int
+     , fetchConfig :: FetchConfig
+     }
+  -> Inventory
+  -> Nut
 renderInventory config (Inventory items) =
   let
     filteredItems =
@@ -166,19 +146,17 @@ renderItem (MenuItem record) =
           [ text_ ("in stock: " <> show record.quantity) ]
       ]
 
--- | Helper functions
-generateClassName :: { category :: ItemCategory, subcategory :: String, species :: Species } -> String
-generateClassName item =
-  "species-" <> toClassName (show item.species)
-    <> " category-"
-    <> toClassName (show item.category)
-    <> " subcategory-"
-    <> toClassName item.subcategory
-
-toClassName :: String -> String
-toClassName str = toLower (replace (Pattern " ") (Replacement "-") str)
-
-compareMenuItems :: Config -> MenuItem -> MenuItem -> Ordering
+compareMenuItems
+  :: { sortFields :: Array (Tuple SortField SortOrder)
+     , hideOutOfStock :: Boolean
+     , mode :: QueryMode
+     , refreshRate :: Int
+     , screens :: Int
+     , fetchConfig :: FetchConfig
+     }
+  -> MenuItem
+  -> MenuItem
+  -> Ordering
 compareMenuItems config (MenuItem item1) (MenuItem item2) =
   let
     StrainLineage meta1 = item1.strain_lineage
@@ -216,7 +194,13 @@ invertOrdering LT = GT
 invertOrdering EQ = EQ
 invertOrdering GT = LT
 
-runLiveView :: Effect Unit
-runLiveView = do
-  Console.log "Starting MenuLiveView with backend integration"
-  liveView
+generateClassName :: { category :: ItemCategory, subcategory :: String, species :: Species } -> String
+generateClassName item =
+  "species-" <> toClassName (show item.species)
+    <> " category-"
+    <> toClassName (show item.category)
+    <> " subcategory-"
+    <> toClassName item.subcategory
+
+toClassName :: String -> String
+toClassName str = toLower (replace (Pattern " ") (Replacement "-") str)
