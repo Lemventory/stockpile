@@ -169,6 +169,7 @@ liveView = do
 runLiveView :: Effect Unit
 runLiveView = do
   log "Starting main"
+<<<<<<< HEAD
   liveView
 
 
@@ -315,3 +316,6 @@ postInventoryToHttp menuItem = do
   case result of
     Left err -> pure $ Left $ "Submission error: " <> show err
     Right msg -> pure $ Right $ Message msg
+=======
+  liveView
+>>>>>>> c90bbe7 (Create WithInterval.purs)
