@@ -1,3 +1,22 @@
+-- module Main where
+
+-- import Prelude
+-- import WithInterval (runLiveView)
+-- -- import CreateItem (createItem)
+-- -- import EditItem (editItem)
+
+-- import Effect (Effect)
+-- import Effect.Class.Console (log)
+
+-- main :: Effect Unit
+-- main = do
+--   log "Starting main"
+--   runLiveView
+-- -- createItem  
+-- -- editItem "8eacb499-76e6-42cb-aa05-103713dd2bd6"
+
+-- {- 
+
 module Main where
 
 import Prelude
@@ -44,4 +63,5 @@ main = do
     )
 
   -- Initialize with home route and redirect to test item for development
-  currentRoute.push $ Tuple (Edit "test") (editItem testItemUUID)
+  currentRoute.push $ Tuple (Edit "test") (editItem testItemUUID) 
+  

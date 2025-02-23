@@ -17,35 +17,72 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
 import Deku.Hooks (useState, (<#~>))
+import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import MenuLiveView.DataFetcher (defaultConfig, fetchInventory)
-import Types (FetchConfig, Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), QueryMode(..), SortField(..), SortOrder(..), Species, StrainLineage(..))
+import Effect.Ref as Ref
+import FRP.Event (subscribe)
+import FRP.Event.Time (interval)
+import Types (FetchConfig, Inventory(..), InventoryResponse(..), ItemCategory, MenuItem(..), SortField(..), SortOrder(..), Species, StrainLineage(..))
+import WithInterval (QueryMode(..), defaultConfig, fetchInventory)
 
-defaultViewConfig
-  :: { sortFields :: Array (Tuple SortField SortOrder)
-     , hideOutOfStock :: Boolean
-     , mode :: QueryMode
-     , refreshRate :: Int
-     , screens :: Int
-     , fetchConfig :: FetchConfig
-     }
-defaultViewConfig =
-  { sortFields:
-      [ SortByCategory /\ Ascending
-      , SortBySpecies /\ Descending
-      , SortByQuantity /\ Descending
-      ]
-  , hideOutOfStock: true
-  , mode: HttpMode
-  , refreshRate: 5000
-  , screens: 1
-  , fetchConfig: defaultConfig
-      { apiEndpoint = "http://localhost:8080/inventory"
-      , corsHeaders = true
-      }
+defaultViewConfig :: {
+  sortFields :: Array (Tuple SortField SortOrder),
+  hideOutOfStock :: Boolean,
+  mode :: QueryMode,
+  refreshRate :: Int,
+  screens :: Int,
+  fetchConfig :: FetchConfig
+}
+defaultViewConfig = {
+  sortFields: [
+    SortByCategory /\ Ascending,
+    SortBySpecies /\ Descending,
+    SortByQuantity /\ Descending
+  ],
+  hideOutOfStock: true,
+  mode: HttpMode,
+  refreshRate: 5000,
+  screens: 1,
+  fetchConfig: defaultConfig {
+    apiEndpoint = "http://localhost:8080/inventory",
+    corsHeaders = true
   }
+}
+
+setupLiveUpdates :: Effect Unit -> Effect Unit -> (Inventory -> Effect Unit) -> (String -> Effect Unit) -> Int -> Effect Unit
+setupLiveUpdates setLoadingTrue setLoadingFalse setInventory setError refreshRate = do
+  mountedRef <- Ref.new true
+
+  let
+    refresh = do
+      setLoadingTrue
+      launchAff_ do
+        liftEffect $ Console.log "Starting refresh..."
+        result <- fetchInventory defaultViewConfig.fetchConfig HttpMode
+        liftEffect $ case result of
+          Left err -> do
+            Console.error $ "Error fetching inventory: " <> err
+            setError err
+            setLoadingFalse
+          Right (InventoryData inv@(Inventory items)) -> do
+            Console.log $ "Received " <> show (length items) <> " items"
+            setInventory inv
+            setLoadingFalse
+          Right (Message msg) -> do
+            Console.log $ "Message received: " <> msg
+            setError msg
+            setLoadingFalse
+
+  refresh
+
+  timer <- interval refreshRate
+  void $ subscribe timer.event \_ -> do
+    isMounted <- Ref.read mountedRef
+    when isMounted refresh
+
+  pure unit
 
 runLiveView :: Nut
 runLiveView = Deku.do
@@ -53,29 +90,18 @@ runLiveView = Deku.do
   setLoading /\ loading <- useState true
   setError /\ error <- useState ""
 
-  let config = defaultViewConfig
-
   D.div
     [ DA.klass_ "page-container" ]
     [ D.div
         [ DA.klass_ "load-container"
         , DL.load_ \_ -> do
-            setLoading true
-            launchAff_ do
-              result <- fetchInventory config.fetchConfig config.mode
-              liftEffect $ case result of
-                Left err -> do
-                  Console.error $ "Error fetching inventory: " <> err
-                  setError err
-                  setLoading false
-                Right (InventoryData inv@(Inventory items)) -> do
-                  Console.log $ "Received " <> show (length items) <> " items"
-                  setInventory inv
-                  setLoading false
-                Right (Message msg) -> do
-                  Console.log msg
-                  setError msg
-                  setLoading false
+            liftEffect $ Console.log "Load container mounted - starting live updates"
+            void $ setupLiveUpdates
+              (setLoading true)
+              (setLoading false)
+              (\inv -> setInventory inv)
+              (\err -> setError err)
+              defaultViewConfig.refreshRate
         ]
         []
     , D.div
@@ -89,26 +115,21 @@ runLiveView = Deku.do
         ]
     , D.div
         [ DA.klass_ "inventory-container" ]
-        [ inventory <#~> renderInventory config ]
+        [ inventory <#~> renderInventory {
+            hideOutOfStock: defaultViewConfig.hideOutOfStock,
+            sortFields: defaultViewConfig.sortFields
+          }
+        ]
     ]
 
-renderInventory
-  :: { sortFields :: Array (Tuple SortField SortOrder)
-     , hideOutOfStock :: Boolean
-     , mode :: QueryMode
-     , refreshRate :: Int
-     , screens :: Int
-     , fetchConfig :: FetchConfig
-     }
-  -> Inventory
-  -> Nut
+renderInventory :: { hideOutOfStock :: Boolean, sortFields :: Array (Tuple SortField SortOrder) } -> Inventory -> Nut
 renderInventory config (Inventory items) =
   let
     filteredItems =
       if config.hideOutOfStock then filter (\(MenuItem item) -> item.quantity > 0) items
       else items
 
-    sortedItems = sortBy (compareMenuItems config) filteredItems
+    sortedItems = sortBy (compareMenuItems { sortFields: config.sortFields }) filteredItems
   in
     D.div
       [ DA.klass_ "inventory-grid" ]
@@ -146,17 +167,7 @@ renderItem (MenuItem record) =
           [ text_ ("in stock: " <> show record.quantity) ]
       ]
 
-compareMenuItems
-  :: { sortFields :: Array (Tuple SortField SortOrder)
-     , hideOutOfStock :: Boolean
-     , mode :: QueryMode
-     , refreshRate :: Int
-     , screens :: Int
-     , fetchConfig :: FetchConfig
-     }
-  -> MenuItem
-  -> MenuItem
-  -> Ordering
+compareMenuItems :: { sortFields :: Array (Tuple SortField SortOrder) } -> MenuItem -> MenuItem -> Ordering
 compareMenuItems config (MenuItem item1) (MenuItem item2) =
   let
     StrainLineage meta1 = item1.strain_lineage

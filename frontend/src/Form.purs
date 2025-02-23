@@ -126,13 +126,12 @@ makeDropdown config setValue setValid validEvent =
         ]
     ]
 
-makeEnumDropdown
-  :: ∀ a
-   . BoundedEnum a
-  => Bounded a
-  => Show a
-  => { label :: String, enumType :: a }
-  -> DropdownConfig
+makeEnumDropdown :: ∀ a
+                  . BoundedEnum a
+                 => Bounded a
+                 => Show a
+                 => { label :: String, enumType :: a }
+                 -> DropdownConfig
 makeEnumDropdown { label } =
   { label
   , options:
