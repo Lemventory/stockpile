@@ -10,12 +10,13 @@ import Deku.Control (text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.DOM.Listeners as DL
+import Deku.DOM.Listeners (load_) as DL
 import Deku.Do as Deku
 import Deku.Hooks (useState, (<#~>))
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Effect.Timer (setInterval)
 import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
 import Utils (compareMenuItems, generateClassName)
@@ -35,31 +36,34 @@ runLiveView = Deku.do
             liftEffect $ Console.log $ "Using config mode: " <> show defaultViewConfig.mode
             liftEffect $ Console.log $ "Using API endpoint: " <> defaultViewConfig.fetchConfig.apiEndpoint
             liftEffect $ Console.log $ "Using refresh rate: " <> show defaultViewConfig.refreshRate
-            liftEffect $ Console.log "Starting data fetch..."
 
-            void $ launchAff_ do
-              liftEffect $ Console.log "Inside launchAff_, about to call fetchInventory..."
-              result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
+            let
+              fetchData = do
+                liftEffect $ Console.log "Starting data fetch..."
+                liftEffect $ setLoading true
+                liftEffect $ setError ""
+                result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
+                liftEffect $ case result of
+                  Left err -> do
+                    Console.error $ "Error fetching inventory: " <> err
+                    setError err
+                    setLoading false
+                  Right (InventoryData inv) -> do
+                    Console.log $ "Success! Received " <> show (length (case inv of Inventory items -> items)) <> " items"
+                    setInventory inv
+                    setLoading false
+                  Right (Message msg) -> do
+                    Console.log $ "Received message: " <> msg
+                    setError msg
+                    setLoading false
 
-              liftEffect $ Console.log "Fetch completed, processing result..."
+            -- Initial fetch
+            void $ launchAff_ fetchData
 
-              liftEffect case result of
-                Left err -> do
-                  Console.error "Error in fetch:"
-                  Console.error err
-                  setError err
-                  setLoading false
-
-                Right (InventoryData inv@(Inventory items)) -> do
-                  Console.log $ "Success! Received " <> show (length items) <> " items"
-                  setInventory inv
-                  setLoading false
-
-                Right (Message msg) -> do
-                  Console.log "Received message:"
-                  Console.log msg
-                  setError msg
-                  setLoading false
+            -- Set up periodic refresh
+            void $ liftEffect $ setInterval defaultViewConfig.refreshRate do
+              Console.log "Refreshing inventory data..."
+              void $ launchAff_ fetchData
         ]
         []
     , D.div

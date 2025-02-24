@@ -33,7 +33,7 @@ main = do
 
   currentRoute <- liftST Poll.create
 
-  _ <- matchesWith (parse route) \_ r -> do
+  void $ matchesWith (parse route) \_ r -> do
     Console.log $ "Route changed to: " <> show r
     currentRoute.push $ Tuple r (routeToComponent r)
 
@@ -44,4 +44,5 @@ main = do
         ]
     )
 
+  -- Initialize with the LiveView route
   currentRoute.push $ Tuple LiveView (routeToComponent LiveView)
