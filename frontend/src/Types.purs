@@ -1,4 +1,38 @@
-module Types where
+module Types
+  ( DropdownConfig
+  , FieldConfig
+  , FieldConfigRecord(..)
+  , FieldConfigRow
+  , ForeignRequestBody(..)
+  , HTMLFormField
+  , Inventory(..)
+  , InventoryResponse(..)
+  , ItemCategory(..)
+  , MenuItem(..)
+  , MenuItemFormInput
+  , MenuItemRecord
+  , NumberFieldConfig
+  , Species(..)
+  , StrainLineage(..)
+  , StrainLineageFormInput
+  , TextFieldConfig
+  , Validated(..)
+  , ValidationPreset
+  , ValidationResult(..)
+  , ValidationRule(..)
+  , class FieldValidator
+  , class FormValue
+  , formField
+  , formFieldValidation
+  , formFieldValue
+  , fromFieldConfigRecord
+  , mkValidationRule
+  , runValidation
+  , validateField
+  , validationError
+  , fromFormValue
+  , toFieldConfigRecord
+  ) where
 
 import Prelude
 
@@ -10,8 +44,8 @@ import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Number (fromString) as Number
+import Data.Show.Generic (genericShow)
 import Data.String (trim)
-import Data.Tuple (Tuple)
 import Deku.Attribute (Attribute)
 import Deku.Control (elementify)
 import Deku.Core (Nut, attributeAtYourOwnRisk)
@@ -28,6 +62,14 @@ newtype ForeignRequestBody = ForeignRequestBody Foreign
 data InventoryResponse
   = InventoryData Inventory
   | Message String
+
+derive instance genericInventory :: Generic Inventory _
+instance showInventory :: Show Inventory where
+  show = genericShow
+
+derive instance genericInventoryResponse :: Generic InventoryResponse _
+instance showInventoryResponse :: Show InventoryResponse where
+  show = genericShow
 
 newtype Inventory = Inventory (Array MenuItem)
 
@@ -90,46 +132,6 @@ data Species
 
 derive instance eqItemSpecies :: Eq Species
 derive instance ordItemSpecies :: Ord Species
-
--- | Sorting types
-data SortField
-  = SortByOrder
-  | SortByName
-  | SortByCategory
-  | SortBySubCategory
-  | SortBySpecies
-  | SortBySKU
-  | SortByPrice
-  | SortByQuantity
-
-data SortOrder = Ascending | Descending
-
--- | Data fetching mode
-data QueryMode = JsonMode | HttpMode
-
-derive instance eqQueryMode :: Eq QueryMode
-derive instance ordQueryMode :: Ord QueryMode
-
-instance Show QueryMode where
-  show JsonMode = "JsonMode"
-  show HttpMode = "HttpMode"
-
--- | Configuration type for fetcher
-type FetchConfig =
-  { apiEndpoint :: String -- Backend API endpoint
-  , jsonPath :: String -- Path to JSON file
-  , corsHeaders :: Boolean -- Whether to include CORS headers
-  }
-
--- | Unified configuration for LiveView
-type LiveViewConfig =
-  { sortFields :: Array (Tuple SortField SortOrder)
-  , hideOutOfStock :: Boolean
-  , mode :: QueryMode
-  , refreshRate :: Int
-  , screens :: Int
-  , fetchConfig :: FetchConfig
-  }
 
 -- | Form input types
 type HTMLFormField (r :: Row Type) =
@@ -462,11 +464,6 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
       , strain_lineage
       }
 
--- instance readForeignInventory :: ReadForeign Inventory where
---   readImpl json = do
---     items <- readImpl json :: F (Array MenuItem)
---     pure $ Inventory items
-
 instance readForeignInventory :: ReadForeign Inventory where
   readImpl json = do
     items <- readImpl json :: F (Array MenuItem)
@@ -507,19 +504,6 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
       , leafly_url
       , img
       }
-
--- instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
---   readImpl f = do
---     obj <- readImpl f
---     typeField <- readProp "type" obj >>= readImpl :: F String
---     case typeField of
---       "data" -> do
---         value <- readProp "value" obj >>= readImpl
---         pure $ InventoryData value
---       "message" -> do
---         value <- readProp "value" obj >>= readImpl
---         pure $ Message value
---       _ -> fail $ ForeignError "Invalid response type"
 
 instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
   readImpl f = do

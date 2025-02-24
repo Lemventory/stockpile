@@ -26,7 +26,7 @@ route :: RouteDuplex' Route
 route = root $ G.sum
   { "LiveView": G.noArgs
   , "Create": "create" / G.noArgs
-  , "Edit": "edit" / string segment
+  , "Edit": "edit" / (string segment)
   }
 
 nav :: Poll Route -> Nut

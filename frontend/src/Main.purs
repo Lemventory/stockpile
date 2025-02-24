@@ -1,22 +1,3 @@
--- module Main where
-
--- import Prelude
--- import WithInterval (runLiveView)
--- -- import CreateItem (createItem)
--- -- import EditItem (editItem)
-
--- import Effect (Effect)
--- import Effect.Class.Console (log)
-
--- main :: Effect Unit
--- main = do
---   log "Starting main"
---   runLiveView
--- -- createItem  
--- -- editItem "8eacb499-76e6-42cb-aa05-103713dd2bd6"
-
--- {- 
-
 module Main where
 
 import Prelude
@@ -30,13 +11,13 @@ import Deku.Hooks (cycle)
 import Deku.Toplevel (runInBody)
 import EditItem (editItem)
 import Effect (Effect)
+import Effect.Class.Console as Console
 import FRP.Poll as Poll
 import MenuLiveView (runLiveView)
 import Route (Route(..), nav, route)
 import Routing.Duplex (parse)
 import Routing.Hash (matchesWith)
 
--- Hardcoded test UUID for edit
 testItemUUID :: String
 testItemUUID = "56b0d1f7-fa3b-4cd4-9e58-79e4724295b0"
 
@@ -48,20 +29,19 @@ routeToComponent = case _ of
 
 main :: Effect Unit
 main = do
+  Console.log "Application starting"
+
   currentRoute <- liftST Poll.create
 
-  -- Set up routing
-  _ <- matchesWith (parse route) \_ r ->
+  _ <- matchesWith (parse route) \_ r -> do
+    Console.log $ "Route changed to: " <> show r
     currentRoute.push $ Tuple r (routeToComponent r)
 
-  -- Create and run the app layout
-  _ <- runInBody
+  void $ runInBody
     ( fixed
         [ nav (fst <$> currentRoute.poll)
         , D.div_ [ cycle (snd <$> currentRoute.poll) ]
         ]
     )
 
-  -- Initialize with home route and redirect to test item for development
-  currentRoute.push $ Tuple (Edit "test") (editItem testItemUUID) 
-  
+  currentRoute.push $ Tuple LiveView (routeToComponent LiveView)

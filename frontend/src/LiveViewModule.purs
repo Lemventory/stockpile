@@ -1,4 +1,6 @@
-module MenuLiveView where
+module LiveViewModule
+  ( runLiveView
+  ) where
 
 import Prelude
 
@@ -10,9 +12,10 @@ import Deku.Control (text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.DOM.Listeners as DL
-import Deku.Do as Deku
-import Deku.Hooks (useState, (<#~>))
+import Deku.Effect (useState)
+import Deku.Hooks ((<#~>))
+import Deku.Toplevel (runInBody)
+import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
@@ -20,61 +23,61 @@ import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(
 import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
 import Utils (compareMenuItems, generateClassName)
 
-runLiveView :: Nut
-runLiveView = Deku.do
+runLiveView :: Effect Unit
+runLiveView = do
+  Console.log "Starting MenuLiveView with backend integration"
+  liveView
+
+liveView :: Effect Unit
+liveView = do
   setInventory /\ inventory <- useState (Inventory [])
   setLoading /\ loading <- useState true
   setError /\ error <- useState ""
 
-  D.div
-    [ DA.klass_ "page-container" ]
-    [ D.div
-        [ DA.klass_ "load-container"
-        , DL.load_ \_ -> do
-            liftEffect $ Console.log "LiveView component mounting..."
-            liftEffect $ Console.log $ "Using config mode: " <> show defaultViewConfig.mode
-            liftEffect $ Console.log $ "Using API endpoint: " <> defaultViewConfig.fetchConfig.apiEndpoint
-            liftEffect $ Console.log $ "Using refresh rate: " <> show defaultViewConfig.refreshRate
-            liftEffect $ Console.log "Starting data fetch..."
+  let
+    config = defaultViewConfig
 
-            void $ launchAff_ do
-              liftEffect $ Console.log "Inside launchAff_, about to call fetchInventory..."
-              result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
+    fetchAndUpdateInventory :: Effect Unit
+    fetchAndUpdateInventory = launchAff_ do
+      liftEffect $ setLoading true
+      liftEffect $ setError ""
+      liftEffect $ Console.log $ "Fetching inventory with mode: " <> show config.mode
 
-              liftEffect $ Console.log "Fetch completed, processing result..."
+      result <- fetchInventory config.fetchConfig config.mode
 
-              liftEffect case result of
-                Left err -> do
-                  Console.error "Error in fetch:"
-                  Console.error err
-                  setError err
-                  setLoading false
+      liftEffect $ case result of
+        Left err -> do
+          Console.error $ "Error fetching inventory: " <> err
+          setError err
+          setLoading false
 
-                Right (InventoryData inv@(Inventory items)) -> do
-                  Console.log $ "Success! Received " <> show (length items) <> " items"
-                  setInventory inv
-                  setLoading false
+        Right (InventoryData inv@(Inventory items)) -> do
+          Console.log $ "Received " <> show (length items) <> " items"
+          setInventory inv
+          setLoading false
 
-                Right (Message msg) -> do
-                  Console.log "Received message:"
-                  Console.log msg
-                  setError msg
-                  setLoading false
-        ]
-        []
-    , D.div
-        [ DA.klass_ "status-container" ]
-        [ loading <#~> \isLoading -> D.div_
-            [ text_ $ if isLoading then "Loading..." else "" ]
-        , error <#~> \err -> D.div_
-            [ text_ $ if err /= "" then "Error: " <> err else "" ]
-        ]
-    , D.div
-        [ DA.klass_ "inventory-container" ]
-        [ inventory <#~> \inv -> D.div_
-            [ renderInventory defaultViewConfig inv ]
-        ]
-    ]
+        Right (Message msg) -> do
+          Console.log msg
+          setError msg
+          setLoading false
+
+  void fetchAndUpdateInventory
+
+  void $ runInBody Deku.do
+    D.div []
+      [ D.div
+          [ DA.klass_ "status-container" ]
+          [ loading <#~> \isLoading ->
+              if isLoading then text_ "Loading..."
+              else text_ ""
+          , error <#~> \err ->
+              if err /= "" then text_ ("Error: " <> err)
+              else text_ ""
+          ]
+      , D.div
+          [ DA.klass_ "inventory-container" ]
+          [ inventory <#~> renderInventory config ]
+      ]
 
 renderInventory :: LiveViewConfig -> Inventory -> Nut
 renderInventory config (Inventory items) =
@@ -87,9 +90,7 @@ renderInventory config (Inventory items) =
   in
     D.div
       [ DA.klass_ "inventory-grid" ]
-      [ D.div_ [ text_ $ "Total items: " <> show (length items) ]
-      , D.div_ (map renderItem sortedItems)
-      ]
+      (map renderItem sortedItems)
 
 renderItem :: MenuItem -> Nut
 renderItem (MenuItem record) =
