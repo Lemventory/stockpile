@@ -14,7 +14,6 @@ import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
 import Deku.Hooks (useState, (<#~>))
-import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
@@ -27,12 +26,17 @@ import Validation (validateMenuItem)
 
 createItem :: Poll String -> Nut
 createItem initialUUID = Deku.do
+  -- Status and loading state
+  setStatusMessage /\ statusMessageEvent <- useState ""
+  setSubmitting /\ submittingEvent <- useState false
+  setFiber /\ _ <- useState (pure unit)
+
+  -- Initialize states
+  setName /\ nameEvent <- useState ""
+  setValidName /\ validNameEvent <- useState (Just false)
 
   setSku /\ skuEvent <- useState ""
   setValidSku /\ validSkuEvent <- useState (Just true)
-
-  setName /\ nameEvent <- useState ""
-  setValidName /\ validNameEvent <- useState (Just false)
 
   setBrand /\ brandEvent <- useState ""
   setValidBrand /\ validBrandEvent <- useState (Just false)
@@ -88,13 +92,8 @@ createItem initialUUID = Deku.do
   setImg /\ imgEvent <- useState ""
   setValidImg /\ validImgEvent <- useState (Just false)
 
-  setStatusMessage /\ statusMessageEvent <- useState ""
-  setSubmitting /\ submittingEvent <- useState false
-  setFiber /\ _ <- useState (pure unit)
-
   let
-
-    isFormValidCheck = ado
+    isFormValid = ado
       vName <- validNameEvent
       vSku <- validSkuEvent
       vBrand <- validBrandEvent
@@ -123,25 +122,71 @@ createItem initialUUID = Deku.do
           , vDominantTarpene
           ]
 
+    resetForm = do
+      newUUID <- genUUID
+      setSku (show newUUID)
+      setValidSku (Just true)
+      setName ""
+      setValidName (Just false)
+      setBrand ""
+      setValidBrand (Just false)
+      setPrice ""
+      setValidPrice (Just false)
+      setQuantity ""
+      setValidQuantity (Just false)
+      setCategory ""
+      setValidCategory (Just false)
+      setDescription ""
+      setTags ""
+      setEffects ""
+      setThc ""
+      setValidThc (Just false)
+      setCbg ""
+      setValidCbg (Just false)
+      setStrain ""
+      setValidStrain (Just false)
+      setCreator ""
+      setValidCreator (Just false)
+      setSpecies ""
+      setValidSpecies (Just false)
+      setDominantTarpene ""
+      setValidDominantTarpene (Just false)
+      setTarpenes ""
+      setLineage ""
+      setSort ""
+      setValidSort (Just false)
+      setMeasureUnit ""
+      setValidMeasureUnit (Just false)
+      setPerPackage ""
+      setValidPerPackage (Just false)
+      setSubcategory ""
+      setValidSubcategory (Just false)
+      setLeaflyUrl ""
+      setValidLeaflyUrl (Just false)
+      setImg ""
+      setValidImg (Just false)
+
   D.div_
-    [ D.div
-        [ DA.klass_ "load-container"
-        , DL.load_ \_ -> do
+    [ D.div 
+        [ DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
-            
-            -- Set the initial UUID when the component loads
-            initialUUID # \uuid -> do
-              setSku uuid
-              setValidSku (Just true)
         ]
         []
+    , initialUUID <#~> \uuid -> 
+        D.div 
+          [ DL.load_ \_ -> do
+              liftEffect $ Console.log $ "Setting UUID: " <> uuid
+              setSku uuid
+              setValidSku (Just true)
+          ]
+          []
     , D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
         [ D.h2
             [ DA.klass_ "text-2xl font-bold mb-6" ]
             [ text_ "Add New Menu Item" ]
         , makeField (nameConfig "") setName setValidName validNameEvent
-        , makeField (skuConfig $ skuEvent) setSku setValidSku validSkuEvent
+        , makeField (skuConfig "") setSku setValidSku validSkuEvent
         , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
         , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
         , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
@@ -166,7 +211,7 @@ createItem initialUUID = Deku.do
         ]
     , D.button
         [ DA.klass_ $ buttonClass "green"
-        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValidCheck
+        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
         , DL.runOn DL.click $
             ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
                 setSubmitting true
@@ -220,67 +265,11 @@ createItem initialUUID = Deku.do
                         Right (Message msg) -> do
                           Console.info "Submission successful"
                           setStatusMessage msg
-
-
-                          setName ""
-                          setValidName (Just false)
-                          setBrand ""
-                          setValidBrand (Just false)
-                          setPrice ""
-                          setValidPrice (Just false)
-                          setQuantity ""
-                          setValidQuantity (Just false)
-                          setCategory ""
-                          setValidCategory (Just false)
-                          setDescription ""
-                          setTags ""
-                          setEffects ""
-                          setThc ""
-                          setValidThc (Just false)
-                          setCbg ""
-                          setValidCbg (Just false)
-                          setStrain ""
-                          setValidStrain (Just false)
-                          setCreator ""
-                          setValidCreator (Just false)
-                          setSpecies ""
-                          setValidSpecies (Just false)
-                          setDominantTarpene ""
-                          setValidDominantTarpene (Just false)
-                          setTarpenes ""
-                          setLineage ""
+                          resetForm
                         Right (InventoryData _) -> do
                           Console.info "Item added to inventory"
                           setStatusMessage "Item successfully added to inventory!"
-
-
-                          setName ""
-                          setValidName (Just false)
-                          setBrand ""
-                          setValidBrand (Just false)
-                          setPrice ""
-                          setValidPrice (Just false)
-                          setQuantity ""
-                          setValidQuantity (Just false)
-                          setCategory ""
-                          setValidCategory (Just false)
-                          setDescription ""
-                          setTags ""
-                          setEffects ""
-                          setThc ""
-                          setValidThc (Just false)
-                          setCbg ""
-                          setValidCbg (Just false)
-                          setStrain ""
-                          setValidStrain (Just false)
-                          setCreator ""
-                          setValidCreator (Just false)
-                          setSpecies ""
-                          setValidSpecies (Just false)
-                          setDominantTarpene ""
-                          setValidDominantTarpene (Just false)
-                          setTarpenes ""
-                          setLineage ""
+                          resetForm
                         Left err -> do
                           Console.error "API Error:"
                           Console.errorShow err
