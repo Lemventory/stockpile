@@ -38,37 +38,15 @@ main = do
   loadingState <- liftST Poll.create
   errorState <- liftST Poll.create
 
-
-  currentUUID <- liftST Poll.create
-
-
-  initialUUID <- genUUID
-  let initialUUIDStr = show initialUUID
-  Console.log $ "Initial UUID generated: " <> initialUUIDStr
-  currentUUID.push initialUUIDStr
-
   let menuLiveView = createMenuLiveView inventoryState.poll loadingState.poll errorState.poll
-
-  let routeToComponent = case _ of
-        LiveView -> menuLiveView
-        Create -> createItem currentUUID.poll
-        Edit uuid -> editItem (if uuid == "test" then testItemUUID else uuid)
 
   let
     matcher _ r = do
       Console.log $ "Route changed to: " <> show r
 
-
-      when (r == Create) do
-        newUUID <- genUUID
-        let newUUIDStr = show newUUID
-        Console.log $ "Generated new UUID for Create page: " <> newUUIDStr
-        currentUUID.push newUUIDStr
-
-      currentRoute.push $ Tuple r (routeToComponent r)
-
       case r of
         LiveView -> do
+          currentRoute.push $ Tuple r menuLiveView
 
           loadingState.push true
           errorState.push ""
@@ -93,7 +71,18 @@ main = do
                 loadingState.push false
                 errorState.push msg
 
-        _ -> pure unit
+        Create -> do
+          -- Generate a new UUID for the Create page
+          newUUID <- genUUID
+          let newUUIDStr = show newUUID
+          Console.log $ "Generated new UUID for Create page: " <> newUUIDStr
+
+          -- Create the component with the UUID string
+          currentRoute.push $ Tuple r (createItem newUUIDStr)
+
+        Edit uuid -> do
+          let actualUuid = if uuid == "test" then testItemUUID else uuid
+          currentRoute.push $ Tuple r (editItem actualUuid)
 
   void $ matchesWith (parse route) matcher
 

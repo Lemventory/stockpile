@@ -13,31 +13,29 @@ import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
-import Deku.Hooks (useState, (<#~>))
+import Deku.Hooks (useState)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import FRP.Poll (Poll)
 import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
 import Types (InventoryResponse(..))
 import UUIDGen (genUUID)
 import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
 
-createItem :: Poll String -> Nut
+createItem :: String -> Nut
 createItem initialUUID = Deku.do
+  -- Initialize with the UUID string that was passed in
+  setSku /\ skuEvent <- useState initialUUID
+  setValidSku /\ validSkuEvent <- useState (Just true)
 
+  -- Other state
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setFiber /\ _ <- useState (pure unit)
 
-
   setName /\ nameEvent <- useState ""
   setValidName /\ validNameEvent <- useState (Just false)
-
-
-  setSku /\ skuEvent <- useState ""
-  setValidSku /\ validSkuEvent <- useState (Just true)
 
   setBrand /\ brandEvent <- useState ""
   setValidBrand /\ validBrandEvent <- useState (Just false)
@@ -123,6 +121,7 @@ createItem initialUUID = Deku.do
           , vDominantTarpene
           ]
 
+  let
     resetForm = do
       newUUID <- genUUID
       setSku (show newUUID)
@@ -168,39 +167,30 @@ createItem initialUUID = Deku.do
       setValidImg (Just false)
 
   D.div_
-    [ D.div
+    [
+      -- Debug/log the UUID at component load time
+      D.div
         [ DA.klass_ "component-loading-debug"
         , DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
+            liftEffect $ Console.log $ "Using initialUUID: " <> initialUUID
         ]
         []
-    , D.div
-        [ DA.klass_ "initial-uuid-handler" ]
-        [ initialUUID <#~> \uuid -> do
-            D.div
-              [ DA.klass_ "uuid-application"
-              , DL.load_ \_ -> do
-                  liftEffect $ Console.log $ "Received UUID: " <> uuid
-                  when (uuid /= "") do
-                    liftEffect $ Console.log $ "Setting SKU field to: " <> uuid
-                    setSku uuid
-                    setValidSku (Just true)
-              ]
-              []
-        ]
+
+    -- The form
     , D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
         [ D.h2
             [ DA.klass_ "text-2xl font-bold mb-6" ]
             [ text_ "Add New Menu Item" ]
-        , makeField (nameConfig "") setName setValidName validNameEvent
-        , makeField (skuConfig "") setSku setValidSku validSkuEvent
         , makeField (brandConfig "") setBrand setValidBrand validBrandEvent
+        , makeField (nameConfig "") setName setValidName validNameEvent
+        , makeField (skuConfig initialUUID) setSku setValidSku validSkuEvent
+        , makeField (sortConfig "") setSort setValidSort validSortEvent
         , makeField (priceConfig "") setPrice setValidPrice validPriceEvent
         , makeField (quantityConfig "") setQuantity setValidQuantity validQuantityEvent
-        , makeField (sortConfig "") setSort setValidSort validSortEvent
-        , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
         , makeField (perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+        , makeField (measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
         , makeField (subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
         , makeDropdown categoryConfig setCategory setValidCategory validCategoryEvent
         , makeField (descriptionConfig "") setDescription (const $ pure unit) (pure $ Just true)
@@ -208,12 +198,12 @@ createItem initialUUID = Deku.do
         , makeField (effectsConfig "") setEffects (const $ pure unit) (pure $ Just true)
         , makeField (thcConfig "") setThc setValidThc validThcEvent
         , makeField (cbgConfig "") setCbg setValidCbg validCbgEvent
-        , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
-        , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
         , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
+        , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
         , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
         , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
         , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
+        , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
         , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
         , makeField (imgConfig "") setImg setValidImg validImgEvent
         ]

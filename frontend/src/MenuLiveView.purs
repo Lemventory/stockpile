@@ -18,7 +18,7 @@ import Utils (compareMenuItems, generateClassName)
 
 -- creates a LiveView component with connected state
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut
-createMenuLiveView inventoryPoll loadingPoll errorPoll = 
+createMenuLiveView inventoryPoll loadingPoll errorPoll =
   D.div
     [ DA.klass_ "page-container"
     , DL.load_ \_ -> do
@@ -26,7 +26,7 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
     ]
     [ D.div
         [ DA.klass_ "status-container" ]
-        [ loadingPoll <#~> \isLoading -> 
+        [ loadingPoll <#~> \isLoading ->
             if isLoading then
               D.div [ DA.klass_ "loading-indicator" ]
                 [ text_ "Loading data..." ]
@@ -46,29 +46,6 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
         ]
     ]
 
--- -- For backward compatibility
--- menuLiveView :: Nut
--- menuLiveView = D.div_
---   [ text_ "Please use createMenuLiveView instead of directly accessing menuLiveView" ]
-
--- -- Legacy function kept for backward compatibility
--- runLiveView :: Effect Unit
--- runLiveView = do
---   Console.log "Running standalone LiveView (deprecated)"
-  
---   void $ launchAff_ do
---     liftEffect $ Console.log "Starting data fetch in standalone mode..."
---     result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
-    
---     liftEffect $ case result of
---       Left err -> do
---         Console.error $ "Error fetching inventory: " <> err
---       Right (InventoryData inv) -> do
---         Console.log $ "Success! Received " <> show (length (case inv of Inventory items -> items)) <> " items"
---         void $ runInBody $ renderInventory defaultViewConfig inv
---       Right (Message msg) -> do
---         Console.log $ "Received message: " <> msg
-
 renderInventory :: LiveViewConfig -> Inventory -> Nut
 renderInventory config inventory@(Inventory items) =
   let
@@ -80,13 +57,13 @@ renderInventory config inventory@(Inventory items) =
   in
     D.div
       [ DA.klass_ "inventory-grid" ]
-      [ D.div [ DA.klass_ "inventory-stats" ] 
+      [ D.div [ DA.klass_ "inventory-stats" ]
           [ text $ pure $ "Total items: " <> show (length items) ]
       , if length items == 0 then
           D.div [ DA.klass_ "empty-inventory" ]
             [ text_ "No items in inventory" ]
         else
-          D.div [ DA.klass_ "inventory-items" ] 
+          D.div [ DA.klass_ "inventory-items" ]
             (map renderItem sortedItems)
       ]
 
