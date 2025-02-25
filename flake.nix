@@ -79,6 +79,7 @@
         runtimeInputs = with pkgs; [ rsync ];
         text = ''
           rsync -va --delete --exclude-from='.gitignore' --exclude='.git/' ~/workdir/cheeblr/ ~/plutus/workspace/scdWs/cheeblr/
+          rsync -va ~/.local/share/cheeblr/backups/ ~/plutus/cheeblrDB/
         '';
       };
 
