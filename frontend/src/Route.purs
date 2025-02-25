@@ -39,10 +39,10 @@ nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
           [ DA.klass_ "navbar-brand"
           , DA.href_ "/#/"
           ]
-          [ text_ "Inventory Management" ]
+          [ text_ "Inventory" ]
       , D.ul
           [ DA.klass_ "nav navbar-nav pull-xs-right" ]
-          [ navItem LiveView "/#/" "Live View" currentRoute
+          [ navItem LiveView "/#/" "LiveView" currentRoute
           , navItem Create "/#/create" "Create Item" currentRoute
           ]
       ]

@@ -251,7 +251,7 @@ sortConfig defaultValue = makeFieldConfig "Sort Order" "Enter sort position" def
   , errorMessage: "Required, non-negative whole number"
   , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
-  
+
 measureUnitConfig :: String -> FieldConfig
 measureUnitConfig defaultValue = makeFieldConfig "Measure Unit" "Enter unit (g, mg, etc)" defaultValue
   { validation: validMeasurementUnit

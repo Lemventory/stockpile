@@ -62,14 +62,14 @@ dollarAmount = ValidationRule \str -> case Number.fromString str of
 
 validMeasurementUnit :: ValidationRule
 validMeasurementUnit = ValidationRule \str ->
-  let 
-    units = ["g", "mg", "kg", "oz", "lb", "ml", "l", "ea", "unit", "units", "pack", "packs", "eighth", "quarter", "half", "1/8", "1/4", "1/2"]
+  let
+    units = [ "g", "mg", "kg", "oz", "lb", "ml", "l", "ea", "unit", "units", "pack", "packs", "eighth", "quarter", "half", "1/8", "1/4", "1/2" ]
     lowercaseStr = trim (str # toLower)
   in
     any (\unit -> unit == lowercaseStr) units
 
 validUrl :: ValidationRule
-validUrl = ValidationRule \str -> 
+validUrl = ValidationRule \str ->
   case regex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags of
     Left _ -> false
     Right validRegex -> test validRegex str

@@ -1,13 +1,4 @@
-module Types.LiveViewConfig
-  ( FetchConfig
-  , LiveViewConfig
-  , QueryMode(..)
-  , SortConfig
-  , SortField(..)
-  , SortOrder(..)
-  , defaultConfig
-  , defaultViewConfig
-  ) where
+module Types.LiveViewConfig where
 
 import Prelude
 import Data.Tuple (Tuple)
