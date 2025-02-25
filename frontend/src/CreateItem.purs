@@ -26,14 +26,15 @@ import Validation (validateMenuItem)
 
 createItem :: Poll String -> Nut
 createItem initialUUID = Deku.do
-  -- Status and loading state
+
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setFiber /\ _ <- useState (pure unit)
 
-  -- Initialize states
+
   setName /\ nameEvent <- useState ""
   setValidName /\ validNameEvent <- useState (Just false)
+
 
   setSku /\ skuEvent <- useState ""
   setValidSku /\ validSkuEvent <- useState (Just true)
@@ -167,19 +168,26 @@ createItem initialUUID = Deku.do
       setValidImg (Just false)
 
   D.div_
-    [ D.div 
-        [ DL.load_ \_ -> do
+    [ D.div
+        [ DA.klass_ "component-loading-debug"
+        , DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
         ]
         []
-    , initialUUID <#~> \uuid -> 
-        D.div 
-          [ DL.load_ \_ -> do
-              liftEffect $ Console.log $ "Setting UUID: " <> uuid
-              setSku uuid
-              setValidSku (Just true)
-          ]
-          []
+    , D.div
+        [ DA.klass_ "initial-uuid-handler" ]
+        [ initialUUID <#~> \uuid -> do
+            D.div
+              [ DA.klass_ "uuid-application"
+              , DL.load_ \_ -> do
+                  liftEffect $ Console.log $ "Received UUID: " <> uuid
+                  when (uuid /= "") do
+                    liftEffect $ Console.log $ "Setting SKU field to: " <> uuid
+                    setSku uuid
+                    setValidSku (Just true)
+              ]
+              []
+        ]
     , D.div
         [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
         [ D.h2

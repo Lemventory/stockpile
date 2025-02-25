@@ -86,8 +86,12 @@ let
     tmux kill-session -t ${name} 2>/dev/null || true
     
     echo "Stopping database..."
-    pg-stop
-    
+    pg-stop || { echo "Failed to stop PostgreSQL completely"; exit 1; }
+    sleep 10  # Wait for processes to fully terminate
+
+    vite-cleanup
+    sleep 10  # Wait for processes to fully terminate
+
     echo "All services stopped."
   '';
 

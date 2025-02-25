@@ -38,12 +38,14 @@ main = do
   loadingState <- liftST Poll.create
   errorState <- liftST Poll.create
 
-  -- Create a Poll.Box for UUID handling
+
   currentUUID <- liftST Poll.create
 
-  -- Generate initial UUID and push it to the Poll Box
+
   initialUUID <- genUUID
-  currentUUID.push (show initialUUID)
+  let initialUUIDStr = show initialUUID
+  Console.log $ "Initial UUID generated: " <> initialUUIDStr
+  currentUUID.push initialUUIDStr
 
   let menuLiveView = createMenuLiveView inventoryState.poll loadingState.poll errorState.poll
 
@@ -56,17 +58,18 @@ main = do
     matcher _ r = do
       Console.log $ "Route changed to: " <> show r
 
-      -- Generate new UUID when navigating to Create route
+
       when (r == Create) do
         newUUID <- genUUID
-        currentUUID.push (show newUUID)
-        Console.log $ "Generated new UUID for Create page: " <> show newUUID
+        let newUUIDStr = show newUUID
+        Console.log $ "Generated new UUID for Create page: " <> newUUIDStr
+        currentUUID.push newUUIDStr
 
       currentRoute.push $ Tuple r (routeToComponent r)
 
       case r of
         LiveView -> do
-          -- Set loading state
+
           loadingState.push true
           errorState.push ""
 

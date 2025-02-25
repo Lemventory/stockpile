@@ -5,7 +5,8 @@ import Prelude
 import Data.Array ((:))
 import Data.Enum (class BoundedEnum)
 import Data.Foldable (for_)
-import Data.Maybe (Maybe(..))
+import Data.Int (fromString)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), Replacement(..), trim, replaceAll)
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
@@ -16,7 +17,7 @@ import Effect (Effect)
 import FRP.Poll (Poll)
 import Types (DropdownConfig, FieldConfig, ItemCategory, Species, ValidationPreset, runValidation)
 import Utils (getAllEnumValues, parseCommaList)
-import Validation (alphanumeric, allOf, commaListField, moneyField, multilineText, nonEmpty, numberField, percentageField, requiredText, requiredTextWithLimit, validUUID)
+import Validation (allOf, alphanumeric, anyOf, commaListField, fraction, moneyField, multilineText, nonEmpty, nonNegativeInteger, percentageField, quantityField, requiredText, requiredTextWithLimit, urlField, validMeasurementUnit, validUUID)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
@@ -199,7 +200,7 @@ nameConfig defaultValue = makeFieldConfig "Name" "Enter product name" defaultVal
 
 brandConfig :: String -> FieldConfig
 brandConfig defaultValue = makeFieldConfig "Brand" "Enter brand name" defaultValue
-  (requiredTextWithLimit 30)
+  (requiredTextWithLimit 50)
 
 priceConfig :: String -> FieldConfig
 priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue
@@ -207,7 +208,7 @@ priceConfig defaultValue = makeFieldConfig "Price" "Enter price" defaultValue
 
 quantityConfig :: String -> FieldConfig
 quantityConfig defaultValue = makeFieldConfig "Quantity" "Enter quantity" defaultValue
-  numberField
+  quantityField
 
 thcConfig :: String -> FieldConfig
 thcConfig defaultValue = makeFieldConfig "THC %" "Enter THC percentage" defaultValue
@@ -245,17 +246,25 @@ lineageConfig :: String -> FieldConfig
 lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue commaListField
 
 sortConfig :: String -> FieldConfig
-sortConfig defaultValue = makeFieldConfig "Sort Order" "Enter sort position" defaultValue numberField
-
+sortConfig defaultValue = makeFieldConfig "Sort Order" "Enter sort position" defaultValue
+  { validation: allOf [ nonEmpty, nonNegativeInteger ]
+  , errorMessage: "Required, non-negative whole number"
+  , formatInput: \str -> fromMaybe str $ map show $ fromString str
+  }
+  
 measureUnitConfig :: String -> FieldConfig
 measureUnitConfig defaultValue = makeFieldConfig "Measure Unit" "Enter unit (g, mg, etc)" defaultValue
-  { validation: allOf [ nonEmpty, alphanumeric ]
-  , errorMessage: "Required, valid unit"
+  { validation: validMeasurementUnit
+  , errorMessage: "Required, valid unit (g, mg, kg, oz, etc.)"
   , formatInput: trim
   }
 
 perPackageConfig :: String -> FieldConfig
-perPackageConfig defaultValue = makeFieldConfig "Per Package" "Enter amount per package" defaultValue numberField
+perPackageConfig defaultValue = makeFieldConfig "Per Package" "Enter amount per package" defaultValue
+  { validation: anyOf [ nonNegativeInteger, fraction ]
+  , errorMessage: "Required, whole number or fraction"
+  , formatInput: identity
+  }
 
 subcategoryConfig :: String -> FieldConfig
 subcategoryConfig defaultValue = makeFieldConfig "Subcategory" "Enter subcategory" defaultValue
@@ -265,18 +274,10 @@ subcategoryConfig defaultValue = makeFieldConfig "Subcategory" "Enter subcategor
   }
 
 leaflyUrlConfig :: String -> FieldConfig
-leaflyUrlConfig defaultValue = makeFieldConfig "Leafly URL" "Enter Leafly URL" defaultValue
-  { validation: nonEmpty
-  , errorMessage: "Required"
-  , formatInput: trim
-  }
+leaflyUrlConfig defaultValue = makeFieldConfig "Leafly URL" "Enter Leafly URL" defaultValue urlField
 
 imgConfig :: String -> FieldConfig
-imgConfig defaultValue = makeFieldConfig "Image URL" "Enter image URL" defaultValue
-  { validation: nonEmpty
-  , errorMessage: "Required"
-  , formatInput: trim
-  }
+imgConfig defaultValue = makeFieldConfig "Image URL" "Enter image URL" defaultValue urlField
 
 -- | Styling
 inputKls :: String

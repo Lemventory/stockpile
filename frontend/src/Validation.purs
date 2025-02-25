@@ -2,13 +2,13 @@ module Validation where
 
 import Prelude
 
-import Data.Array (all)
+import Data.Array (all, any)
 import Data.Either (Either(..))
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
 import Data.String (length) as String
-import Data.String (trim)
+import Data.String (toLower, trim)
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
 import Type.Proxy (Proxy(..))
@@ -45,6 +45,11 @@ alphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9-\\s]+$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
+extendedAlphanumeric :: ValidationRule
+extendedAlphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9\\s\\-_&+',\\.\\(\\)]+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
+
 percentage :: ValidationRule
 percentage = ValidationRule \str -> case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
   Left _ -> false
@@ -55,10 +60,34 @@ dollarAmount = ValidationRule \str -> case Number.fromString str of
   Just n -> n >= 0.0
   Nothing -> false
 
+validMeasurementUnit :: ValidationRule
+validMeasurementUnit = ValidationRule \str ->
+  let 
+    units = ["g", "mg", "kg", "oz", "lb", "ml", "l", "ea", "unit", "units", "pack", "packs", "eighth", "quarter", "half", "1/8", "1/4", "1/2"]
+    lowercaseStr = trim (str # toLower)
+  in
+    any (\unit -> unit == lowercaseStr) units
+
+validUrl :: ValidationRule
+validUrl = ValidationRule \str -> 
+  case regex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags of
+    Left _ -> false
+    Right validRegex -> test validRegex str
+
 positiveInteger :: ValidationRule
 positiveInteger = ValidationRule \str -> case fromString str of
   Just n -> n > 0
   Nothing -> false
+
+nonNegativeInteger :: ValidationRule
+nonNegativeInteger = ValidationRule \str -> case fromString str of
+  Just n -> n >= 0
+  Nothing -> false
+
+fraction :: ValidationRule
+fraction = ValidationRule \str -> case regex "^\\d+\\/\\d+$" noFlags of
+  Left _ -> false
+  Right validRegex -> test validRegex str
 
 vowels :: ValidationRule
 vowels = ValidationRule \str -> case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
@@ -82,6 +111,10 @@ allOf :: Array ValidationRule -> ValidationRule
 allOf rules = ValidationRule \str ->
   all (\(ValidationRule rule) -> rule str) rules
 
+anyOf :: Array ValidationRule -> ValidationRule
+anyOf rules = ValidationRule \str ->
+  any (\(ValidationRule rule) -> rule str) rules
+
 -- | Validation presets
 requiredText :: ValidationPreset
 requiredText =
@@ -92,7 +125,7 @@ requiredText =
 
 requiredTextWithLimit :: Int -> ValidationPreset
 requiredTextWithLimit limit =
-  { validation: allOf [ nonEmpty, alphanumeric, maxLength limit ]
+  { validation: allOf [ nonEmpty, extendedAlphanumeric, maxLength limit ]
   , errorMessage: "Required, text only (max " <> show limit <> " chars)"
   , formatInput: trim
   }
@@ -118,6 +151,20 @@ numberField =
   , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
+urlField :: ValidationPreset
+urlField =
+  { validation: allOf [ nonEmpty, validUrl ]
+  , errorMessage: "Required, valid URL"
+  , formatInput: trim
+  }
+
+quantityField :: ValidationPreset
+quantityField =
+  { validation: allOf [ nonEmpty, nonNegativeInteger ]
+  , errorMessage: "Required, whole number"
+  , formatInput: \str -> fromMaybe str $ map show $ fromString str
+  }
+
 commaListField :: ValidationPreset
 commaListField =
   { validation: commaList
@@ -130,6 +177,13 @@ multilineText =
   { validation: nonEmpty
   , errorMessage: "Required"
   , formatInput: identity
+  }
+
+nonNegativeIntegerField :: ValidationPreset
+nonNegativeIntegerField =
+  { validation: allOf [ nonEmpty, nonNegativeInteger ]
+  , errorMessage: "Required, whole number (0 or positive)"
+  , formatInput: \str -> fromMaybe str $ map show $ fromString str
   }
 
 -- | Form validation
@@ -217,14 +271,14 @@ validateStringField fieldName (ValidationRule rule) value =
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input = do
-  sort <- validateStringField "Sort" positiveInteger input.sort
+  sort <- validateStringField "Sort" nonNegativeInteger input.sort
   sku <- validateStringField "SKU" (allOf [ nonEmpty, validUUID ]) input.sku
-  brand <- validateStringField "Brand" (allOf [ nonEmpty, alphanumeric ]) input.brand
+  brand <- validateStringField "Brand" (allOf [ nonEmpty, extendedAlphanumeric ]) input.brand
   name <- validateStringField "Name" (allOf [ nonEmpty, alphanumeric ]) input.name
   price <- validateStringField "Price" dollarAmount input.price
-  measure_unit <- validateStringField "Measure Unit" nonEmpty input.measure_unit
-  per_package <- validateStringField "Per Package" nonEmpty input.per_package
-  quantity <- validateStringField "Quantity" positiveInteger input.quantity
+  measure_unit <- validateStringField "Measure Unit" validMeasurementUnit input.measure_unit
+  per_package <- validateStringField "Per Package" (anyOf [ nonNegativeInteger, fraction ]) input.per_package
+  quantity <- validateStringField "Quantity" nonNegativeInteger input.quantity
   category <- validateStringField "Category" nonEmpty input.category
   subcategory <- validateStringField "Subcategory" nonEmpty input.subcategory
 
@@ -275,8 +329,8 @@ validateStrainLineage input = do
   creator <- validateStringField "Creator" (allOf [ nonEmpty, alphanumeric ]) input.creator
   species <- validateStringField "Species" nonEmpty input.species
   dominant_tarpene <- validateStringField "Dominant Terpene" (allOf [ nonEmpty, alphanumeric ]) input.dominant_tarpene
-  leafly_url <- validateStringField "Leafly URL" nonEmpty input.leafly_url
-  img <- validateStringField "Image URL" nonEmpty input.img
+  leafly_url <- validateStringField "Leafly URL" validUrl input.leafly_url
+  img <- validateStringField "Image URL" validUrl input.img
 
   speciesType <- validateSpecies species
 

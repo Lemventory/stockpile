@@ -5,7 +5,6 @@ module Types.LiveViewConfig
   , SortConfig
   , SortField(..)
   , SortOrder(..)
-  , ViewConfig
   , defaultConfig
   , defaultViewConfig
   ) where
@@ -80,13 +79,4 @@ data SortOrder = Ascending | Descending
 
 type SortConfig =
   { sortFields :: Array (Tuple SortField SortOrder)
-  }
-
-type ViewConfig =
-  { sortFields :: Array (Tuple SortField SortOrder)
-  , hideOutOfStock :: Boolean
-  , mode :: QueryMode
-  , refreshRate :: Int
-  , screens :: Int
-  , fetchConfig :: FetchConfig
   }

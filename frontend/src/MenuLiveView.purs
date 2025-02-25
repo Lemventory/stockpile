@@ -2,26 +2,21 @@ module MenuLiveView where
 
 import Prelude
 
-import API (fetchInventory)
 import Data.Array (filter, length, sortBy)
-import Data.Either (Either(..))
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners (load_) as DL
 import Deku.Hooks ((<#~>))
-import Deku.Toplevel (runInBody)
-import Effect (Effect)
-import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Poll (Poll)
-import Types (Inventory(..), InventoryResponse(..), MenuItem(..), StrainLineage(..))
+import Types (Inventory(..), MenuItem(..), StrainLineage(..))
 import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
 import Utils (compareMenuItems, generateClassName)
 
--- Factory function that creates a LiveView component with connected state
+-- creates a LiveView component with connected state
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut
 createMenuLiveView inventoryPoll loadingPoll errorPoll = 
   D.div
@@ -51,28 +46,28 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
         ]
     ]
 
--- For backward compatibility
-menuLiveView :: Nut
-menuLiveView = D.div_
-  [ text_ "Please use createMenuLiveView instead of directly accessing menuLiveView" ]
+-- -- For backward compatibility
+-- menuLiveView :: Nut
+-- menuLiveView = D.div_
+--   [ text_ "Please use createMenuLiveView instead of directly accessing menuLiveView" ]
 
--- Legacy function kept for backward compatibility
-runLiveView :: Effect Unit
-runLiveView = do
-  Console.log "Running standalone LiveView (deprecated)"
+-- -- Legacy function kept for backward compatibility
+-- runLiveView :: Effect Unit
+-- runLiveView = do
+--   Console.log "Running standalone LiveView (deprecated)"
   
-  void $ launchAff_ do
-    liftEffect $ Console.log "Starting data fetch in standalone mode..."
-    result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
+--   void $ launchAff_ do
+--     liftEffect $ Console.log "Starting data fetch in standalone mode..."
+--     result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
     
-    liftEffect $ case result of
-      Left err -> do
-        Console.error $ "Error fetching inventory: " <> err
-      Right (InventoryData inv) -> do
-        Console.log $ "Success! Received " <> show (length (case inv of Inventory items -> items)) <> " items"
-        void $ runInBody $ renderInventory defaultViewConfig inv
-      Right (Message msg) -> do
-        Console.log $ "Received message: " <> msg
+--     liftEffect $ case result of
+--       Left err -> do
+--         Console.error $ "Error fetching inventory: " <> err
+--       Right (InventoryData inv) -> do
+--         Console.log $ "Success! Received " <> show (length (case inv of Inventory items -> items)) <> " items"
+--         void $ runInBody $ renderInventory defaultViewConfig inv
+--       Right (Message msg) -> do
+--         Console.log $ "Received message: " <> msg
 
 renderInventory :: LiveViewConfig -> Inventory -> Nut
 renderInventory config inventory@(Inventory items) =
