@@ -128,8 +128,12 @@ let
     '';
   };
 
-  ip-show = pkgs.writeShellApplication {
-    name = "ip-show";
+  get-ip = pkgs.writeShellApplication {
+    name = "get-ip";
+    # runtimeInputs = with pkgs; [
+    #   ip
+    #   gnugrep
+    # ];
     text = ''
       ip addr show | grep "inet " | grep -v 127.0.0.1
     '';
@@ -175,7 +179,7 @@ let
   };
 
 in {
-  inherit vite vite-cleanup spago-watch concurrent dev network-dev;
+  inherit vite vite-cleanup spago-watch concurrent dev network-dev get-ip;
   
   # Frontend development tools
   buildInputs = with pkgs; [
