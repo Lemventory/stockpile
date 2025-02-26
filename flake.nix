@@ -100,6 +100,7 @@
         nativeBuildInputs = with pkgs; [
           pkg-config
           postgresql
+          postgresql.lib
           zlib
           openssl.dev
           libiconv
@@ -169,12 +170,12 @@
             CoreServices
           ]));
           shellHook = ''
-            # Set up PostgreSQL environment
             export PGDATA="$HOME/.local/share/${name}/postgres"
             export PGPORT="5432"
             export PGUSER="$(whoami)"
             export PGPASSWORD="postgres"
             export PGDATABASE="${name}"
+            export PKG_CONFIG_PATH="${pkgs.postgresql.lib}/lib/pkgconfig:$PKG_CONFIG_PATH"
             # code-workspace
           '';
       };
