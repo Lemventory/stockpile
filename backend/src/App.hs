@@ -1,7 +1,7 @@
+-- FILE: backend/src/App.hs
 module App where
 
 import API
-import qualified Data.ByteString.Char8 as BS
 import Database
 import Network.HTTP.Types.Header
 import Network.HTTP.Types.Method
@@ -31,14 +31,19 @@ run = do
   pool <- initializeDB (dbConfig config)
   createTables pool
 
-  putStrLn $ "Starting server on port " ++ show (serverPort config)
+  putStrLn $ "Starting server on all interfaces, port " ++ show (serverPort config)
+  putStrLn "=================================="
+  putStrLn $ "Server running on port " ++ show (serverPort config)
+  putStrLn "You can access this application from other devices on your network using:"
+  putStrLn $ "http://YOUR_MACHINE_IP:" ++ show (serverPort config)
+  putStrLn "=================================="
 
   let
     corsPolicy =
       CorsResourcePolicy
-        { corsOrigins = Just ([BS.pack "http://localhost:5173", BS.pack "http://localhost:5174"], True)
+        { corsOrigins = Nothing  -- Allow requests from any origin for LAN testing
         , corsMethods = [methodGet, methodPost, methodPut, methodDelete, methodOptions]
-        , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hContentLength]
+        , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hOrigin, hContentLength]
         , corsExposedHeaders = Nothing
         , corsMaxAge = Just 3600
         , corsVaryOrigin = False
@@ -48,4 +53,5 @@ run = do
 
     app = cors (const $ Just corsPolicy) $ serve inventoryAPI (server pool)
 
+  -- Use the defined app variable
   Warp.run (serverPort config) app

@@ -12,9 +12,10 @@ import Fetch.Yoga.Json (fromJSON)
 import Types (Inventory, InventoryResponse(..), MenuItem)
 import Types.LiveViewConfig (QueryMode(..), FetchConfig)
 import Yoga.JSON (writeJSON)
+import NetworkConfig (currentConfig)
 
 baseUrl :: String
-baseUrl = "http://localhost:8080"
+baseUrl = currentConfig.apiBaseUrl
 
 writeInventory :: MenuItem -> Aff (Either String InventoryResponse)
 writeInventory menuItem = do
@@ -29,7 +30,7 @@ writeInventory menuItem = do
       , headers:
           { "Content-Type": "application/json"
           , "Accept": "application/json"
-          , "Origin": "http://localhost:5174"
+          , "Origin": currentConfig.appOrigin
           }
       }
     fromJSON response.json
@@ -46,7 +47,7 @@ readInventory = do
       , headers:
           { "Content-Type": "application/json"
           , "Accept": "application/json"
-          , "Origin": "http://localhost:5174"
+          , "Origin": currentConfig.appOrigin
           }
       }
     fromJSON response.json :: Aff InventoryResponse

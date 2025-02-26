@@ -128,8 +128,47 @@ let
     '';
   };
 
+  network-dev = pkgs.writeShellApplication {
+    name = "network-dev";
+    runtimeInputs = with pkgs; [
+      nodejs_20
+      esbuild
+      tmux
+    ];
+    text = ''
+      # Get the local IP address
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        # For macOS
+        IP=$(ipconfig getifaddr en0 || ipconfig getifaddr en1)
+      else
+        # For Linux
+        IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -n 1)
+      fi
+      
+      echo "Starting development server on network address: $IP"
+      echo "Update Config.purs with this IP address if it's not already set"
+      
+      cd frontend
+      
+      # Run the backend in one pane and frontend in another
+      tmux new-session -d -s dev-session
+      
+      # Backend pane
+      tmux send-keys "cd ../backend && cabal run" C-m
+      
+      # Split window horizontally
+      tmux split-window -h
+      
+      # Frontend pane with host set to local IP
+      tmux send-keys "cd ../frontend && npx vite --host $IP" C-m
+      
+      # Attach to the session
+      tmux attach-session -t dev-session
+    '';
+  };
+
 in {
-  inherit vite vite-cleanup spago-watch concurrent dev;
+  inherit vite vite-cleanup spago-watch concurrent dev network-dev;
   
   # Frontend development tools
   buildInputs = with pkgs; [

@@ -3,11 +3,11 @@ module Types.LiveViewConfig where
 import Prelude
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
+import NetworkConfig (currentConfig)
 
--- | Default configurations
 defaultConfig :: FetchConfig
 defaultConfig =
-  { apiEndpoint: "http://localhost:8080/inventory"
+  { apiEndpoint: currentConfig.apiBaseUrl <> "/inventory"
   , jsonPath: "./inventory.json"
   , corsHeaders: true
   }
@@ -24,7 +24,7 @@ defaultViewConfig =
   , refreshRate: 5000
   , screens: 1
   , fetchConfig: defaultConfig
-      { apiEndpoint = "http://localhost:8080/inventory"
+      { apiEndpoint = currentConfig.apiBaseUrl <> "/inventory"
       , corsHeaders = true
       }
   }
