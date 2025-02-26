@@ -226,8 +226,8 @@ creatorConfig :: String -> FieldConfig
 creatorConfig defaultValue = makeFieldConfig "Creator" "Enter creator name" defaultValue
   requiredText
 
-dominantTarpeneConfig :: String -> FieldConfig
-dominantTarpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue
+dominantTerpeneConfig :: String -> FieldConfig
+dominantTerpeneConfig defaultValue = makeFieldConfig "Dominant Terpene" "Enter dominant terpene" defaultValue
   requiredText
 
 descriptionConfig :: String -> FieldConfig
@@ -239,8 +239,8 @@ tagsConfig defaultValue = makeFieldConfig "Tags" "Enter tags (comma-separated)" 
 effectsConfig :: String -> FieldConfig
 effectsConfig defaultValue = makeFieldConfig "Effects" "Enter effects (comma-separated)" defaultValue commaListField
 
-tarpenesConfig :: String -> FieldConfig
-tarpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" defaultValue commaListField
+terpenesConfig :: String -> FieldConfig
+terpenesConfig defaultValue = makeFieldConfig "Terpenes" "Enter terpenes (comma-separated)" defaultValue commaListField
 
 lineageConfig :: String -> FieldConfig
 lineageConfig defaultValue = makeFieldConfig "Lineage" "Enter lineage (comma-separated)" defaultValue commaListField

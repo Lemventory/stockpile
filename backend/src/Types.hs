@@ -43,8 +43,8 @@ data StrainLineage = StrainLineage
   , strain :: Text
   , creator :: Text
   , species :: Species
-  , dominant_tarpene :: Text
-  , tarpenes :: V.Vector Text
+  , dominant_terpene :: Text
+  , terpenes :: V.Vector Text
   , lineage :: V.Vector Text
   , leafly_url :: Text
   , img :: Text

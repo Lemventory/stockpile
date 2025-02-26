@@ -328,7 +328,7 @@ validateStrainLineage input = do
   strain <- validateStringField "Strain" (allOf [ nonEmpty, alphanumeric ]) input.strain
   creator <- validateStringField "Creator" (allOf [ nonEmpty, alphanumeric ]) input.creator
   species <- validateStringField "Species" nonEmpty input.species
-  dominant_tarpene <- validateStringField "Dominant Terpene" (allOf [ nonEmpty, alphanumeric ]) input.dominant_tarpene
+  dominant_terpene <- validateStringField "Dominant Terpene" (allOf [ nonEmpty, alphanumeric ]) input.dominant_terpene
   leafly_url <- validateStringField "Leafly URL" validUrl input.leafly_url
   img <- validateStringField "Image URL" validUrl input.img
 
@@ -340,8 +340,8 @@ validateStrainLineage input = do
     , strain
     , creator
     , species: speciesType
-    , dominant_tarpene
-    , tarpenes: parseCommaList input.tarpenes
+    , dominant_terpene
+    , terpenes: parseCommaList input.terpenes
     , lineage: parseCommaList input.lineage
     , leafly_url
     , img

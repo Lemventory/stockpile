@@ -114,8 +114,8 @@ data StrainLineage = StrainLineage
   , strain :: String
   , creator :: String
   , species :: Species
-  , dominant_tarpene :: String
-  , tarpenes :: Array String
+  , dominant_terpene :: String
+  , terpenes :: Array String
   , lineage :: Array String
   , leafly_url :: String
   , img :: String
@@ -185,8 +185,8 @@ type StrainLineageFormInput =
   , strain :: String
   , creator :: String
   , species :: String
-  , dominant_tarpene :: String
-  , tarpenes :: String
+  , dominant_terpene :: String
+  , terpenes :: String
   , lineage :: String
   , leafly_url :: String
   , img :: String
@@ -387,8 +387,8 @@ instance writeForeignStrainLineage :: WriteForeign StrainLineage where
     , strain: lineage.strain
     , creator: lineage.creator
     , species: show lineage.species
-    , dominant_tarpene: lineage.dominant_tarpene
-    , tarpenes: lineage.tarpenes
+    , dominant_terpene: lineage.dominant_terpene
+    , terpenes: lineage.terpenes
     , lineage: lineage.lineage
     , leafly_url: lineage.leafly_url
     , img: lineage.img
@@ -487,8 +487,8 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
     strain <- readProp "strain" json >>= readImpl
     creator <- readProp "creator" json >>= readImpl
     species <- readProp "species" json >>= readImpl
-    dominant_tarpene <- readProp "dominant_tarpene" json >>= readImpl
-    tarpenes <- readProp "tarpenes" json >>= readImpl
+    dominant_terpene <- readProp "dominant_terpene" json >>= readImpl
+    terpenes <- readProp "terpenes" json >>= readImpl
     lineage <- readProp "lineage" json >>= readImpl
     leafly_url <- readProp "leafly_url" json >>= readImpl
     img <- readProp "img" json >>= readImpl
@@ -498,8 +498,8 @@ instance readForeignStrainLineage :: ReadForeign StrainLineage where
       , strain
       , creator
       , species
-      , dominant_tarpene
-      , tarpenes
+      , dominant_terpene
+      , terpenes
       , lineage
       , leafly_url
       , img

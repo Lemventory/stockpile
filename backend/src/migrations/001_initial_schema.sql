@@ -21,8 +21,8 @@ CREATE TABLE strain_lineage (
   strain TEXT NOT NULL,
   creator TEXT NOT NULL,
   species TEXT NOT NULL,
-  dominant_tarpene TEXT NOT NULL,
-  tarpenes TEXT[] NOT NULL,
+  dominant_terpene TEXT NOT NULL,
+  terpenes TEXT[] NOT NULL,
   lineage TEXT[] NOT NULL,
   leafly_url TEXT NOT NULL,
   img TEXT NOT NULL

@@ -17,7 +17,7 @@ import Deku.Hooks (useState)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTarpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, tarpenesConfig, thcConfig)
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
 import Types (InventoryResponse(..))
 import UUIDGen (genUUID)
 import Utils (ensureInt, ensureNumber)
@@ -52,7 +52,7 @@ createItem initialUUID = Deku.do
   setDescription /\ descriptionEvent <- useState ""
   setTags /\ tagsEvent <- useState ""
   setEffects /\ effectsEvent <- useState ""
-  setTarpenes /\ tarpenesEvent <- useState ""
+  setTerpenes /\ terpenesEvent <- useState ""
   setLineage /\ lineageEvent <- useState ""
 
   setThc /\ thcEvent <- useState ""
@@ -70,8 +70,8 @@ createItem initialUUID = Deku.do
   setSpecies /\ speciesEvent <- useState ""
   setValidSpecies /\ validSpeciesEvent <- useState (Just false)
 
-  setDominantTarpene /\ dominantTarpeneEvent <- useState ""
-  setValidDominantTarpene /\ validDominantTarpeneEvent <- useState (Just false)
+  setDominantTerpene /\ dominantTerpeneEvent <- useState ""
+  setValidDominantTerpene /\ validDominantTerpeneEvent <- useState (Just false)
 
   setSort /\ sortEvent <- useState ""
   setValidSort /\ validSortEvent <- useState (Just false)
@@ -104,7 +104,7 @@ createItem initialUUID = Deku.do
       vStrain <- validStrainEvent
       vCreator <- validCreatorEvent
       vSpecies <- validSpeciesEvent
-      vDominantTarpene <- validDominantTarpeneEvent
+      vDominantTerpene <- validDominantTerpeneEvent
       in
         all (fromMaybe false)
           [ vName
@@ -118,7 +118,7 @@ createItem initialUUID = Deku.do
           , vStrain
           , vCreator
           , vSpecies
-          , vDominantTarpene
+          , vDominantTerpene
           ]
 
   let
@@ -149,9 +149,9 @@ createItem initialUUID = Deku.do
       setValidCreator (Just false)
       setSpecies ""
       setValidSpecies (Just false)
-      setDominantTarpene ""
-      setValidDominantTarpene (Just false)
-      setTarpenes ""
+      setDominantTerpene ""
+      setValidDominantTerpene (Just false)
+      setTerpenes ""
       setLineage ""
       setSort ""
       setValidSort (Just false)
@@ -200,8 +200,8 @@ createItem initialUUID = Deku.do
         , makeField (cbgConfig "") setCbg setValidCbg validCbgEvent
         , makeDropdown speciesConfig setSpecies setValidSpecies validSpeciesEvent
         , makeField (strainConfig "") setStrain setValidStrain validStrainEvent
-        , makeField (dominantTarpeneConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneEvent
-        , makeField (tarpenesConfig "") setTarpenes (const $ pure unit) (pure $ Just true)
+        , makeField (dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
+        , makeField (terpenesConfig "") setTerpenes (const $ pure unit) (pure $ Just true)
         , makeField (lineageConfig "") setLineage (const $ pure unit) (pure $ Just true)
         , makeField (creatorConfig "") setCreator setValidCreator validCreatorEvent
         , makeField (leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
@@ -211,7 +211,7 @@ createItem initialUUID = Deku.do
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
         , DL.runOn DL.click $
-            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTarpene tarpenes lineage leaflyUrl img -> do
+            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTerpene terpenes lineage leaflyUrl img -> do
                 setSubmitting true
                 void $ setFiber =<< launchAff do
                   let
@@ -235,8 +235,8 @@ createItem initialUUID = Deku.do
                           , strain
                           , creator
                           , species
-                          , dominant_tarpene: dominantTarpene
-                          , tarpenes
+                          , dominant_terpene: dominantTerpene
+                          , terpenes
                           , lineage
                           , leafly_url: leaflyUrl
                           , img
@@ -292,8 +292,8 @@ createItem initialUUID = Deku.do
               <*> strainEvent
               <*> creatorEvent
               <*> speciesEvent
-              <*> dominantTarpeneEvent
-              <*> tarpenesEvent
+              <*> dominantTerpeneEvent
+              <*> terpenesEvent
               <*> lineageEvent
               <*> leaflyUrlEvent
               <*> imgEvent

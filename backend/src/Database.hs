@@ -104,8 +104,8 @@ createTables pool = withConnection pool $ \conn -> do
             strain TEXT NOT NULL,
             creator TEXT NOT NULL,
             species TEXT NOT NULL,
-            dominant_tarpene TEXT NOT NULL,
-            tarpenes TEXT[] NOT NULL,
+            dominant_terpene TEXT NOT NULL,
+            terpenes TEXT[] NOT NULL,
             lineage TEXT[] NOT NULL,
             leafly_url TEXT NOT NULL,
             img TEXT NOT NULL
@@ -145,8 +145,8 @@ insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
       conn
       [sql|
         INSERT INTO strain_lineage
-            (sku, thc, cbg, strain, creator, species, dominant_tarpene,
-             tarpenes, lineage, leafly_url, img)
+            (sku, thc, cbg, strain, creator, species, dominant_terpene,
+             terpenes, lineage, leafly_url, img)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     |]
       ( sku
@@ -155,8 +155,8 @@ insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
       , strain
       , creator
       , show species
-      , dominant_tarpene
-      , PGArray $ V.toList tarpenes
+      , dominant_terpene
+      , PGArray $ V.toList terpenes
       , PGArray $ V.toList lineage
       , leafly_url
       , img
@@ -171,7 +171,7 @@ getAllMenuItems pool = withConnection pool $ \conn -> do
       [sql|
         SELECT m.*, 
                s.thc, s.cbg, s.strain, s.creator, s.species,
-               s.dominant_tarpene, s.tarpenes, s.lineage,
+               s.dominant_terpene, s.terpenes, s.lineage,
                s.leafly_url, s.img
         FROM menu_items m
         JOIN strain_lineage s ON m.sku = s.sku
