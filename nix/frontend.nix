@@ -128,6 +128,13 @@ let
     '';
   };
 
+  ip-show = pkgs.writeShellApplication {
+    name = "ip-show";
+    text = ''
+      ip addr show | grep "inet " | grep -v 127.0.0.1
+    '';
+  };
+
   network-dev = pkgs.writeShellApplication {
     name = "network-dev";
     runtimeInputs = with pkgs; [
