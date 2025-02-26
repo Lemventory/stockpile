@@ -19,8 +19,8 @@
             "strain": "Chronic",
             "creator": "Serious Seeds",
             "species": "IndicaDominantHybrid", 
-            "dominant_terpene": "Caryophyllene",
-            "terpenes": ["Caryophyllene", "Myrcene", "Terpinolene"],
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Terpinolene"],
             "lineage": ["Northern Lights", "Skunk #1", "AK-47"],
             "leafly_url": "https://www.leafly.com/strains/chronic",
             "img": "https://images.leafly.com/flower-images/defaults/generic/strain-29.png"
@@ -46,8 +46,8 @@
             "strain": "Sour Joker",
             "creator": "Unknown",
             "species": "Sativa", 
-            "dominant_terpene": "Caryophyllene",
-            "terpenes": ["Caryophyllene", "Myrcene", "Limonene", "Pinene"],
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Limonene", "Pinene"],
             "lineage": ["Amnesia Haze", "East Coast Sour Diesel"],
             "leafly_url": "https://www.leafly.com/strains/sour-joker",
             "img": "https://images.leafly.com/flower-images/defaults/generic/strain-30.png"
@@ -73,8 +73,8 @@
             "strain": "Lemon OG Haze",
             "creator": "Nirvana",
             "species": "SativaDominantHybrid", 
-            "dominant_terpene": "Caryophyllene",
-            "terpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
+            "dominant_tarpene": "Caryophyllene",
+            "tarpenes": ["Caryophyllene", "Myrcene", "Alpha-Pinene", "Limonene"],
             "lineage": ["Lemon OG", "Haze"],
             "leafly_url": "https://www.leafly.com/strains/lemon-og-haze",
             "img": "https://images.leafly.com/flower-images/defaults/generic/strain-23.png"
