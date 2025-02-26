@@ -1,6 +1,6 @@
 module Route where
 
-import Prelude
+import Prelude hiding ((/))
 
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
