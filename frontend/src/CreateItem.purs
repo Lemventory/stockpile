@@ -7,7 +7,6 @@ import Data.Array (all, null)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple.Nested ((/\))
-import Data.Validation.Semigroup (V, invalid, toEither)
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
@@ -19,39 +18,14 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Form as F
-import Types (InventoryResponse(..), MenuItem(..), StrainLineage(..), ItemCategory(..), Species(..))
-import Types.UUID (parseUUID)
+import Types (InventoryResponse(..))
 import UUIDGen (genUUID)
-import Utils (ensureInt, ensureNumber, parseCommaList)
+import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
-
--- Helper function for parsing ItemCategory
-parseCategory :: String -> V (Array String) ItemCategory
-parseCategory str = case str of
-  "Flower" -> pure Flower
-  "PreRolls" -> pure PreRolls
-  "Vaporizers" -> pure Vaporizers
-  "Edibles" -> pure Edibles
-  "Drinks" -> pure Drinks
-  "Concentrates" -> pure Concentrates
-  "Topicals" -> pure Topicals
-  "Tinctures" -> pure Tinctures
-  "Accessories" -> pure Accessories
-  _ -> invalid ["Invalid category"]
-
--- Helper function for parsing Species
-parseSpecies :: String -> V (Array String) Species  
-parseSpecies str = case str of
-  "Indica" -> pure Indica
-  "IndicaDominantHybrid" -> pure IndicaDominantHybrid
-  "Hybrid" -> pure Hybrid
-  "SativaDominantHybrid" -> pure SativaDominantHybrid
-  "Sativa" -> pure Sativa
-  _ -> invalid ["Invalid species"]
 
 createItem :: String -> Nut
 createItem initialUUID = Deku.do
-  -- State for form values
+
   setSku /\ skuValue <- useState initialUUID
   setName /\ nameValue <- useState ""
   setBrand /\ brandValue <- useState ""
@@ -66,7 +40,7 @@ createItem initialUUID = Deku.do
   setStrain /\ strainValue <- useState ""
   setCreator /\ creatorValue <- useState ""
   setSpecies /\ speciesValue <- useState ""
-  setDominantTarpene /\ dominantTarpeneValue <- useState ""
+  setDominantTerpene /\ dominantTerpeneValue <- useState ""
   setTerpenes /\ terpenesValue <- useState ""
   setLineage /\ lineageValue <- useState ""
   setSort /\ sortValue <- useState ""
@@ -76,47 +50,61 @@ createItem initialUUID = Deku.do
   setLeaflyUrl /\ leaflyUrlValue <- useState ""
   setImg /\ imgValue <- useState ""
 
-  -- validation states
-  setValidSku /\ validSkuValue <- useState (Just true)
-  setValidName /\ validNameValue <- useState (Just false)
-  setValidBrand /\ validBrandValue <- useState (Just false)
-  setValidPrice /\ validPriceValue <- useState (Just false)
-  setValidQuantity /\ validQuantityValue <- useState (Just false)
-  setValidCategory /\ validCategoryValue <- useState (Just false)
-  setValidThc /\ validThcValue <- useState (Just false)
-  setValidCbg /\ validCbgValue <- useState (Just false)
-  setValidStrain /\ validStrainValue <- useState (Just false)
-  setValidCreator /\ validCreatorValue <- useState (Just false)
-  setValidSpecies /\ validSpeciesValue <- useState (Just false)
-  setValidDominantTarpene /\ validDominantTarpeneValue <- useState (Just false)
-  setValidSort /\ validSortValue <- useState (Just false)
-  setValidMeasureUnit /\ validMeasureUnitValue <- useState (Just false)
-  setValidPerPackage /\ validPerPackageValue <- useState (Just false)
-  setValidSubcategory /\ validSubcategoryValue <- useState (Just false)
-  setValidLeaflyUrl /\ validLeaflyUrlValue <- useState (Just false)
-  setValidImg /\ validImgValue <- useState (Just false)
+  setValidName /\ validNameEvent <- useState (Just false)
+  setValidSku /\ validSkuEvent <- useState (Just true)
+  setValidBrand /\ validBrandEvent <- useState (Just false)
+  setValidPrice /\ validPriceEvent <- useState (Just false)
+  setValidQuantity /\ validQuantityEvent <- useState (Just false)
+  setValidCategory /\ validCategoryEvent <- useState (Just false)
+  setValidThc /\ validThcEvent <- useState (Just false)
+  setValidCbg /\ validCbgEvent <- useState (Just false)
+  setValidStrain /\ validStrainEvent <- useState (Just false)
+  setValidCreator /\ validCreatorEvent <- useState (Just false)
+  setValidSpecies /\ validSpeciesEvent <- useState (Just false)
+  setValidDominantTerpene /\ validDominantTerpeneEvent <- useState (Just false)
+  setValidTerpenes /\ validTerpenesEvent <- useState (Just true) -- Will be used in debug display
+  setValidLineage /\ validLineageEvent <- useState (Just true) -- Will be used in debug display
+  setValidSort /\ validSortEvent <- useState (Just false)
+  setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false)
+  setValidPerPackage /\ validPerPackageEvent <- useState (Just false)
+  setValidSubcategory /\ validSubcategoryEvent <- useState (Just false)
+  setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false)
+  setValidImg /\ validImgEvent <- useState (Just false)
+  setValidDescription /\ validDescriptionEvent <- useState (Just true) -- Will be used in debug display
+  setValidTags /\ validTagsEvent <- useState (Just true) -- Will be used in debug display
+  setValidEffects /\ validEffectsEvent <- useState (Just true) -- Will be used in debug display
 
-  -- UI state
-  setStatusMessage /\ statusMessageValue <- useState ""
-  setSubmitting /\ submittingValue <- useState false
+  setStatusMessage /\ statusMessageEvent <- useState ""
+  setSubmitting /\ submittingEvent <- useState false
   setErrors /\ errorsValue <- useState []
   setFiber /\ _ <- useState (pure unit)
 
-  -- Form validation logic
   let
     isFormValid = ado
-      vName <- validNameValue
-      vSku <- validSkuValue
-      vBrand <- validBrandValue
-      vPrice <- validPriceValue
-      vQuantity <- validQuantityValue
-      vCategory <- validCategoryValue
-      vThc <- validThcValue
-      vCbg <- validCbgValue
-      vStrain <- validStrainValue
-      vCreator <- validCreatorValue
-      vSpecies <- validSpeciesValue
-      vDominantTarpene <- validDominantTarpeneValue
+      vName <- validNameEvent
+      vSku <- validSkuEvent
+      vBrand <- validBrandEvent
+      vPrice <- validPriceEvent
+      vQuantity <- validQuantityEvent
+      vCategory <- validCategoryEvent
+      vThc <- validThcEvent
+      vCbg <- validCbgEvent
+      vStrain <- validStrainEvent
+      vCreator <- validCreatorEvent
+      vSpecies <- validSpeciesEvent
+      vDominantTerpene <- validDominantTerpeneEvent
+      vSort <- validSortEvent
+      vMeasureUnit <- validMeasureUnitEvent
+      vPerPackage <- validPerPackageEvent
+      vSubcategory <- validSubcategoryEvent
+      vLeaflyUrl <- validLeaflyUrlEvent
+      vImg <- validImgEvent
+      -- Include all validation states for completeness
+      vDescription <- validDescriptionEvent
+      vTags <- validTagsEvent
+      vEffects <- validEffectsEvent
+      vTerpenes <- validTerpenesEvent
+      vLineage <- validLineageEvent
       in
         all (fromMaybe false)
           [ vName
@@ -130,10 +118,21 @@ createItem initialUUID = Deku.do
           , vStrain
           , vCreator
           , vSpecies
-          , vDominantTarpene
+          , vDominantTerpene
+          , vSort
+          , vMeasureUnit
+          , vPerPackage
+          , vSubcategory
+          , vLeaflyUrl
+          , vImg
+          , vDescription
+          , vTags
+          , vEffects
+          , vTerpenes
+          , vLineage
           ]
 
-    -- Form reset function
+  let
     resetForm = do
       newUUID <- genUUID
       setSku (show newUUID)
@@ -149,8 +148,11 @@ createItem initialUUID = Deku.do
       setCategory ""
       setValidCategory (Just false)
       setDescription ""
+      setValidDescription (Just true)
       setTags ""
+      setValidTags (Just true)
       setEffects ""
+      setValidEffects (Just true)
       setThc ""
       setValidThc (Just false)
       setCbg ""
@@ -161,10 +163,12 @@ createItem initialUUID = Deku.do
       setValidCreator (Just false)
       setSpecies ""
       setValidSpecies (Just false)
-      setDominantTarpene ""
-      setValidDominantTarpene (Just false)
+      setDominantTerpene ""
+      setValidDominantTerpene (Just false)
       setTerpenes ""
+      setValidTerpenes (Just true)
       setLineage ""
+      setValidLineage (Just true)
       setSort ""
       setValidSort (Just false)
       setMeasureUnit ""
@@ -177,6 +181,8 @@ createItem initialUUID = Deku.do
       setValidLeaflyUrl (Just false)
       setImg ""
       setValidImg (Just false)
+      setStatusMessage "Form reset successfully"
+      setErrors []
 
   D.div_
     [
@@ -204,112 +210,193 @@ createItem initialUUID = Deku.do
                       (map (\err -> D.li_ [ text_ err ]) errs)
               ]
 
-          , F.makeField (F.brandFieldConfig "") setBrand setValidBrand validSkuValue
-          , F.makeField (F.nameFieldConfig "") setName setValidName validNameValue
-          , F.makeField (F.skuFieldConfig initialUUID) setSku setValidSku validSkuValue
-          , F.makeField (F.sortFieldConfig "") setSort setValidSort validSortValue
-          , F.makeField (F.priceFieldConfig "") setPrice setValidPrice validPriceValue
-          , F.makeField (F.quantityFieldConfig "") setQuantity setValidQuantity validQuantityValue
-          , F.makeField (F.perPackageFieldConfig "") setPerPackage setValidPerPackage validPerPackageValue
-          , F.makeField (F.measureUnitFieldConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitValue
-          , F.makeField (F.subcategoryFieldConfig "") setSubcategory setValidSubcategory validSubcategoryValue
-          , F.makeDropdown F.categoryConfig setCategory setValidCategory validCategoryValue
-          , F.makeField (F.descriptionFieldConfig "") setDescription (const $ pure unit) (pure $ Just true)
-          , F.makeField (F.tagsFieldConfig "") setTags (const $ pure unit) (pure $ Just true)
-          , F.makeField (F.effectsFieldConfig "") setEffects (const $ pure unit) (pure $ Just true)
-          , F.makeField (F.thcFieldConfig "") setThc setValidThc validThcValue
-          , F.makeField (F.cbgFieldConfig "") setCbg setValidCbg validCbgValue
-          , F.makeDropdown F.speciesConfig setSpecies setValidSpecies validSpeciesValue
-          , F.makeField (F.strainFieldConfig "") setStrain setValidStrain validStrainValue
-          , F.makeField (F.dominantTerpeneFieldConfig "") setDominantTarpene setValidDominantTarpene validDominantTarpeneValue
-          , F.makeField (F.terpenesFieldConfig "") setTerpenes (const $ pure unit) (pure $ Just true)
-          , F.makeField (F.lineageFieldConfig "") setLineage (const $ pure unit) (pure $ Just true)
-          , F.makeField (F.creatorFieldConfig "") setCreator setValidCreator validCreatorValue
-          , F.makeField (F.leaflyUrlFieldConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlValue
-          , F.makeField (F.imgFieldConfig "") setImg setValidImg validImgValue
+          , F.makeField (F.brandConfig "") setBrand setValidBrand validBrandEvent
+          , F.makeField (F.nameConfig "") setName setValidName validNameEvent
+          , F.makeField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent
+          , F.makeField (F.sortConfig "") setSort setValidSort validSortEvent
+          , F.makeField (F.priceConfig "") setPrice setValidPrice validPriceEvent
+          , F.makeField (F.quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+          , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+          , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+          , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
+          , F.makeDropdown F.categoryConfig setCategory setValidCategory validCategoryEvent
+          , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
+          , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
+          , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
+          , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
+          , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
+          , F.makeDropdown F.speciesConfig setSpecies setValidSpecies validSpeciesEvent
+          , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
+          , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
+          , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
+          , F.makeField (F.lineageConfig "") setLineage setValidLineage validLineageEvent
+          , F.makeField (F.creatorConfig "") setCreator setValidCreator validCreatorEvent
+          , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+          , F.makeField (F.imgConfig "") setImg setValidImg validImgEvent
           ]
 
-      , D.button
-          [ DA.klass_ $ F.buttonClass "green"
-          , DA.disabled $ map show $ (||) <$> submittingValue <*> map not isFormValid
-          , DL.runOn DL.click \_ -> do
-              setSubmitting true
-              setErrors []
-              
-              void $ setFiber =<< launchAff do
-                let
-                  formInput =
-                    { sort: ensureInt sortValue
-                    , name: nameValue
-                    , sku: skuValue
-                    , brand: brandValue
-                    , price: ensureNumber priceValue
-                    , measure_unit: measureUnitValue
-                    , per_package: perPackageValue
-                    , quantity: ensureInt quantityValue
-                    , category: categoryValue
-                    , subcategory: subcategoryValue
-                    , description: descriptionValue
-                    , tags: tagsValue
-                    , effects: effectsValue
-                    , strain_lineage:
-                        { thc: thcValue
-                        , cbg: cbgValue
-                        , strain: strainValue
-                        , creator: creatorValue
-                        , species: speciesValue
-                        , dominant_terpene: dominantTarpeneValue
-                        , terpenes: terpenesValue
-                        , lineage: lineageValue
-                        , leafly_url: leaflyUrlValue
-                        , img: imgValue
-                        }
-                    }
+        , D.button
+            [ DA.klass_ $ F.buttonClass "green"
+            , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+            , DL.runOn DL.click $
+                ( { sort: _, name: _, sku: _, brand: _, price: _, measureUnit: _, perPackage: _, quantity: _, category: _,
+                    subcategory: _, description: _, tags: _, effects: _, thc: _, cbg: _, strain: _, creator: _, species: _,
+                    dominantTerpene: _, terpenes: _, lineage: _, leaflyUrl: _, img: _ }
+                    <$> sortValue
+                    <*> nameValue
+                    <*> skuValue
+                    <*> brandValue
+                    <*> priceValue
+                    <*> measureUnitValue
+                    <*> perPackageValue
+                    <*> quantityValue
+                    <*> categoryValue
+                    <*> subcategoryValue
+                    <*> descriptionValue
+                    <*> tagsValue
+                    <*> effectsValue
+                    <*> thcValue
+                    <*> cbgValue
+                    <*> strainValue
+                    <*> creatorValue
+                    <*> speciesValue
+                    <*> dominantTerpeneValue
+                    <*> terpenesValue
+                    <*> lineageValue
+                    <*> leaflyUrlValue
+                    <*> imgValue
+                ) <#> \values -> do
+                    setSubmitting true
+                    setErrors []
+                    setStatusMessage "Processing form submission..."
 
-                liftEffect $ Console.group "Form Submission"
-                liftEffect $ Console.log "Form data:"
-                liftEffect $ Console.logShow formInput
+                    void $ setFiber =<< launchAff do
+                        let
+                          formInput =
+                            { sort: ensureInt values.sort
+                            , name: values.name
+                            , sku: values.sku
+                            , brand: values.brand
+                            , price: ensureNumber values.price
+                            , measure_unit: values.measureUnit
+                            , per_package: values.perPackage
+                            , quantity: ensureInt values.quantity
+                            , category: values.category
+                            , subcategory: values.subcategory
+                            , description: values.description
+                            , tags: values.tags
+                            , effects: values.effects
+                            , strain_lineage:
+                                { thc: values.thc
+                                , cbg: values.cbg
+                                , strain: values.strain
+                                , creator: values.creator
+                                , species: values.species
+                                , dominant_terpene: values.dominantTerpene
+                                , terpenes: values.terpenes
+                                , lineage: values.lineage
+                                , leafly_url: values.leaflyUrl
+                                , img: values.img
+                                }
+                            }
 
-                case validateMenuItem formInput of
-                  Left err -> liftEffect do
-                    Console.error "Form validation failed:"
-                    Console.errorShow err
-                    Console.groupEnd
-                    setStatusMessage $ "Validation error: " <> err
-                    setSubmitting false
-                    setErrors [err]
+                        liftEffect $ Console.group "Form Submission"
+                        liftEffect $ Console.log "Form data:"
+                        liftEffect $ Console.logShow formInput
 
-                  Right menuItem -> do
-                    liftEffect $ Console.info "Form validated successfully:"
-                    liftEffect $ Console.logShow menuItem
+                        case validateMenuItem formInput of
+                          Left err -> liftEffect do
+                            Console.error "Form validation failed:"
+                            Console.errorShow err
+                            Console.groupEnd
+                            setStatusMessage $ "Validation error: " <> err
+                            setSubmitting false
+                            setErrors [err]
 
-                    result <- writeInventory menuItem
-                    liftEffect case result of
-                      Right (Message msg) -> do
-                        Console.info "Submission successful"
-                        setStatusMessage msg
-                        resetForm
-                      Right (InventoryData _) -> do
-                        Console.info "Item added to inventory"
-                        setStatusMessage "Item successfully added to inventory!"
-                        resetForm
-                      Left err -> do
-                        Console.error "API Error:"
-                        Console.errorShow err
-                        setStatusMessage $ "Error saving item: " <> err
-                        setErrors [err]
+                          Right menuItem -> do
+                            liftEffect $ Console.info "Form validated successfully:"
+                            liftEffect $ Console.logShow menuItem
 
-                    liftEffect $ Console.groupEnd
-                    liftEffect $ setSubmitting false
-          ]
-          [ text $ map
-              (\isSubmitting ->
-                  if isSubmitting then "Submitting..." else "Submit"
-              )
-              submittingValue
-          ]
+                            result <- writeInventory menuItem
+                            liftEffect case result of
+                              Right (Message msg) -> do
+                                Console.info "Submission successful"
+                                setStatusMessage msg
+                                resetForm
+                              Right (InventoryData _) -> do
+                                Console.info "Item added to inventory"
+                                setStatusMessage "Item successfully added to inventory!"
+                                resetForm
+                              Left err -> do
+                                Console.error "API Error:"
+                                Console.errorShow err
+                                setStatusMessage $ "Error saving item: " <> err
+                                setErrors [err]
 
-      , D.div
-          [ DA.klass_ "mt-4 text-center" ]
-          [ text statusMessageValue ]
+                            liftEffect $ Console.groupEnd
+                            liftEffect $ setSubmitting false
+            ]
+            [ text $ map
+                (\isSubmitting ->
+                    if isSubmitting then "Submitting..." else "Submit"
+                )
+                submittingEvent
+            ]
+
+        -- Debug panel for valuable debugging information
+        , D.div
+            [ DA.klass_ "mt-8 p-4 border rounded bg-gray-50" ]
+            [ D.h3
+                [ DA.klass_ "text-lg font-semibold mb-2" ]
+                [ text_ "Debug Information" ]
+            , D.div
+                [ DA.klass_ "debug-status mb-2 text-sm" ]
+                [ D.strong_ [ text_ "Status: " ]
+                , text statusMessageEvent
+                ]
+            , D.div
+                [ DA.klass_ "debug-form-state mb-2 text-sm" ]
+                [ D.strong_ [ text_ "Form valid: " ]
+                , text $ map show isFormValid
+                ]
+            , D.div
+                [ DA.klass_ "debug-form-valid-items grid grid-cols-3 gap-2 text-xs" ]
+                [ validNameEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Name: " <> show v ]
+                , validBrandEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Brand: " <> show v ]
+                , validSkuEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "SKU: " <> show v ]
+                , validPriceEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Price: " <> show v ]
+                , validQuantityEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Quantity: " <> show v ]
+                , validCategoryEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Category: " <> show v ]
+                , validThcEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "THC: " <> show v ]
+                , validCbgEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "CBG: " <> show v ]
+                , validStrainEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Strain: " <> show v ]
+                , validCreatorEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Creator: " <> show v ]
+                , validSpeciesEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Species: " <> show v ]
+                , validDominantTerpeneEvent <#~> \v -> D.div
+                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                    [ text_ $ "Dom Terpene: " <> show v ]
+                ]
+            ]
     ]

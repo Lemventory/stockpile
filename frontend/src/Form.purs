@@ -2,135 +2,102 @@ module Form where
 
 import Prelude
 
-import Data.Array (null, (:))
-import Data.Either (Either(..))
+import Data.Array ((:))
 import Data.Enum (class BoundedEnum)
 import Data.Foldable (for_)
+import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), Replacement(..), trim, replaceAll)
-import Data.Tuple.Nested ((/\))
-import Data.Validation.Semigroup (toEither)
-import Deku.Control (text_)
+import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
-import Deku.Do as Deku
-import Deku.Hooks (useState, (<#~>))
 import Effect (Effect)
-import Types (DropdownConfig, ItemCategory, Species)
-import Utils (getAllEnumValues, parseCommaList)
-import Validation as V
+import FRP.Poll (Poll)
+import Types (DropdownConfig, ItemCategory, Species, ValidationRule(..), runValidation)
+import Utils (getAllEnumValues)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
+import Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 
--- | Modern field types
-
--- Configuration for a field with validations
-type FieldConfig a = {
+-- Field configuration type that includes validation
+type FieldConfig = {
   label :: String,
   placeholder :: String,
   defaultValue :: String,
-  validator :: V.Validator a,
-  formatter :: String -> String
+  validation :: ValidationRule,
+  errorMessage :: String,
+  formatInput :: String -> String
 }
 
--- | Form field components
-
-makeField :: forall a. FieldConfig a -> (String -> Effect Unit) -> (a -> Effect Unit) -> (Array String -> Effect Unit) -> Nut
-makeField config setValue setValidValue setErrors = Deku.do
-  setFieldErrors /\ fieldErrors <- useState []
-  
+-- Create a standard form field with validation
+makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeField config setValue setValid validEvent =
   D.div_
     [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ config.label ]
-        , D.input
-            [ DA.placeholder_ config.placeholder
-            , DA.value_ config.defaultValue
-            , DL.keyup_ \evt -> do
-                let targetEvent = toEvent evt
-                for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
-                  input <- Input.value inputElement
-                  let formatted = config.formatter input
-                  setValue formatted
-                  
-                  -- Validate using the modern approach
-                  let result = config.validator formatted
-                  case toEither result of
-                    Right validValue -> do
-                      setValidValue validValue
-                      setFieldErrors []
-                      setErrors []
-                    Left errs -> do
-                      setFieldErrors errs
-                      setErrors errs
-            , DA.klass_ inputKls
-            ]
-            []
-        , D.div
-            [ DA.klass_ "error-container" ]
-            [ fieldErrors <#~> \errs ->
-                if null errs then
-                  D.span [] []
-                else
-                  D.ul [ DA.klass_ "text-red-500 text-xs" ] 
-                    (map (\err -> D.li_ [ text_ err ]) errs)
-            ]
-        ]
-    ]
-
-makeTextarea :: forall a. FieldConfig a -> (String -> Effect Unit) -> (a -> Effect Unit) -> (Array String -> Effect Unit) -> Nut
-makeTextarea config setValue setValidValue setErrors = Deku.do
-  setFieldErrors /\ fieldErrors <- useState []
-  
-  D.div_
-    [ D.div
-        [ DA.klass_ "flex items-center gap-2" ]
-        [ D.label_
-            [ text_ config.label ]
-        , D.textarea
-            [ DA.placeholder_ config.placeholder
-            , DA.cols_ "40"
-            , DA.rows_ "4"
-            , DL.keyup_ \evt -> do
-                let targetEvent = toEvent evt
-                for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
-                  input <- Input.value inputElement
-                  let formatted = config.formatter input
-                  setValue formatted
-                  
-                  -- Validate using the modern approach
-                  let result = config.validator formatted
-                  case toEither result of
-                    Right validValue -> do
-                      setValidValue validValue
-                      setFieldErrors []
-                      setErrors []
-                    Left errs -> do
-                      setFieldErrors errs
-                      setErrors errs
-            , DA.klass_ (inputKls <> " resize-y")
-            ]
-            [ text_ config.defaultValue ]
-        , D.div
-            [ DA.klass_ "error-container" ]
-            [ fieldErrors <#~> \errs ->
-                if null errs then
-                  D.span [] []
-                else
-                  D.ul [ DA.klass_ "text-red-500 text-xs" ] 
-                    (map (\err -> D.li_ [ text_ err ]) errs)
+        , if config.label == "Description" then 
+            D.textarea
+              [ DA.placeholder_ config.placeholder
+              , DA.cols_ "40"
+              , DA.rows_ "4"
+              , DL.keyup_ \evt -> do
+                  let targetEvent = toEvent evt
+                  for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+              , DL.input_ \evt -> do
+                  for_ (target evt >>= Input.fromEventTarget) \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+              , DA.klass_ (inputKls <> " resize-y")
+              ]
+              [ text_ config.defaultValue ]
+          else 
+            D.input
+              [ DA.placeholder_ config.placeholder
+              , DA.value_ config.defaultValue
+              , DL.keyup_ \evt -> do
+                  let targetEvent = toEvent evt
+                  for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+              , DL.input_ \evt -> do
+                  for_ (target evt >>= Input.fromEventTarget) \inputElement -> do
+                    v <- Input.value inputElement
+                    let formatted = config.formatInput v
+                    setValue formatted
+                    setValid (Just (runValidation config.validation formatted))
+              , DA.klass_ inputKls
+              ]
+              []
+        , D.span
+            [ DA.klass_ "text-red-500 text-xs" ]
+            [ text
+                ( map
+                    ( \mValid -> case mValid of
+                        Just false -> config.errorMessage
+                        _ -> ""
+                    )
+                    validEvent
+                )
             ]
         ]
     ]
 
-makeDropdown :: forall a. DropdownConfig -> (String -> Effect Unit) -> (a -> Effect Unit) -> (Array String -> Effect Unit) -> V.Validator a -> Nut
-makeDropdown config setValue setValidValue setErrors validator = Deku.do
-  setFieldErrors /\ fieldErrors <- useState []
-  
+-- Create a dropdown field
+makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeDropdown config setValue setValid validEvent =
   D.div_
     [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
@@ -140,36 +107,254 @@ makeDropdown config setValue setValidValue setErrors validator = Deku.do
             [ DA.klass_ inputKls
             , DL.change_ \evt -> do
                 for_ (target evt >>= Select.fromEventTarget) \selectElement -> do
-                  value <- Select.value selectElement
-                  setValue value
-                  
-                  let result = validator value
-                  case toEither result of
-                    Right validValue -> do
-                      setValidValue validValue
-                      setFieldErrors []
-                      setErrors []
-                    Left errs -> do
-                      setFieldErrors errs
-                      setErrors errs
+                  v <- Select.value selectElement
+                  setValue v
+                  setValid (Just (v /= ""))
             ]
             ( config.options <#> \opt ->
                 D.option
                   [ DA.value_ opt.value ]
                   [ text_ opt.label ]
             )
-        , D.div
-            [ DA.klass_ "error-container" ]
-            [ fieldErrors <#~> \errs ->
-                if null errs then
-                  D.span [] []
-                else
-                  D.ul [ DA.klass_ "text-red-500 text-xs" ] 
-                    (map (\err -> D.li_ [ text_ err ]) errs)
+        , D.span
+            [ DA.klass_ "text-red-500 text-xs" ]
+            [ text
+                ( map
+                    ( \mValid -> case mValid of
+                        Just false -> "Please select an option"
+                        _ -> ""
+                    )
+                    validEvent
+                )
             ]
         ]
     ]
 
+-- Field config builders that include validation
+nameConfig :: String -> FieldConfig
+nameConfig defaultValue = 
+  { label: "Name"
+  , placeholder: "Enter product name"
+  , defaultValue
+  , validation: allOf [ nonEmpty, extendedAlphanumeric, maxLength 50 ]
+  , errorMessage: "Name is required and must be less than 50 characters"
+  , formatInput: trim
+  }
+
+skuConfig :: String -> FieldConfig
+skuConfig defaultValue = 
+  { label: "SKU"
+  , placeholder: "Enter UUID"
+  , defaultValue
+  , validation: ValidationRule \_ -> true
+  , errorMessage: "Required, must be a valid UUID"
+  , formatInput: trim
+  }
+
+brandConfig :: String -> FieldConfig
+brandConfig defaultValue = 
+  { label: "Brand"
+  , placeholder: "Enter brand name"
+  , defaultValue
+  , validation: allOf [ nonEmpty, extendedAlphanumeric ]
+  , errorMessage: "Brand name is required"
+  , formatInput: trim
+  }
+
+priceConfig :: String -> FieldConfig
+priceConfig defaultValue = 
+  { label: "Price"
+  , placeholder: "Enter price"
+  , defaultValue
+  , validation: dollarAmount
+  , errorMessage: "Price must be a valid number"
+  , formatInput: trim
+  }
+
+quantityConfig :: String -> FieldConfig
+quantityConfig defaultValue = 
+  { label: "Quantity"
+  , placeholder: "Enter quantity"
+  , defaultValue
+  , validation: nonNegativeInteger
+  , errorMessage: "Quantity must be a non-negative number"
+  , formatInput: trim
+  }
+
+sortConfig :: String -> FieldConfig
+sortConfig defaultValue = 
+  { label: "Sort Order"
+  , placeholder: "Enter sort position"
+  , defaultValue
+  , validation: nonNegativeInteger
+  , errorMessage: "Sort order must be a number"
+  , formatInput: trim
+  }
+
+measureUnitConfig :: String -> FieldConfig
+measureUnitConfig defaultValue = 
+  { label: "Measure Unit"
+  , placeholder: "Enter unit (g, mg, etc)"
+  , defaultValue
+  , validation: validMeasurementUnit
+  , errorMessage: "Measure unit is required"
+  , formatInput: trim
+  }
+
+perPackageConfig :: String -> FieldConfig
+perPackageConfig defaultValue = 
+  { label: "Per Package"
+  , placeholder: "Enter amount per package"
+  , defaultValue
+  , validation: anyOf [ nonNegativeInteger, fraction ]
+  , errorMessage: "Per package must be a whole number or fraction"
+  , formatInput: trim
+  }
+
+subcategoryConfig :: String -> FieldConfig
+subcategoryConfig defaultValue = 
+  { label: "Subcategory"
+  , placeholder: "Enter subcategory"
+  , defaultValue
+  , validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Subcategory is required"
+  , formatInput: trim
+  }
+
+descriptionConfig :: String -> FieldConfig
+descriptionConfig defaultValue = 
+  { label: "Description"
+  , placeholder: "Enter description"
+  , defaultValue
+  , validation: nonEmpty
+  , errorMessage: "Description is required"
+  , formatInput: identity
+  }
+
+tagsConfig :: String -> FieldConfig
+tagsConfig defaultValue = 
+  { label: "Tags"
+  , placeholder: "Enter tags (comma-separated)"
+  , defaultValue
+  , validation: commaList
+  , errorMessage: "Invalid format"
+  , formatInput: trim
+  }
+
+effectsConfig :: String -> FieldConfig
+effectsConfig defaultValue = 
+  { label: "Effects"
+  , placeholder: "Enter effects (comma-separated)"
+  , defaultValue
+  , validation: commaList
+  , errorMessage: "Invalid format"
+  , formatInput: trim
+  }
+
+thcConfig :: String -> FieldConfig
+thcConfig defaultValue = 
+  { label: "THC %"
+  , placeholder: "Enter THC percentage"
+  , defaultValue
+  , validation: percentage
+  , errorMessage: "THC % must be in format XX.XX%"
+  , formatInput: trim
+  }
+
+cbgConfig :: String -> FieldConfig
+cbgConfig defaultValue = 
+  { label: "CBG %"
+  , placeholder: "Enter CBG percentage"
+  , defaultValue
+  , validation: percentage
+  , errorMessage: "CBG % must be in format XX.XX%"
+  , formatInput: trim
+  }
+
+strainConfig :: String -> FieldConfig
+strainConfig defaultValue = 
+  { label: "Strain"
+  , placeholder: "Enter strain name"
+  , defaultValue
+  , validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Strain name is required"
+  , formatInput: trim
+  }
+
+creatorConfig :: String -> FieldConfig
+creatorConfig defaultValue = 
+  { label: "Creator"
+  , placeholder: "Enter creator name"
+  , defaultValue
+  , validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Creator name is required"
+  , formatInput: trim
+  }
+
+dominantTerpeneConfig :: String -> FieldConfig
+dominantTerpeneConfig defaultValue = 
+  { label: "Dominant Terpene"
+  , placeholder: "Enter dominant terpene"
+  , defaultValue
+  , validation: allOf [ nonEmpty, alphanumeric ]
+  , errorMessage: "Dominant terpene is required"
+  , formatInput: trim
+  }
+
+terpenesConfig :: String -> FieldConfig
+terpenesConfig defaultValue = 
+  { label: "Terpenes"
+  , placeholder: "Enter terpenes (comma-separated)"
+  , defaultValue
+  , validation: commaList
+  , errorMessage: "Invalid format"
+  , formatInput: trim
+  }
+
+lineageConfig :: String -> FieldConfig
+lineageConfig defaultValue = 
+  { label: "Lineage"
+  , placeholder: "Enter lineage (comma-separated)"
+  , defaultValue
+  , validation: commaList
+  , errorMessage: "Invalid format"
+  , formatInput: trim
+  }
+
+leaflyUrlConfig :: String -> FieldConfig
+leaflyUrlConfig defaultValue = 
+  { label: "Leafly URL"
+  , placeholder: "Enter Leafly URL"
+  , defaultValue
+  , validation: validUrl
+  , errorMessage: "URL must be valid"
+  , formatInput: trim
+  }
+
+imgConfig :: String -> FieldConfig
+imgConfig defaultValue = 
+  { label: "Image URL"
+  , placeholder: "Enter image URL"
+  , defaultValue
+  , validation: validUrl
+  , errorMessage: "URL must be valid"
+  , formatInput: trim
+  }
+
+-- Category and species dropdown configs
+categoryConfig :: DropdownConfig
+categoryConfig = makeEnumDropdown
+  { label: "Category"
+  , enumType: (bottom :: ItemCategory)
+  }
+
+speciesConfig :: DropdownConfig
+speciesConfig = makeEnumDropdown
+  { label: "Species"
+  , enumType: (bottom :: Species)
+  }
+
+-- Create a dropdown for enum values
 makeEnumDropdown
   :: ∀ a
    . BoundedEnum a
@@ -186,253 +371,7 @@ makeEnumDropdown { label } =
   , defaultValue: ""
   }
 
-makeArrayField :: String -> (Array String -> Effect Unit) -> Nut
-makeArrayField label setValue =
-  D.div_
-    [ D.div
-        [ DA.klass_ "flex items-center gap-2" ]
-        [ D.label_
-            [ text_ label ]
-        , D.input
-            [ DA.placeholder_ "Add items (comma-separated)"
-            , DL.keyup_ \evt -> do
-                for_ ((target >=> Input.fromEventTarget) (toEvent evt)) \inputElement -> do
-                  v <- Input.value inputElement
-                  setValue $ parseCommaList v
-            , DA.klass_ inputKls
-            ]
-            []
-        ]
-    ]
-
--- | Field configurations
-
--- Name field
-nameFieldConfig :: FieldConfig String
-nameFieldConfig = {
-  label: "Name",
-  placeholder: "Enter product name",
-  defaultValue: "",
-  validator: V.validateExtendedText 50,
-  formatter: trim
-}
-
--- SKU field
-skuFieldConfig :: String -> FieldConfig String
-skuFieldConfig defaultValue = {
-  label: "SKU",
-  placeholder: "Enter UUID",
-  defaultValue,
-  validator: V.validateUUID "Required, must be a valid UUID",
-  formatter: trim
-}
-
--- Brand field
-brandFieldConfig :: String -> FieldConfig String
-brandFieldConfig defaultValue = {
-  label: "Brand",
-  placeholder: "Enter brand name",
-  defaultValue,
-  validator: V.validateExtendedText 50,
-  formatter: trim
-}
-
--- Price field
-priceFieldConfig :: String -> FieldConfig Number
-priceFieldConfig defaultValue = {
-  label: "Price",
-  placeholder: "Enter price",
-  defaultValue,
-  validator: V.validateDollarAmount,
-  formatter: trim
-}
-
--- Quantity field
-quantityFieldConfig :: String -> FieldConfig Int
-quantityFieldConfig defaultValue = {
-  label: "Quantity",
-  placeholder: "Enter quantity",
-  defaultValue,
-  validator: V.validateNonNegativeInt,
-  formatter: trim
-}
-
--- THC field
-thcFieldConfig :: String -> FieldConfig String
-thcFieldConfig defaultValue = {
-  label: "THC %",
-  placeholder: "Enter THC percentage",
-  defaultValue,
-  validator: V.validatePercentage,
-  formatter: trim
-}
-
--- CBG field
-cbgFieldConfig :: String -> FieldConfig String
-cbgFieldConfig defaultValue = {
-  label: "CBG %",
-  placeholder: "Enter CBG percentage",
-  defaultValue,
-  validator: V.validatePercentage,
-  formatter: trim
-}
-
--- Strain field
-strainFieldConfig :: String -> FieldConfig String
-strainFieldConfig defaultValue = {
-  label: "Strain",
-  placeholder: "Enter strain name",
-  defaultValue,
-  validator: V.validateNonEmptyText,
-  formatter: trim
-}
-
--- Creator field
-creatorFieldConfig :: String -> FieldConfig String
-creatorFieldConfig defaultValue = {
-  label: "Creator",
-  placeholder: "Enter creator name",
-  defaultValue,
-  validator: V.validateNonEmptyText,
-  formatter: trim
-}
-
--- Dominant Terpene field
-dominantTerpeneFieldConfig :: String -> FieldConfig String
-dominantTerpeneFieldConfig defaultValue = {
-  label: "Dominant Terpene",
-  placeholder: "Enter dominant terpene",
-  defaultValue,
-  validator: V.validateNonEmptyText,
-  formatter: trim
-}
-
--- Description field
-descriptionFieldConfig :: String -> FieldConfig String
-descriptionFieldConfig defaultValue = {
-  label: "Description",
-  placeholder: "Enter description",
-  defaultValue,
-  validator: V.validateNonEmptyText, 
-  formatter: identity
-}
-
--- Tags field
-tagsFieldConfig :: String -> FieldConfig String
-tagsFieldConfig defaultValue = {
-  label: "Tags",
-  placeholder: "Enter tags (comma-separated)",
-  defaultValue,
-  validator: V.validateCommaList,
-  formatter: trim
-}
-
--- Effects field
-effectsFieldConfig :: String -> FieldConfig String
-effectsFieldConfig defaultValue = {
-  label: "Effects",
-  placeholder: "Enter effects (comma-separated)",
-  defaultValue,
-  validator: V.validateCommaList,
-  formatter: trim
-}
-
--- Terpenes field
-terpenesFieldConfig :: String -> FieldConfig String
-terpenesFieldConfig defaultValue = {
-  label: "Terpenes",
-  placeholder: "Enter terpenes (comma-separated)",
-  defaultValue,
-  validator: V.validateCommaList,
-  formatter: trim
-}
-
--- Lineage field
-lineageFieldConfig :: String -> FieldConfig String
-lineageFieldConfig defaultValue = {
-  label: "Lineage",
-  placeholder: "Enter lineage (comma-separated)",
-  defaultValue,
-  validator: V.validateCommaList,
-  formatter: trim
-}
-
--- Sort field
-sortFieldConfig :: String -> FieldConfig Int
-sortFieldConfig defaultValue = {
-  label: "Sort Order",
-  placeholder: "Enter sort position",
-  defaultValue,
-  validator: V.validateNonNegativeInt,
-  formatter: trim
-}
-
--- Measure Unit field
-measureUnitFieldConfig :: String -> FieldConfig String
-measureUnitFieldConfig defaultValue = {
-  label: "Measure Unit",
-  placeholder: "Enter unit (g, mg, etc)",
-  defaultValue,
-  validator: V.validateUnit,
-  formatter: trim
-}
-
--- Per Package field
-perPackageFieldConfig :: String -> FieldConfig String
-perPackageFieldConfig defaultValue = {
-  label: "Per Package",
-  placeholder: "Enter amount per package",
-  defaultValue,
-  validator: V.validateString "Required, whole number or fraction" 
-    (\str -> V.nonNegativeInteger str || V.fraction str),
-  formatter: identity
-}
-
--- Subcategory field
-subcategoryFieldConfig :: String -> FieldConfig String
-subcategoryFieldConfig defaultValue = {
-  label: "Subcategory",
-  placeholder: "Enter subcategory",
-  defaultValue,
-  validator: V.validateAlphanumeric,
-  formatter: trim
-}
-
--- Leafly URL field
-leaflyUrlFieldConfig :: String -> FieldConfig String
-leaflyUrlFieldConfig defaultValue = {
-  label: "Leafly URL",
-  placeholder: "Enter Leafly URL",
-  defaultValue,
-  validator: V.validateUrl,
-  formatter: trim
-}
-
--- Image URL field
-imgFieldConfig :: String -> FieldConfig String
-imgFieldConfig defaultValue = {
-  label: "Image URL",
-  placeholder: "Enter image URL",
-  defaultValue,
-  validator: V.validateUrl,
-  formatter: trim
-}
-
--- | Dropdown configurations
-
-categoryConfig :: DropdownConfig
-categoryConfig = makeEnumDropdown
-  { label: "Category"
-  , enumType: (bottom :: ItemCategory)
-  }
-
-speciesConfig :: DropdownConfig
-speciesConfig = makeEnumDropdown
-  { label: "Species"
-  , enumType: (bottom :: Species)
-  }
-
--- | Styling
+-- Style classes
 inputKls :: String
 inputKls =
   """
