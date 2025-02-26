@@ -42,6 +42,7 @@ writeInventory menuItem = do
 readInventory :: Aff (Either String InventoryResponse)
 readInventory = do
   result <- attempt do
+    liftEffect $ Console.log $ "Fetching inventory from: " <> baseUrl <> "/inventory"
     response <- fetch (baseUrl <> "/inventory")
       { method: GET
       , headers:
@@ -50,7 +51,10 @@ readInventory = do
           , "Origin": currentConfig.appOrigin
           }
       }
-    fromJSON response.json :: Aff InventoryResponse
+    liftEffect $ Console.log "Got response, parsing JSON..."
+    inventoryResponse <- fromJSON response.json :: Aff InventoryResponse
+    liftEffect $ Console.log "Successfully parsed inventory response"
+    pure inventoryResponse
 
   pure case result of
     Left err -> Left $ "Failed to read inventory: " <> show err
@@ -61,6 +65,7 @@ updateInventory menuItem = do
   result <- attempt do
     let content = writeJSON menuItem
     liftEffect $ Console.log "Updating menu item..."
+    liftEffect $ Console.log $ "Sending content: " <> content
 
     response <- fetch (baseUrl <> "/inventory")
       { method: PUT
@@ -68,6 +73,7 @@ updateInventory menuItem = do
       , headers:
           { "Content-Type": "application/json"
           , "Accept": "application/json"
+          , "Origin": currentConfig.appOrigin
           }
       }
 
@@ -85,6 +91,7 @@ deleteInventory itemId = do
       , headers:
           { "Content-Type": "application/json"
           , "Accept": "application/json"
+          , "Origin": currentConfig.appOrigin
           }
       }
     fromJSON response.json :: Aff InventoryResponse
@@ -120,7 +127,7 @@ fetchInventoryFromHttp config = do
       , headers:
           { "Content-Type": "application/json"
           , "Accept": "application/json"
-          , "Origin": "http://localhost:5174"
+          , "Origin": currentConfig.appOrigin
           }
       }
 

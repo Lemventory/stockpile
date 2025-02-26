@@ -16,7 +16,6 @@ import Types (Inventory(..), MenuItem(..), StrainLineage(..))
 import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
 import Utils (compareMenuItems, generateClassName)
 
--- creates a LiveView component with connected state
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut
 createMenuLiveView inventoryPoll loadingPoll errorPoll =
   D.div
@@ -97,4 +96,11 @@ renderItem (MenuItem record) =
           [ text_ ("$" <> show record.price <> " (" <> record.per_package <> "" <> record.measure_unit <> ")") ]
       , D.div [ DA.klass_ "item-quantity" ]
           [ text_ ("in stock: " <> show record.quantity) ]
+      , D.div [ DA.klass_ "item-actions" ]
+          [ D.a
+              [ DA.klass_ "edit-button"
+              , DA.href_ ("/#/edit/" <> show record.sku)
+              ]
+              [ text_ "Edit" ]
+          ]
       ]

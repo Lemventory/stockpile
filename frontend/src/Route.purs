@@ -13,7 +13,6 @@ import Routing.Duplex (RouteDuplex', root, segment, string)
 import Routing.Duplex.Generic as G
 import Routing.Duplex.Generic.Syntax ((/))
 
--- Define our routes
 data Route = LiveView | Create | Edit String
 
 derive instance Eq Route
@@ -23,7 +22,6 @@ derive instance genericRoute :: Generic Route _
 instance Show Route where
   show = genericShow
 
--- Define route parsing
 route :: RouteDuplex' Route
 route = root $ G.sum
   { "LiveView": G.noArgs
@@ -31,7 +29,6 @@ route = root $ G.sum
   , "Edit": "edit" / (string segment)
   }
 
--- Navigation component 
 nav :: Poll Route -> Nut
 nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
   [ D.div [ DA.klass_ "container" ]
@@ -44,11 +41,11 @@ nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
           [ DA.klass_ "nav navbar-nav pull-xs-right" ]
           [ navItem LiveView "/#/" "LiveView" currentRoute
           , navItem Create "/#/create" "Create Item" currentRoute
+          , navItem (Edit "test") "/#/edit/test" "Edit Test Item" currentRoute
           ]
       ]
   ]
 
--- Helper for navigation items
 navItem :: Route -> String -> String -> Poll Route -> Nut
 navItem thisRoute href label currentRoute =
   D.li

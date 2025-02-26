@@ -178,3 +178,55 @@ getAllMenuItems pool = withConnection pool $ \conn -> do
         ORDER BY m.sort
     |]
   return $ Inventory $ V.fromList items
+
+updateExistingMenuItem :: Pool.Pool Connection -> MenuItem -> IO ()
+updateExistingMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
+  _ <-
+    execute
+      conn
+      [sql|
+        UPDATE menu_items
+        SET sort = ?, brand = ?, name = ?, price = ?, measure_unit = ?, 
+            per_package = ?, quantity = ?, category = ?, subcategory = ?,
+            description = ?, tags = ?, effects = ?
+        WHERE sku = ?
+    |]
+      ( sort
+      , brand
+      , name
+      , price
+      , measure_unit
+      , per_package
+      , quantity
+      , show category
+      , subcategory
+      , description
+      , PGArray $ V.toList tags
+      , PGArray $ V.toList effects
+      , sku
+      )
+
+  let StrainLineage {..} = strain_lineage
+  _ <-
+    execute
+      conn
+      [sql|
+        UPDATE strain_lineage
+        SET thc = ?, cbg = ?, strain = ?, creator = ?, species = ?,
+            dominant_terpene = ?, terpenes = ?, lineage = ?,
+            leafly_url = ?, img = ?
+        WHERE sku = ?
+    |]
+      ( thc
+      , cbg
+      , strain
+      , creator
+      , show species
+      , dominant_terpene
+      , PGArray $ V.toList terpenes
+      , PGArray $ V.toList lineage
+      , leafly_url
+      , img
+      , sku
+      )
+  pure ()

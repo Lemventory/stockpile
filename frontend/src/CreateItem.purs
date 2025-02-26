@@ -62,17 +62,17 @@ createItem initialUUID = Deku.do
   setValidCreator /\ validCreatorEvent <- useState (Just false)
   setValidSpecies /\ validSpeciesEvent <- useState (Just false)
   setValidDominantTerpene /\ validDominantTerpeneEvent <- useState (Just false)
-  setValidTerpenes /\ validTerpenesEvent <- useState (Just true) -- Will be used in debug display
-  setValidLineage /\ validLineageEvent <- useState (Just true) -- Will be used in debug display
+  setValidTerpenes /\ validTerpenesEvent <- useState (Just true)
+  setValidLineage /\ validLineageEvent <- useState (Just true)
   setValidSort /\ validSortEvent <- useState (Just false)
   setValidMeasureUnit /\ validMeasureUnitEvent <- useState (Just false)
   setValidPerPackage /\ validPerPackageEvent <- useState (Just false)
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just false)
   setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false)
   setValidImg /\ validImgEvent <- useState (Just false)
-  setValidDescription /\ validDescriptionEvent <- useState (Just true) -- Will be used in debug display
-  setValidTags /\ validTagsEvent <- useState (Just true) -- Will be used in debug display
-  setValidEffects /\ validEffectsEvent <- useState (Just true) -- Will be used in debug display
+  setValidDescription /\ validDescriptionEvent <- useState (Just true)
+  setValidTags /\ validTagsEvent <- useState (Just true)
+  setValidEffects /\ validEffectsEvent <- useState (Just true)
 
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
@@ -99,7 +99,7 @@ createItem initialUUID = Deku.do
       vSubcategory <- validSubcategoryEvent
       vLeaflyUrl <- validLeaflyUrlEvent
       vImg <- validImgEvent
-      -- Include all validation states for completeness
+
       vDescription <- validDescriptionEvent
       vTags <- validTagsEvent
       vEffects <- validEffectsEvent
@@ -363,7 +363,7 @@ createItem initialUUID = Deku.do
             submittingEvent
         ]
 
-    -- Debug panel for valuable debugging information
+
     , D.div
         [ DA.klass_ "mt-8 p-4 border rounded bg-gray-50" ]
         [ D.h3
