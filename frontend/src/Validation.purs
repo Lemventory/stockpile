@@ -1,345 +1,242 @@
 module Validation where
 
 import Prelude
+import Types (ItemCategory(..), MenuItem(..), MenuItemFormInput, Species(..), StrainLineage(..), StrainLineageFormInput)
 
-import Data.Array (all, any)
+import Data.Array (any)
 import Data.Either (Either(..))
 import Data.Int (fromString)
+import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
-import Data.String (length) as String
-import Data.String (toLower, trim)
+import Data.String (joinWith)
+import Data.String (length, toLower, trim) as String
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
-import Type.Proxy (Proxy(..))
-import Types (class FieldValidator, class FormValue, FieldConfigRow, HTMLFormField, ItemCategory(..), MenuItem(..), MenuItemFormInput, NumberFieldConfig, Species(..), StrainLineage(..), StrainLineageFormInput, TextFieldConfig, ValidationPreset, ValidationResult(..), ValidationRule(..), fromFormValue, runValidation, validationError)
-import Types.UUID (parseUUID)
-import Utils (formatDollarAmount, parseCommaList)
+import Data.Validation.Semigroup (V, invalid, toEither, andThen)
+import Types.UUID (UUID(..), parseUUID)
+import Utils (parseCommaList)
 
--- | Basic validation rules
-requireValid :: forall a. String -> ValidationResult a -> Either String a
-requireValid field = case _ of
-  ValidationSuccess x -> Right x
-  ValidationError err -> Left $ field <> ": " <> err
+type Validator a = String -> V (Array String) a
 
-requiredField :: forall a. FormValue a => FieldValidator a => ValidationRule
-requiredField = ValidationRule \str ->
-  let
-    validate :: String -> Either String a
-    validate = validateField
-  in
-    case validate str of
-      Right _ -> true
-      Left _ -> false
+nonEmpty :: String -> Boolean
+nonEmpty str = String.trim str /= ""
 
-nonEmpty :: ValidationRule
-nonEmpty = ValidationRule (_ /= "")
-
-validUUID :: ValidationRule
-validUUID = ValidationRule \str -> case parseUUID (trim str) of
-  Just _ -> true
-  Nothing -> false
-
-alphanumeric :: ValidationRule
-alphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9-\\s]+$" noFlags of
+alphanumeric :: String -> Boolean
+alphanumeric str = case regex "^[A-Za-z0-9-\\s]+$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
-extendedAlphanumeric :: ValidationRule
-extendedAlphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9\\s\\-_&+',\\.\\(\\)]+$" noFlags of
+extendedAlphanumeric :: String -> Boolean
+extendedAlphanumeric str = case regex "^[A-Za-z0-9\\s\\-_&+',\\.\\(\\)]+$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
-percentage :: ValidationRule
-percentage = ValidationRule \str -> case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
+percentage :: String -> Boolean
+percentage str = case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
-dollarAmount :: ValidationRule
-dollarAmount = ValidationRule \str -> case Number.fromString str of
+dollarAmount :: String -> Boolean
+dollarAmount str = case Number.fromString str of
   Just n -> n >= 0.0
   Nothing -> false
 
-validMeasurementUnit :: ValidationRule
-validMeasurementUnit = ValidationRule \str ->
+validMeasurementUnit :: String -> Boolean
+validMeasurementUnit str =
   let
     units = [ "g", "mg", "kg", "oz", "lb", "ml", "l", "ea", "unit", "units", "pack", "packs", "eighth", "quarter", "half", "1/8", "1/4", "1/2" ]
-    lowercaseStr = trim (str # toLower)
+    lowercaseStr = String.trim (str # String.toLower)
   in
     any (\unit -> unit == lowercaseStr) units
 
-validUrl :: ValidationRule
-validUrl = ValidationRule \str ->
+validUrl :: String -> Boolean
+validUrl str =
   case regex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags of
     Left _ -> false
     Right validRegex -> test validRegex str
 
-positiveInteger :: ValidationRule
-positiveInteger = ValidationRule \str -> case fromString str of
+positiveInteger :: String -> Boolean
+positiveInteger str = case fromString str of
   Just n -> n > 0
   Nothing -> false
 
-nonNegativeInteger :: ValidationRule
-nonNegativeInteger = ValidationRule \str -> case fromString str of
+nonNegativeInteger :: String -> Boolean
+nonNegativeInteger str = case fromString str of
   Just n -> n >= 0
   Nothing -> false
 
-fraction :: ValidationRule
-fraction = ValidationRule \str -> case regex "^\\d+\\/\\d+$" noFlags of
+fraction :: String -> Boolean
+fraction str = case regex "^\\d+\\/\\d+$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
-vowels :: ValidationRule
-vowels = ValidationRule \str -> case regex "^[AEIOUYaeiouy\\s]+$" noFlags of
+commaList :: String -> Boolean
+commaList str = case regex "^[^,]+(,[^,]+)*$" noFlags of
   Left _ -> false
   Right validRegex -> test validRegex str
 
-consonants :: ValidationRule
-consonants = ValidationRule \str -> case regex "^[BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz\\s]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
+validUUID :: String -> Boolean
+validUUID str = case parseUUID (String.trim str) of
+  Just _ -> true
+  Nothing -> false
 
-commaList :: ValidationRule
-commaList = ValidationRule \str -> case regex "^[^,]+(,[^,]+)*$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
+maxLength :: Int -> String -> Boolean
+maxLength n str = String.length str <= n
 
-maxLength :: Int -> ValidationRule
-maxLength n = ValidationRule \str -> String.length str <= n
+validateString :: String -> (String -> Boolean) -> Validator String
+validateString errorMsg predicate = \str ->
+  if predicate str
+    then pure str
+    else invalid [errorMsg]
 
-allOf :: Array ValidationRule -> ValidationRule
-allOf rules = ValidationRule \str ->
-  all (\(ValidationRule rule) -> rule str) rules
+validateAs :: forall a. String -> (String -> Maybe a) -> Validator a
+validateAs errorMsg parser = \str ->
+  case parser str of
+    Just value -> pure value
+    Nothing -> invalid [errorMsg]
 
-anyOf :: Array ValidationRule -> ValidationRule
-anyOf rules = ValidationRule \str ->
-  any (\(ValidationRule rule) -> rule str) rules
+required :: String -> Validator String
+required errorMsg = validateString errorMsg nonEmpty
 
--- | Validation presets
-requiredText :: ValidationPreset
-requiredText =
-  { validation: allOf [ nonEmpty, alphanumeric ]
-  , errorMessage: "Required, text only"
-  , formatInput: trim
-  }
+validateInt :: String -> Validator Int
+validateInt errorMsg = \str ->
+  case fromString str of
+    Just n -> pure n
+    Nothing -> invalid [errorMsg]
 
-requiredTextWithLimit :: Int -> ValidationPreset
-requiredTextWithLimit limit =
-  { validation: allOf [ nonEmpty, extendedAlphanumeric, maxLength limit ]
-  , errorMessage: "Required, text only (max " <> show limit <> " chars)"
-  , formatInput: trim
-  }
+validateNumber :: String -> Validator Number
+validateNumber errorMsg = \str ->
+  case Number.fromString str of
+    Just n -> pure n
+    Nothing -> invalid [errorMsg]
 
-percentageField :: ValidationPreset
-percentageField =
-  { validation: percentage
-  , errorMessage: "Required format: XX.XX%"
-  , formatInput: trim
-  }
+validateUUID :: String -> Validator String
+validateUUID errorMsg = validateString errorMsg validUUID
 
-moneyField :: ValidationPreset
-moneyField =
-  { validation: allOf [ nonEmpty, dollarAmount ]
-  , errorMessage: "Required, valid dollar amount"
-  , formatInput: formatDollarAmount
-  }
+validateNonEmptyText :: Validator String
+validateNonEmptyText = required "Field cannot be empty"
 
-numberField :: ValidationPreset
-numberField =
-  { validation: allOf [ nonEmpty, positiveInteger ]
-  , errorMessage: "Required, positive whole number"
-  , formatInput: \str -> fromMaybe str $ map show $ fromString str
-  }
+validateAlphanumeric :: Validator String
+validateAlphanumeric = validateString "Must contain only letters, numbers, spaces, and hyphens" alphanumeric
 
-urlField :: ValidationPreset
-urlField =
-  { validation: allOf [ nonEmpty, validUrl ]
-  , errorMessage: "Required, valid URL"
-  , formatInput: trim
-  }
+validateExtendedText :: Int -> Validator String
+validateExtendedText limit = \str ->
+  if not (nonEmpty str)
+    then invalid ["Field cannot be empty"]
+  else if not (extendedAlphanumeric str)
+    then invalid ["Must contain only allowed characters"]
+  else if not (maxLength limit str)
+    then invalid ["Must be less than " <> show limit <> " characters"]
+  else pure str
 
-quantityField :: ValidationPreset
-quantityField =
-  { validation: allOf [ nonEmpty, nonNegativeInteger ]
-  , errorMessage: "Required, whole number"
-  , formatInput: \str -> fromMaybe str $ map show $ fromString str
-  }
+validatePercentage :: Validator String
+validatePercentage = validateString "Must be in format: XX.XX%" percentage
 
-commaListField :: ValidationPreset
-commaListField =
-  { validation: commaList
-  , errorMessage: "Must be a comma-separated list"
-  , formatInput: trim
-  }
+validateDollarAmount :: Validator Number
+validateDollarAmount = \str ->
+  case Number.fromString (String.trim str) of
+    Just n | n >= 0.0 -> pure n
+    _ -> invalid ["Must be a valid dollar amount"]
 
-multilineText :: ValidationPreset
-multilineText =
-  { validation: nonEmpty
-  , errorMessage: "Required"
-  , formatInput: identity
-  }
+validateUnit :: Validator String
+validateUnit = validateString "Must be a valid unit (g, mg, kg, oz, etc.)" validMeasurementUnit
 
-nonNegativeIntegerField :: ValidationPreset
-nonNegativeIntegerField =
-  { validation: allOf [ nonEmpty, nonNegativeInteger ]
-  , errorMessage: "Required, whole number (0 or positive)"
-  , formatInput: \str -> fromMaybe str $ map show $ fromString str
-  }
+validateUrl :: Validator String
+validateUrl = validateString "Must be a valid URL" validUrl
 
--- | Form validation
-validateForm :: forall r. Record (FieldConfigRow r) -> MenuItemFormInput -> Either String MenuItem
-validateForm _ input = do
-  name <- validateTextField
-    { label: "Name"
-    , maxLength: 50
-    , placeholder: "Enter name"
-    , defaultValue: ""
-    , validation: allOf [ nonEmpty, alphanumeric ]
-    , errorMessage: "Required, text only (max 50 chars)"
-    , formatInput: trim
-    }
-    input.name
+validatePositiveInt :: Validator Int
+validatePositiveInt = \str ->
+  case fromString str of
+    Just n | n > 0 -> pure n
+    _ -> invalid ["Must be a positive whole number"]
 
-  sku <- requireValid "SKU" $ fromFormValue input.sku
-  brand <- requireValid "Brand" $ fromFormValue input.brand
-  price <- requireValid "Price" $ fromFormValue input.price
-  quantity <- requireValid "Quantity" $ fromFormValue input.quantity
-  category <- requireValid "Category" $ fromFormValue input.category
+validateNonNegativeInt :: Validator Int
+validateNonNegativeInt = \str ->
+  case fromString str of
+    Just n | n >= 0 -> pure n
+    _ -> invalid ["Must be a non-negative whole number"]
 
-  strainLineage <- validateStrainLineage input.strain_lineage
+validateFraction :: Validator String
+validateFraction = validateString "Must be a fraction (e.g. 1/2)" fraction
 
-  pure $ MenuItem
-    { sort: 0
-    , sku
-    , brand
-    , name
-    , price
-    , measure_unit: "units"
-    , per_package: show quantity
-    , quantity
-    , category
-    , subcategory: show category
-    , description: input.description
-    , tags: parseCommaList input.tags
-    , effects: parseCommaList input.effects
-    , strain_lineage: strainLineage
-    }
+validateCommaList :: Validator String
+validateCommaList = validateString "Must be a comma-separated list" commaList
 
-validateTextField :: forall r. Record (TextFieldConfig r) -> String -> Either String String
-validateTextField config input = do
-  let ValidationRule validate = config.validation
-  if not (validate input) then Left config.errorMessage
-  else if String.length input > config.maxLength then Left $ "Must be less than " <> show config.maxLength <> " characters"
-  else Right $ config.formatInput input
+withDefault :: forall a. a -> Validator a -> Validator a
+withDefault defaultValue validator = \str ->
+  if String.trim str == ""
+    then pure defaultValue
+    else validator str
 
-validateNumberField :: forall r. Record (NumberFieldConfig r) -> String -> Either String Number
-validateNumberField config input =
-  case validateField input of
-    Right value ->
-      if value >= config.min && value <= config.max then Right value
-      else Left $ "Must be between " <> show config.min <> " and " <> show config.max
-    Left err -> Left err
+optional :: forall a. Validator a -> Validator (Maybe a)
+optional validator = \str ->
+  if String.trim str == ""
+    then pure Nothing
+    else map Just (validator str)
 
-validateFormField
-  :: forall r a
-   . FormValue a
-  => FieldValidator a
-  => Record (HTMLFormField r)
-  -> ValidationResult a
-validateFormField field =
-  let
-    validationResult = fromFormValue field.value
-  in
-    case validationResult of
-      ValidationSuccess value ->
-        if runValidation field.validation field.value then ValidationSuccess value
-        else ValidationError (validationError (Proxy :: Proxy a))
-      ValidationError err -> ValidationError err
-
-validateField :: forall a. FormValue a => FieldValidator a => String -> Either String a
-validateField str = do
-  let trimmed = trim str
-  if trimmed == "" then Left (validationError (Proxy :: Proxy a))
-  else case fromFormValue trimmed of
-    ValidationSuccess value -> Right value
-    ValidationError err -> Left err
-
-validateStringField :: String -> ValidationRule -> String -> Either String String
-validateStringField fieldName (ValidationRule rule) value =
-  if rule value then Right value
-  else Left $ fieldName <> " validation failed"
+validateForm :: forall a. V (Array String) a -> Either (Array String) a
+validateForm = toEither
 
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
-validateMenuItem input = do
-  sort <- validateStringField "Sort" nonNegativeInteger input.sort
-  sku <- validateStringField "SKU" (allOf [ nonEmpty, validUUID ]) input.sku
-  brand <- validateStringField "Brand" (allOf [ nonEmpty, extendedAlphanumeric ]) input.brand
-  name <- validateStringField "Name" (allOf [ nonEmpty, alphanumeric ]) input.name
-  price <- validateStringField "Price" dollarAmount input.price
-  measure_unit <- validateStringField "Measure Unit" validMeasurementUnit input.measure_unit
-  per_package <- validateStringField "Per Package" (anyOf [ nonNegativeInteger, fraction ]) input.per_package
-  quantity <- validateStringField "Quantity" nonNegativeInteger input.quantity
-  category <- validateStringField "Category" nonEmpty input.category
-  subcategory <- validateStringField "Subcategory" nonEmpty input.subcategory
+validateMenuItem input = 
+  case toEither validationResult of
+    Left errors -> Left (joinErrors errors)
+    Right result -> Right result
+  where
+    joinErrors :: Array String -> String
+    joinErrors = joinWith ", "
 
-  -- Validate strain lineage
-  strainLineage <- validateStrainLineage input.strain_lineage
+    validationResult :: V (Array String) MenuItem
+    validationResult =
+      validateNonNegativeInt input.sort `andThen` \sort ->
+      validateUUID "Required, must be a valid UUID" input.sku `andThen` \sku ->
+      validateExtendedText 50 input.brand `andThen` \brand ->
+      validateExtendedText 50 input.name `andThen` \name ->
+      validateDollarAmount input.price `andThen` \price ->
+      validateUnit input.measure_unit `andThen` \measure_unit ->
+      validateString "Per package cannot be empty" nonEmpty input.per_package `andThen` \per_package ->
+      validateNonNegativeInt input.quantity `andThen` \quantity ->
+      validateCategory input.category `andThen` \category ->
+      validateAlphanumeric input.subcategory `andThen` \subcategory ->
+      validateStrainLineage' input.strain_lineage `andThen` \strainLineage ->
 
-  -- Convert validated strings to final types
-  sortNum <- case fromString sort of
-    Just n -> Right n
-    Nothing -> Left "Invalid sort number"
+      pure $ MenuItem
+        { sort: Int.fromString input.sort # fromMaybe 0
+        , sku: parseUUID input.sku # fromMaybe (UUID "00000000-0000-0000-0000-000000000000")
+        , brand
+        , name
+        , price: Number.fromString input.price # fromMaybe 0.0
+        , measure_unit
+        , per_package
+        , quantity: Int.fromString input.quantity # fromMaybe 0
+        , category
+        , subcategory
+        , description: input.description
+        , tags: parseCommaList input.tags
+        , effects: parseCommaList input.effects
+        , strain_lineage: strainLineage
+        }
+    
+    validateStrainLineage' = validateStrainLineage
 
-  skuUUID <- case parseUUID sku of
-    Just uuid -> Right uuid
-    Nothing -> Left "Invalid UUID format"
-
-  priceNum <- case Number.fromString price of
-    Just n -> Right n
-    Nothing -> Left "Invalid price format"
-
-  quantityNum <- case fromString quantity of
-    Just n -> Right n
-    Nothing -> Left "Invalid quantity format"
-
-  categoryType <- validateCategory category
-
-  pure $ MenuItem
-    { sort: sortNum
-    , sku: skuUUID
-    , brand
-    , name
-    , price: priceNum
-    , measure_unit
-    , per_package
-    , quantity: quantityNum
-    , category: categoryType
-    , subcategory
-    , description: input.description
-    , tags: parseCommaList input.tags
-    , effects: parseCommaList input.effects
-    , strain_lineage: strainLineage
-    }
-
-validateStrainLineage :: StrainLineageFormInput -> Either String StrainLineage
-validateStrainLineage input = do
-  thc <- validateStringField "THC" percentage input.thc
-  cbg <- validateStringField "CBG" percentage input.cbg
-  strain <- validateStringField "Strain" (allOf [ nonEmpty, alphanumeric ]) input.strain
-  creator <- validateStringField "Creator" (allOf [ nonEmpty, alphanumeric ]) input.creator
-  species <- validateStringField "Species" nonEmpty input.species
-  dominant_terpene <- validateStringField "Dominant Terpene" (allOf [ nonEmpty, alphanumeric ]) input.dominant_terpene
-  leafly_url <- validateStringField "Leafly URL" validUrl input.leafly_url
-  img <- validateStringField "Image URL" validUrl input.img
-
-  speciesType <- validateSpecies species
+validateStrainLineage :: StrainLineageFormInput -> V (Array String) StrainLineage
+validateStrainLineage input =
+  validatePercentage input.thc `andThen` \thc ->
+  validatePercentage input.cbg `andThen` \cbg ->
+  validateString "Strain cannot be empty" nonEmpty input.strain `andThen` \strain ->
+  validateString "Creator cannot be empty" nonEmpty input.creator `andThen` \creator ->
+  validateSpecies input.species `andThen` \species ->
+  validateString "Dominant terpene cannot be empty" nonEmpty input.dominant_terpene `andThen` \dominant_terpene ->
+  validateUrl input.leafly_url `andThen` \leafly_url ->
+  validateUrl input.img `andThen` \img ->
 
   pure $ StrainLineage
     { thc
     , cbg
     , strain
     , creator
-    , species: speciesType
+    , species
     , dominant_terpene
     , terpenes: parseCommaList input.terpenes
     , lineage: parseCommaList input.lineage
@@ -347,24 +244,24 @@ validateStrainLineage input = do
     , img
     }
 
-validateCategory :: String -> Either String ItemCategory
-validateCategory = case _ of
-  "Flower" -> Right Flower
-  "PreRolls" -> Right PreRolls
-  "Vaporizers" -> Right Vaporizers
-  "Edibles" -> Right Edibles
-  "Drinks" -> Right Drinks
-  "Concentrates" -> Right Concentrates
-  "Topicals" -> Right Topicals
-  "Tinctures" -> Right Tinctures
-  "Accessories" -> Right Accessories
-  _ -> Left "Invalid category"
+validateCategory :: String -> V (Array String) ItemCategory
+validateCategory input = case input of
+  "Flower" -> pure Flower
+  "PreRolls" -> pure PreRolls
+  "Vaporizers" -> pure Vaporizers
+  "Edibles" -> pure Edibles
+  "Drinks" -> pure Drinks
+  "Concentrates" -> pure Concentrates
+  "Topicals" -> pure Topicals
+  "Tinctures" -> pure Tinctures
+  "Accessories" -> pure Accessories
+  _ -> invalid ["Invalid category"]
 
-validateSpecies :: String -> Either String Species
-validateSpecies = case _ of
-  "Indica" -> Right Indica
-  "IndicaDominantHybrid" -> Right IndicaDominantHybrid
-  "Hybrid" -> Right Hybrid
-  "SativaDominantHybrid" -> Right SativaDominantHybrid
-  "Sativa" -> Right Sativa
-  _ -> Left "Invalid species"
+validateSpecies :: String -> V (Array String) Species
+validateSpecies input = case input of
+  "Indica" -> pure Indica
+  "IndicaDominantHybrid" -> pure IndicaDominantHybrid
+  "Hybrid" -> pure Hybrid
+  "SativaDominantHybrid" -> pure SativaDominantHybrid
+  "Sativa" -> pure Sativa
+  _ -> invalid ["Invalid species"]
