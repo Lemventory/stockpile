@@ -152,43 +152,38 @@ multilineText =
 -- Modern validation approach using Data.Validation.Semigroup for form validation
 validateString :: String -> String -> V (Array String) String
 validateString fieldName str =
-  if String.trim str == ""
-    then invalid [fieldName <> " is required"]
-    else pure str
-    
+  if String.trim str == "" then invalid [ fieldName <> " is required" ]
+  else pure str
+
 validatePercentage :: String -> String -> V (Array String) String
 validatePercentage fieldName str =
-  if String.trim str == ""
-    then invalid [fieldName <> " is required"]
-    else if not (test (unsafeRegex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags) str)
-      then invalid [fieldName <> " must be in the format XX.XX%"]
-      else pure str
+  if String.trim str == "" then invalid [ fieldName <> " is required" ]
+  else if not (test (unsafeRegex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags) str) then invalid [ fieldName <> " must be in the format XX.XX%" ]
+  else pure str
 
 validateNumber :: String -> String -> V (Array String) Number
 validateNumber fieldName str =
   case Number.fromString (String.trim str) of
     Just n | n >= 0.0 -> pure n
-    _ -> invalid [fieldName <> " must be a non-negative number"]
+    _ -> invalid [ fieldName <> " must be a non-negative number" ]
 
 validateInt :: String -> String -> V (Array String) Int
 validateInt fieldName str =
   case fromString (String.trim str) of
     Just n | n >= 0 -> pure n
-    _ -> invalid [fieldName <> " must be a non-negative integer"]
+    _ -> invalid [ fieldName <> " must be a non-negative integer" ]
 
 validateUrl :: String -> String -> V (Array String) String
 validateUrl fieldName str =
-  if String.trim str == ""
-    then invalid [fieldName <> " is required"]
-    else if not (test (unsafeRegex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags) str)
-      then invalid [fieldName <> " must be a valid URL"]
-      else pure str
+  if String.trim str == "" then invalid [ fieldName <> " is required" ]
+  else if not (test (unsafeRegex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags) str) then invalid [ fieldName <> " must be a valid URL" ]
+  else pure str
 
 validateUUID :: String -> String -> V (Array String) UUID
 validateUUID fieldName str =
   case parseUUID (String.trim str) of
     Just uuid -> pure uuid
-    Nothing -> invalid [fieldName <> " must be a valid UUID"]
+    Nothing -> invalid [ fieldName <> " must be a valid UUID" ]
 
 validateCategory :: String -> String -> V (Array String) ItemCategory
 validateCategory fieldName str = case str of
@@ -201,7 +196,7 @@ validateCategory fieldName str = case str of
   "Topicals" -> pure Topicals
   "Tinctures" -> pure Tinctures
   "Accessories" -> pure Accessories
-  _ -> invalid [fieldName <> " has invalid category value"]
+  _ -> invalid [ fieldName <> " has invalid category value" ]
 
 validateSpecies :: String -> String -> V (Array String) Species
 validateSpecies fieldName str = case str of
@@ -210,11 +205,11 @@ validateSpecies fieldName str = case str of
   "Hybrid" -> pure Hybrid
   "SativaDominantHybrid" -> pure SativaDominantHybrid
   "Sativa" -> pure Sativa
-  _ -> invalid [fieldName <> " has invalid species value"]
+  _ -> invalid [ fieldName <> " has invalid species value" ]
 
 -- Helper to convert validation result to Either with joined error messages
 mapValidationErrors :: forall a. V (Array String) a -> Either String a
-mapValidationErrors validation = 
+mapValidationErrors validation =
   case toEither validation of
     Left errors -> Left (joinWith ", " errors)
     Right value -> Right value
@@ -226,65 +221,63 @@ validateMenuItem input =
     Left errors -> Left (joinWith ", " errors)
     Right result -> Right result
   where
-    -- Applicative validation that accumulates all errors
-    validationResult =
-      validateUUID "SKU" input.sku `andThen` \sku ->
+  -- Applicative validation that accumulates all errors
+  validationResult =
+    validateUUID "SKU" input.sku `andThen` \sku ->
       validateString "Name" input.name `andThen` \name ->
-      validateString "Brand" input.brand `andThen` \brand ->
-      validateNumber "Price" input.price `andThen` \price ->
-      validateInt "Quantity" input.quantity `andThen` \quantity ->
-      validateString "Measure Unit" input.measure_unit `andThen` \measure_unit ->
-      validateString "Per Package" input.per_package `andThen` \per_package ->
-      validateCategory "Category" input.category `andThen` \category ->
-      validateString "Subcategory" input.subcategory `andThen` \subcategory ->
-      validateStrainLineage input.strain_lineage `andThen` \strain_lineage ->
-      validateInt "Sort" input.sort `andThen` \sort ->
-        
-      pure $ MenuItem
-        { sort
-        , sku
-        , brand
-        , name
-        , price
-        , measure_unit
-        , per_package
-        , quantity
-        , category
-        , subcategory
-        , description: input.description
-        , tags: parseCommaList input.tags
-        , effects: parseCommaList input.effects
-        , strain_lineage
-        }
+        validateString "Brand" input.brand `andThen` \brand ->
+          validateNumber "Price" input.price `andThen` \price ->
+            validateInt "Quantity" input.quantity `andThen` \quantity ->
+              validateString "Measure Unit" input.measure_unit `andThen` \measure_unit ->
+                validateString "Per Package" input.per_package `andThen` \per_package ->
+                  validateCategory "Category" input.category `andThen` \category ->
+                    validateString "Subcategory" input.subcategory `andThen` \subcategory ->
+                      validateStrainLineage input.strain_lineage `andThen` \strain_lineage ->
+                        validateInt "Sort" input.sort `andThen` \sort ->
+                          pure $ MenuItem
+                            { sort
+                            , sku
+                            , brand
+                            , name
+                            , price
+                            , measure_unit
+                            , per_package
+                            , quantity
+                            , category
+                            , subcategory
+                            , description: input.description
+                            , tags: parseCommaList input.tags
+                            , effects: parseCommaList input.effects
+                            , strain_lineage
+                            }
 
 -- Separate validation for strain lineage
 validateStrainLineage :: StrainLineageFormInput -> V (Array String) StrainLineage
 validateStrainLineage input =
   validatePercentage "THC" input.thc `andThen` \thc ->
-  validatePercentage "CBG" input.cbg `andThen` \cbg ->
-  validateString "Strain" input.strain `andThen` \strain ->
-  validateString "Creator" input.creator `andThen` \creator ->
-  validateSpecies "Species" input.species `andThen` \species ->
-  validateString "Dominant Terpene" input.dominant_terpene `andThen` \dominant_terpene ->
-  validateUrl "Leafly URL" input.leafly_url `andThen` \leafly_url ->
-  validateUrl "Image URL" input.img `andThen` \img ->
-
-  pure $ StrainLineage
-    { thc
-    , cbg
-    , strain
-    , creator
-    , species
-    , dominant_terpene
-    , terpenes: parseCommaList input.terpenes
-    , lineage: parseCommaList input.lineage
-    , leafly_url
-    , img
-    }
+    validatePercentage "CBG" input.cbg `andThen` \cbg ->
+      validateString "Strain" input.strain `andThen` \strain ->
+        validateString "Creator" input.creator `andThen` \creator ->
+          validateSpecies "Species" input.species `andThen` \species ->
+            validateString "Dominant Terpene" input.dominant_terpene `andThen` \dominant_terpene ->
+              validateUrl "Leafly URL" input.leafly_url `andThen` \leafly_url ->
+                validateUrl "Image URL" input.img `andThen` \img ->
+                  pure $ StrainLineage
+                    { thc
+                    , cbg
+                    , strain
+                    , creator
+                    , species
+                    , dominant_terpene
+                    , terpenes: parseCommaList input.terpenes
+                    , lineage: parseCommaList input.lineage
+                    , leafly_url
+                    , img
+                    }
 
 -- Helper for unsafe regex creation in validatePercentage and validateUrl
 unsafeRegex :: String -> RegexFlags -> Regex
-unsafeRegex pattern flags = 
+unsafeRegex pattern flags =
   case regex pattern flags of
     Left _ -> unsafeCrashWith $ "Invalid regex pattern: " <> pattern
     Right r -> r

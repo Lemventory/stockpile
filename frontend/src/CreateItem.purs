@@ -185,8 +185,7 @@ createItem initialUUID = Deku.do
       setErrors []
 
   D.div_
-    [
-      D.div
+    [ D.div
         [ DA.klass_ "component-loading-debug"
         , DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
@@ -194,209 +193,230 @@ createItem initialUUID = Deku.do
         ]
         []
 
-      , D.div
-          [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
-          [ D.h2
-              [ DA.klass_ "text-2xl font-bold mb-6" ]
-              [ text_ "Add New Menu Item" ]
+    , D.div
+        [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6" ]
+        [ D.h2
+            [ DA.klass_ "text-2xl font-bold mb-6" ]
+            [ text_ "Add New Menu Item" ]
 
-          , D.div
-              [ DA.klass_ "error-container mb-4" ]
-              [ errorsValue <#~> \errs ->
-                  if null errs then
-                    D.span [] []
-                  else
-                    D.ul [ DA.klass_ "text-red-500 text-sm bg-red-50 p-4 rounded" ]
-                      (map (\err -> D.li_ [ text_ err ]) errs)
-              ]
-
-          , F.makeField (F.brandConfig "") setBrand setValidBrand validBrandEvent
-          , F.makeField (F.nameConfig "") setName setValidName validNameEvent
-          , F.makeField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent
-          , F.makeField (F.sortConfig "") setSort setValidSort validSortEvent
-          , F.makeField (F.priceConfig "") setPrice setValidPrice validPriceEvent
-          , F.makeField (F.quantityConfig "") setQuantity setValidQuantity validQuantityEvent
-          , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
-          , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
-          , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
-          , F.makeDropdown F.categoryConfig setCategory setValidCategory validCategoryEvent
-          , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
-          , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
-          , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
-          , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
-          , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
-          , F.makeDropdown F.speciesConfig setSpecies setValidSpecies validSpeciesEvent
-          , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
-          , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
-          , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
-          , F.makeField (F.lineageConfig "") setLineage setValidLineage validLineageEvent
-          , F.makeField (F.creatorConfig "") setCreator setValidCreator validCreatorEvent
-          , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
-          , F.makeField (F.imgConfig "") setImg setValidImg validImgEvent
-          ]
-
-        , D.button
-            [ DA.klass_ $ F.buttonClass "green"
-            , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
-            , DL.runOn DL.click $
-                ( { sort: _, name: _, sku: _, brand: _, price: _, measureUnit: _, perPackage: _, quantity: _, category: _,
-                    subcategory: _, description: _, tags: _, effects: _, thc: _, cbg: _, strain: _, creator: _, species: _,
-                    dominantTerpene: _, terpenes: _, lineage: _, leaflyUrl: _, img: _ }
-                    <$> sortValue
-                    <*> nameValue
-                    <*> skuValue
-                    <*> brandValue
-                    <*> priceValue
-                    <*> measureUnitValue
-                    <*> perPackageValue
-                    <*> quantityValue
-                    <*> categoryValue
-                    <*> subcategoryValue
-                    <*> descriptionValue
-                    <*> tagsValue
-                    <*> effectsValue
-                    <*> thcValue
-                    <*> cbgValue
-                    <*> strainValue
-                    <*> creatorValue
-                    <*> speciesValue
-                    <*> dominantTerpeneValue
-                    <*> terpenesValue
-                    <*> lineageValue
-                    <*> leaflyUrlValue
-                    <*> imgValue
-                ) <#> \values -> do
-                    setSubmitting true
-                    setErrors []
-                    setStatusMessage "Processing form submission..."
-
-                    void $ setFiber =<< launchAff do
-                        let
-                          formInput =
-                            { sort: ensureInt values.sort
-                            , name: values.name
-                            , sku: values.sku
-                            , brand: values.brand
-                            , price: ensureNumber values.price
-                            , measure_unit: values.measureUnit
-                            , per_package: values.perPackage
-                            , quantity: ensureInt values.quantity
-                            , category: values.category
-                            , subcategory: values.subcategory
-                            , description: values.description
-                            , tags: values.tags
-                            , effects: values.effects
-                            , strain_lineage:
-                                { thc: values.thc
-                                , cbg: values.cbg
-                                , strain: values.strain
-                                , creator: values.creator
-                                , species: values.species
-                                , dominant_terpene: values.dominantTerpene
-                                , terpenes: values.terpenes
-                                , lineage: values.lineage
-                                , leafly_url: values.leaflyUrl
-                                , img: values.img
-                                }
-                            }
-
-                        liftEffect $ Console.group "Form Submission"
-                        liftEffect $ Console.log "Form data:"
-                        liftEffect $ Console.logShow formInput
-
-                        case validateMenuItem formInput of
-                          Left err -> liftEffect do
-                            Console.error "Form validation failed:"
-                            Console.errorShow err
-                            Console.groupEnd
-                            setStatusMessage $ "Validation error: " <> err
-                            setSubmitting false
-                            setErrors [err]
-
-                          Right menuItem -> do
-                            liftEffect $ Console.info "Form validated successfully:"
-                            liftEffect $ Console.logShow menuItem
-
-                            result <- writeInventory menuItem
-                            liftEffect case result of
-                              Right (Message msg) -> do
-                                Console.info "Submission successful"
-                                setStatusMessage msg
-                                resetForm
-                              Right (InventoryData _) -> do
-                                Console.info "Item added to inventory"
-                                setStatusMessage "Item successfully added to inventory!"
-                                resetForm
-                              Left err -> do
-                                Console.error "API Error:"
-                                Console.errorShow err
-                                setStatusMessage $ "Error saving item: " <> err
-                                setErrors [err]
-
-                            liftEffect $ Console.groupEnd
-                            liftEffect $ setSubmitting false
-            ]
-            [ text $ map
-                (\isSubmitting ->
-                    if isSubmitting then "Submitting..." else "Submit"
-                )
-                submittingEvent
-            ]
-
-        -- Debug panel for valuable debugging information
         , D.div
-            [ DA.klass_ "mt-8 p-4 border rounded bg-gray-50" ]
-            [ D.h3
-                [ DA.klass_ "text-lg font-semibold mb-2" ]
-                [ text_ "Debug Information" ]
-            , D.div
-                [ DA.klass_ "debug-status mb-2 text-sm" ]
-                [ D.strong_ [ text_ "Status: " ]
-                , text statusMessageEvent
-                ]
-            , D.div
-                [ DA.klass_ "debug-form-state mb-2 text-sm" ]
-                [ D.strong_ [ text_ "Form valid: " ]
-                , text $ map show isFormValid
-                ]
-            , D.div
-                [ DA.klass_ "debug-form-valid-items grid grid-cols-3 gap-2 text-xs" ]
-                [ validNameEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Name: " <> show v ]
-                , validBrandEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Brand: " <> show v ]
-                , validSkuEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "SKU: " <> show v ]
-                , validPriceEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Price: " <> show v ]
-                , validQuantityEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Quantity: " <> show v ]
-                , validCategoryEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Category: " <> show v ]
-                , validThcEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "THC: " <> show v ]
-                , validCbgEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "CBG: " <> show v ]
-                , validStrainEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Strain: " <> show v ]
-                , validCreatorEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Creator: " <> show v ]
-                , validSpeciesEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Species: " <> show v ]
-                , validDominantTerpeneEvent <#~> \v -> D.div
-                    [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
-                    [ text_ $ "Dom Terpene: " <> show v ]
-                ]
+            [ DA.klass_ "error-container mb-4" ]
+            [ errorsValue <#~> \errs ->
+                if null errs then
+                  D.span [] []
+                else
+                  D.ul [ DA.klass_ "text-red-500 text-sm bg-red-50 p-4 rounded" ]
+                    (map (\err -> D.li_ [ text_ err ]) errs)
             ]
+
+        , F.makeField (F.brandConfig "") setBrand setValidBrand validBrandEvent
+        , F.makeField (F.nameConfig "") setName setValidName validNameEvent
+        , F.makeField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent
+        , F.makeField (F.sortConfig "") setSort setValidSort validSortEvent
+        , F.makeField (F.priceConfig "") setPrice setValidPrice validPriceEvent
+        , F.makeField (F.quantityConfig "") setQuantity setValidQuantity validQuantityEvent
+        , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
+        , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
+        , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
+        , F.makeDropdown F.categoryConfig setCategory setValidCategory validCategoryEvent
+        , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
+        , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
+        , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
+        , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
+        , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
+        , F.makeDropdown F.speciesConfig setSpecies setValidSpecies validSpeciesEvent
+        , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
+        , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
+        , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
+        , F.makeField (F.lineageConfig "") setLineage setValidLineage validLineageEvent
+        , F.makeField (F.creatorConfig "") setCreator setValidCreator validCreatorEvent
+        , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+        , F.makeField (F.imgConfig "") setImg setValidImg validImgEvent
+        ]
+
+    , D.button
+        [ DA.klass_ $ F.buttonClass "green"
+        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+        , DL.runOn DL.click $
+            ( { sort: _
+              , name: _
+              , sku: _
+              , brand: _
+              , price: _
+              , measureUnit: _
+              , perPackage: _
+              , quantity: _
+              , category: _
+              , subcategory: _
+              , description: _
+              , tags: _
+              , effects: _
+              , thc: _
+              , cbg: _
+              , strain: _
+              , creator: _
+              , species: _
+              , dominantTerpene: _
+              , terpenes: _
+              , lineage: _
+              , leaflyUrl: _
+              , img: _
+              }
+                <$> sortValue
+                <*> nameValue
+                <*> skuValue
+                <*> brandValue
+                <*> priceValue
+                <*> measureUnitValue
+                <*> perPackageValue
+                <*> quantityValue
+                <*> categoryValue
+                <*> subcategoryValue
+                <*> descriptionValue
+                <*> tagsValue
+                <*> effectsValue
+                <*> thcValue
+                <*> cbgValue
+                <*> strainValue
+                <*> creatorValue
+                <*> speciesValue
+                <*> dominantTerpeneValue
+                <*> terpenesValue
+                <*> lineageValue
+                <*> leaflyUrlValue
+                <*> imgValue
+            ) <#> \values -> do
+              setSubmitting true
+              setErrors []
+              setStatusMessage "Processing form submission..."
+
+              void $ setFiber =<< launchAff do
+                let
+                  formInput =
+                    { sort: ensureInt values.sort
+                    , name: values.name
+                    , sku: values.sku
+                    , brand: values.brand
+                    , price: ensureNumber values.price
+                    , measure_unit: values.measureUnit
+                    , per_package: values.perPackage
+                    , quantity: ensureInt values.quantity
+                    , category: values.category
+                    , subcategory: values.subcategory
+                    , description: values.description
+                    , tags: values.tags
+                    , effects: values.effects
+                    , strain_lineage:
+                        { thc: values.thc
+                        , cbg: values.cbg
+                        , strain: values.strain
+                        , creator: values.creator
+                        , species: values.species
+                        , dominant_terpene: values.dominantTerpene
+                        , terpenes: values.terpenes
+                        , lineage: values.lineage
+                        , leafly_url: values.leaflyUrl
+                        , img: values.img
+                        }
+                    }
+
+                liftEffect $ Console.group "Form Submission"
+                liftEffect $ Console.log "Form data:"
+                liftEffect $ Console.logShow formInput
+
+                case validateMenuItem formInput of
+                  Left err -> liftEffect do
+                    Console.error "Form validation failed:"
+                    Console.errorShow err
+                    Console.groupEnd
+                    setStatusMessage $ "Validation error: " <> err
+                    setSubmitting false
+                    setErrors [ err ]
+
+                  Right menuItem -> do
+                    liftEffect $ Console.info "Form validated successfully:"
+                    liftEffect $ Console.logShow menuItem
+
+                    result <- writeInventory menuItem
+                    liftEffect case result of
+                      Right (Message msg) -> do
+                        Console.info "Submission successful"
+                        setStatusMessage msg
+                        resetForm
+                      Right (InventoryData _) -> do
+                        Console.info "Item added to inventory"
+                        setStatusMessage "Item successfully added to inventory!"
+                        resetForm
+                      Left err -> do
+                        Console.error "API Error:"
+                        Console.errorShow err
+                        setStatusMessage $ "Error saving item: " <> err
+                        setErrors [ err ]
+
+                    liftEffect $ Console.groupEnd
+                    liftEffect $ setSubmitting false
+        ]
+        [ text $ map
+            ( \isSubmitting ->
+                if isSubmitting then "Submitting..." else "Submit"
+            )
+            submittingEvent
+        ]
+
+    -- Debug panel for valuable debugging information
+    , D.div
+        [ DA.klass_ "mt-8 p-4 border rounded bg-gray-50" ]
+        [ D.h3
+            [ DA.klass_ "text-lg font-semibold mb-2" ]
+            [ text_ "Debug Information" ]
+        , D.div
+            [ DA.klass_ "debug-status mb-2 text-sm" ]
+            [ D.strong_ [ text_ "Status: " ]
+            , text statusMessageEvent
+            ]
+        , D.div
+            [ DA.klass_ "debug-form-state mb-2 text-sm" ]
+            [ D.strong_ [ text_ "Form valid: " ]
+            , text $ map show isFormValid
+            ]
+        , D.div
+            [ DA.klass_ "debug-form-valid-items grid grid-cols-3 gap-2 text-xs" ]
+            [ validNameEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Name: " <> show v ]
+            , validBrandEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Brand: " <> show v ]
+            , validSkuEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "SKU: " <> show v ]
+            , validPriceEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Price: " <> show v ]
+            , validQuantityEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Quantity: " <> show v ]
+            , validCategoryEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Category: " <> show v ]
+            , validThcEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "THC: " <> show v ]
+            , validCbgEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "CBG: " <> show v ]
+            , validStrainEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Strain: " <> show v ]
+            , validCreatorEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Creator: " <> show v ]
+            , validSpeciesEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Species: " <> show v ]
+            , validDominantTerpeneEvent <#~> \v -> D.div
+                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ text_ $ "Dom Terpene: " <> show v ]
+            ]
+        ]
     ]

@@ -23,14 +23,14 @@ import Web.UIEvent.KeyboardEvent (toEvent)
 import Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 
 -- Field configuration type that includes validation
-type FieldConfig = {
-  label :: String,
-  placeholder :: String,
-  defaultValue :: String,
-  validation :: ValidationRule,
-  errorMessage :: String,
-  formatInput :: String -> String
-}
+type FieldConfig =
+  { label :: String
+  , placeholder :: String
+  , defaultValue :: String
+  , validation :: ValidationRule
+  , errorMessage :: String
+  , formatInput :: String -> String
+  }
 
 -- Create a standard form field with validation
 makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
@@ -40,7 +40,7 @@ makeField config setValue setValid validEvent =
         [ DA.klass_ "flex items-center gap-2" ]
         [ D.label_
             [ text_ config.label ]
-        , if config.label == "Description" then 
+        , if config.label == "Description" then
             D.textarea
               [ DA.placeholder_ config.placeholder
               , DA.cols_ "40"
@@ -61,7 +61,7 @@ makeField config setValue setValid validEvent =
               , DA.klass_ (inputKls <> " resize-y")
               ]
               [ text_ config.defaultValue ]
-          else 
+          else
             D.input
               [ DA.placeholder_ config.placeholder
               , DA.value_ config.defaultValue
@@ -132,7 +132,7 @@ makeDropdown config setValue setValid validEvent =
 
 -- Field config builders that include validation
 nameConfig :: String -> FieldConfig
-nameConfig defaultValue = 
+nameConfig defaultValue =
   { label: "Name"
   , placeholder: "Enter product name"
   , defaultValue
@@ -142,7 +142,7 @@ nameConfig defaultValue =
   }
 
 skuConfig :: String -> FieldConfig
-skuConfig defaultValue = 
+skuConfig defaultValue =
   { label: "SKU"
   , placeholder: "Enter UUID"
   , defaultValue
@@ -152,7 +152,7 @@ skuConfig defaultValue =
   }
 
 brandConfig :: String -> FieldConfig
-brandConfig defaultValue = 
+brandConfig defaultValue =
   { label: "Brand"
   , placeholder: "Enter brand name"
   , defaultValue
@@ -162,7 +162,7 @@ brandConfig defaultValue =
   }
 
 priceConfig :: String -> FieldConfig
-priceConfig defaultValue = 
+priceConfig defaultValue =
   { label: "Price"
   , placeholder: "Enter price"
   , defaultValue
@@ -172,7 +172,7 @@ priceConfig defaultValue =
   }
 
 quantityConfig :: String -> FieldConfig
-quantityConfig defaultValue = 
+quantityConfig defaultValue =
   { label: "Quantity"
   , placeholder: "Enter quantity"
   , defaultValue
@@ -182,7 +182,7 @@ quantityConfig defaultValue =
   }
 
 sortConfig :: String -> FieldConfig
-sortConfig defaultValue = 
+sortConfig defaultValue =
   { label: "Sort Order"
   , placeholder: "Enter sort position"
   , defaultValue
@@ -192,7 +192,7 @@ sortConfig defaultValue =
   }
 
 measureUnitConfig :: String -> FieldConfig
-measureUnitConfig defaultValue = 
+measureUnitConfig defaultValue =
   { label: "Measure Unit"
   , placeholder: "Enter unit (g, mg, etc)"
   , defaultValue
@@ -202,7 +202,7 @@ measureUnitConfig defaultValue =
   }
 
 perPackageConfig :: String -> FieldConfig
-perPackageConfig defaultValue = 
+perPackageConfig defaultValue =
   { label: "Per Package"
   , placeholder: "Enter amount per package"
   , defaultValue
@@ -212,7 +212,7 @@ perPackageConfig defaultValue =
   }
 
 subcategoryConfig :: String -> FieldConfig
-subcategoryConfig defaultValue = 
+subcategoryConfig defaultValue =
   { label: "Subcategory"
   , placeholder: "Enter subcategory"
   , defaultValue
@@ -222,7 +222,7 @@ subcategoryConfig defaultValue =
   }
 
 descriptionConfig :: String -> FieldConfig
-descriptionConfig defaultValue = 
+descriptionConfig defaultValue =
   { label: "Description"
   , placeholder: "Enter description"
   , defaultValue
@@ -232,7 +232,7 @@ descriptionConfig defaultValue =
   }
 
 tagsConfig :: String -> FieldConfig
-tagsConfig defaultValue = 
+tagsConfig defaultValue =
   { label: "Tags"
   , placeholder: "Enter tags (comma-separated)"
   , defaultValue
@@ -242,7 +242,7 @@ tagsConfig defaultValue =
   }
 
 effectsConfig :: String -> FieldConfig
-effectsConfig defaultValue = 
+effectsConfig defaultValue =
   { label: "Effects"
   , placeholder: "Enter effects (comma-separated)"
   , defaultValue
@@ -252,7 +252,7 @@ effectsConfig defaultValue =
   }
 
 thcConfig :: String -> FieldConfig
-thcConfig defaultValue = 
+thcConfig defaultValue =
   { label: "THC %"
   , placeholder: "Enter THC percentage"
   , defaultValue
@@ -262,7 +262,7 @@ thcConfig defaultValue =
   }
 
 cbgConfig :: String -> FieldConfig
-cbgConfig defaultValue = 
+cbgConfig defaultValue =
   { label: "CBG %"
   , placeholder: "Enter CBG percentage"
   , defaultValue
@@ -272,7 +272,7 @@ cbgConfig defaultValue =
   }
 
 strainConfig :: String -> FieldConfig
-strainConfig defaultValue = 
+strainConfig defaultValue =
   { label: "Strain"
   , placeholder: "Enter strain name"
   , defaultValue
@@ -282,7 +282,7 @@ strainConfig defaultValue =
   }
 
 creatorConfig :: String -> FieldConfig
-creatorConfig defaultValue = 
+creatorConfig defaultValue =
   { label: "Creator"
   , placeholder: "Enter creator name"
   , defaultValue
@@ -292,7 +292,7 @@ creatorConfig defaultValue =
   }
 
 dominantTerpeneConfig :: String -> FieldConfig
-dominantTerpeneConfig defaultValue = 
+dominantTerpeneConfig defaultValue =
   { label: "Dominant Terpene"
   , placeholder: "Enter dominant terpene"
   , defaultValue
@@ -302,7 +302,7 @@ dominantTerpeneConfig defaultValue =
   }
 
 terpenesConfig :: String -> FieldConfig
-terpenesConfig defaultValue = 
+terpenesConfig defaultValue =
   { label: "Terpenes"
   , placeholder: "Enter terpenes (comma-separated)"
   , defaultValue
@@ -312,7 +312,7 @@ terpenesConfig defaultValue =
   }
 
 lineageConfig :: String -> FieldConfig
-lineageConfig defaultValue = 
+lineageConfig defaultValue =
   { label: "Lineage"
   , placeholder: "Enter lineage (comma-separated)"
   , defaultValue
@@ -322,7 +322,7 @@ lineageConfig defaultValue =
   }
 
 leaflyUrlConfig :: String -> FieldConfig
-leaflyUrlConfig defaultValue = 
+leaflyUrlConfig defaultValue =
   { label: "Leafly URL"
   , placeholder: "Enter Leafly URL"
   , defaultValue
@@ -332,7 +332,7 @@ leaflyUrlConfig defaultValue =
   }
 
 imgConfig :: String -> FieldConfig
-imgConfig defaultValue = 
+imgConfig defaultValue =
   { label: "Image URL"
   , placeholder: "Enter image URL"
   , defaultValue
