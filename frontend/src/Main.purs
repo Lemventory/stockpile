@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import Types
+import Types (Inventory(..), InventoryResponse(..), MenuItem(..))
 
 import API (fetchInventory, readInventory)
 import Control.Monad.ST.Class (liftST)
@@ -14,6 +14,7 @@ import Deku.Core (fixed)
 import Deku.DOM as D
 import Deku.Hooks (cycle)
 import Deku.Toplevel (runInBody)
+import DeleteItem (renderDeleteConfirmation)
 import EditItem (editItem, renderError)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -73,48 +74,77 @@ main = do
                 errorState.push msg
 
         Create -> do
-          -- Generate a new UUID for the Create page
           newUUID <- genUUID
           let newUUIDStr = show newUUID
           Console.log $ "Generated new UUID for Create page: " <> newUUIDStr
-
-          -- Create the component with the UUID string
           currentRoute.push $ Tuple r (createItem newUUIDStr)
 
         Edit uuid -> do
           let actualUuid = if uuid == "test" then testItemUUID else uuid
           Console.log $ "Loading item with UUID: " <> actualUuid
-          
-          -- Fetch the item before creating the component
+
           loadingState.push true
           launchAff_ do
             liftEffect $ Console.log "Fetching inventory for edit..."
             result <- readInventory
-            
+
             liftEffect case result of
               Right (InventoryData (Inventory items)) -> do
                 Console.log $ "Found " <> show (length items) <> " items in inventory"
-                
+
                 case find (\(MenuItem item) -> show item.sku == actualUuid) items of
                   Just menuItem -> do
                     Console.log $ "Found item with UUID: " <> actualUuid
-                    -- Create the EditItem component with the found item
                     currentRoute.push $ Tuple r (editItem menuItem)
                   Nothing -> do
                     Console.error $ "Item with UUID " <> actualUuid <> " not found"
                     errorState.push $ "Error: Item with UUID " <> actualUuid <> " not found"
                     currentRoute.push $ Tuple r (renderError $ "Item with UUID " <> actualUuid <> " not found")
-              
+
               Right (Message msg) -> do
                 Console.error $ "API error: " <> msg
                 errorState.push $ "API error: " <> msg
                 currentRoute.push $ Tuple r (renderError $ "API error: " <> msg)
-              
+
               Left err -> do
                 Console.error $ "Failed to fetch inventory: " <> err
                 errorState.push $ "Failed to fetch inventory: " <> err
                 currentRoute.push $ Tuple r (renderError $ "Failed to fetch inventory: " <> err)
+
+            liftEffect $ loadingState.push false
             
+        Delete uuid -> do
+          let actualUuid = if uuid == "test" then testItemUUID else uuid
+          Console.log $ "Loading item with UUID: " <> actualUuid <> " for deletion"
+
+          loadingState.push true
+          launchAff_ do
+            liftEffect $ Console.log "Fetching inventory for delete confirmation..."
+            result <- readInventory
+
+            liftEffect case result of
+              Right (InventoryData (Inventory items)) -> do
+                Console.log $ "Found " <> show (length items) <> " items in inventory"
+
+                case find (\(MenuItem item) -> show item.sku == actualUuid) items of
+                  Just (MenuItem item) -> do
+                    Console.log $ "Found item with UUID: " <> actualUuid
+                    currentRoute.push $ Tuple r (renderDeleteConfirmation actualUuid item.name)
+                  Nothing -> do
+                    Console.error $ "Item with UUID " <> actualUuid <> " not found"
+                    errorState.push $ "Error: Item with UUID " <> actualUuid <> " not found"
+                    currentRoute.push $ Tuple r (renderError $ "Item with UUID " <> actualUuid <> " not found")
+
+              Right (Message msg) -> do
+                Console.error $ "API error: " <> msg
+                errorState.push $ "API error: " <> msg
+                currentRoute.push $ Tuple r (renderError $ "API error: " <> msg)
+
+              Left err -> do
+                Console.error $ "Failed to fetch inventory: " <> err
+                errorState.push $ "Failed to fetch inventory: " <> err
+                currentRoute.push $ Tuple r (renderError $ "Failed to fetch inventory: " <> err)
+
             liftEffect $ loadingState.push false
 
   void $ matchesWith (parse route) matcher

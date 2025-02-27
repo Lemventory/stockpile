@@ -26,7 +26,7 @@ server pool =
   getInventory
     :<|> addMenuItem
     :<|> updateMenuItem
-    :<|> deleteMenuItem
+    :<|> deleteMenuItem pool  -- Pass the pool to the deleteMenuItem function
   where
     getInventory :: Handler InventoryResponse
     getInventory = do
@@ -68,18 +68,6 @@ server pool =
           let response = Message errMsg
           liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
-
-    deleteMenuItem :: UUID -> Handler InventoryResponse
-    deleteMenuItem uuid = do
-      affected <-
-        liftIO $ withConnection pool $ \conn ->
-          execute
-            conn
-            (Query "DELETE FROM menu_items WHERE sku = ?")
-            (Only uuid)
-      if affected > 0
-        then return $ Message "Item deleted successfully"
-        else throwError err404
 
 
 

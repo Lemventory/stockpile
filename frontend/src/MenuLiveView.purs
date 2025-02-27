@@ -102,5 +102,13 @@ renderItem (MenuItem record) =
               , DA.href_ ("/#/edit/" <> show record.sku)
               ]
               [ text_ "Edit" ]
+          , D.span
+              [ DA.klass_ "text-gray-300 mx-2" ]
+              [ text_ "|" ]
+          , D.a
+              [ DA.klass_ "delete-button text-red-500 hover:text-red-700"
+              , DA.href_ ("/#/delete/" <> show record.sku)
+              ]
+              [ text_ "Delete" ]
           ]
       ]

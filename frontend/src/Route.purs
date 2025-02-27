@@ -13,7 +13,7 @@ import Routing.Duplex (RouteDuplex', root, segment, string)
 import Routing.Duplex.Generic as G
 import Routing.Duplex.Generic.Syntax ((/))
 
-data Route = LiveView | Create | Edit String
+data Route = LiveView | Create | Edit String | Delete String
 
 derive instance Eq Route
 derive instance Ord Route
@@ -27,6 +27,7 @@ route = root $ G.sum
   { "LiveView": G.noArgs
   , "Create": "create" / G.noArgs
   , "Edit": "edit" / (string segment)
+  , "Delete": "delete" / (string segment)
   }
 
 nav :: Poll Route -> Nut

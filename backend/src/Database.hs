@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Database where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception (catch, throwIO)
+import Control.Exception (catch, throwIO, SomeException)
 import qualified Data.Pool as Pool
 import qualified Data.Vector as V
 import Database.PostgreSQL.Simple
@@ -13,6 +14,14 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.PostgreSQL.Simple.Types (PGArray (..))
 import System.IO (hPutStrLn, stderr)
 import Types
+import Data.UUID
+import Servant (Handler)
+import Control.Monad.IO.Class (liftIO)
+import Control.Exception.Base (try)
+import Control.Monad.Error.Class (throwError)
+import Data.Text (pack)
+import Servant.Server (err404)
+
 
 data DBConfig = DBConfig
   { dbHost :: String
@@ -29,8 +38,8 @@ initializeDB config = do
         Pool.defaultPoolConfig
           (connectWithRetry config)
           close
-          0.5 -- # of stripes
-          10 -- keep unused connections (seconds_
+          0.5
+          10
   pool <- Pool.newPool poolConfig
 
   Pool.withResource pool $ \conn -> do
@@ -113,6 +122,7 @@ createTables pool = withConnection pool $ \conn -> do
     |]
   pure ()
 
+
 insertMenuItem :: Pool.Pool Connection -> MenuItem -> IO ()
 insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
   _ <-
@@ -120,10 +130,10 @@ insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
       conn
       [sql|
         INSERT INTO menu_items
-            (sort, sku, brand, name, price, measure_unit, per_package, 
+            (sort, sku, brand, name, price, measure_unit, per_package,
              quantity, category, subcategory, description, tags, effects)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    |]
+      |]
       ( sort
       , sku
       , brand
@@ -148,7 +158,7 @@ insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
             (sku, thc, cbg, strain, creator, species, dominant_terpene,
              terpenes, lineage, leafly_url, img)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    |]
+      |]
       ( sku
       , thc
       , cbg
@@ -163,20 +173,51 @@ insertMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
       )
   pure ()
 
+deleteMenuItem :: Pool.Pool Connection -> UUID -> Handler InventoryResponse
+deleteMenuItem pool uuid = do
+  liftIO $ putStrLn $ "Received request to delete menu item with UUID: " ++ show uuid
+
+  result <- liftIO $ try @SomeException $ do
+
+    _ <- withConnection pool $ \conn ->
+      execute
+        conn
+        "DELETE FROM strain_lineage WHERE sku = ?"
+        (Only uuid)
+
+
+    affected <- withConnection pool $ \conn ->
+      execute
+        conn
+        "DELETE FROM menu_items WHERE sku = ?"
+        (Only uuid)
+
+    return affected
+
+  case result of
+    Left e -> do
+      let errMsg = pack $ "Error deleting item: " <> show e
+      liftIO $ putStrLn $ "Error in delete operation: " ++ show e
+      return $ Message errMsg
+    Right affected ->
+      if affected > 0
+        then return $ Message "Item deleted successfully"
+        else throwError err404
+
 getAllMenuItems :: Pool.Pool Connection -> IO Inventory
 getAllMenuItems pool = withConnection pool $ \conn -> do
   items <-
     query_
       conn
       [sql|
-        SELECT m.*, 
+        SELECT m.*,
                s.thc, s.cbg, s.strain, s.creator, s.species,
                s.dominant_terpene, s.terpenes, s.lineage,
                s.leafly_url, s.img
         FROM menu_items m
         JOIN strain_lineage s ON m.sku = s.sku
         ORDER BY m.sort
-    |]
+      |]
   return $ Inventory $ V.fromList items
 
 updateExistingMenuItem :: Pool.Pool Connection -> MenuItem -> IO ()
@@ -186,11 +227,11 @@ updateExistingMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
       conn
       [sql|
         UPDATE menu_items
-        SET sort = ?, brand = ?, name = ?, price = ?, measure_unit = ?, 
+        SET sort = ?, brand = ?, name = ?, price = ?, measure_unit = ?,
             per_package = ?, quantity = ?, category = ?, subcategory = ?,
             description = ?, tags = ?, effects = ?
         WHERE sku = ?
-    |]
+      |]
       ( sort
       , brand
       , name
@@ -216,7 +257,7 @@ updateExistingMenuItem pool MenuItem {..} = withConnection pool $ \conn -> do
             dominant_terpene = ?, terpenes = ?, lineage = ?,
             leafly_url = ?, img = ?
         WHERE sku = ?
-    |]
+      |]
       ( thc
       , cbg
       , strain
