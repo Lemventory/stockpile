@@ -12,3 +12,5 @@ generated-docs/
 .spago
 /script/
 /.vscode/
+dist-newstyle/
+.vite
