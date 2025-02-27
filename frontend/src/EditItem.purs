@@ -27,12 +27,9 @@ import Validation (validateMenuItem)
 editItem :: MenuItem -> Nut
 editItem (MenuItem item) = Deku.do
   let (StrainLineage lineage) = item.strain_lineage
-  
-  -- Get the string representations for category and species
   let categoryValue = show item.category
   let speciesValue = show lineage.species
 
-  -- Initialize state
   setStatusMessage /\ statusMessageEvent <- useState ""
   setSubmitting /\ submittingEvent <- useState false
   setFiber /\ _ <- useState (pure unit)
@@ -61,10 +58,9 @@ editItem (MenuItem item) = Deku.do
   setPerPackage /\ perPackageEvent <- useState item.per_package
   setValidPerPackage /\ validPerPackageEvent <- useState (Just true)
 
-  -- Ensure we initialize with the right values for the dropdowns
   setCategory /\ categoryEvent <- useState categoryValue
   setValidCategory /\ validCategoryEvent <- useState (Just true)
-  
+
   setSubcategory /\ subcategoryEvent <- useState item.subcategory
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just true)
 
@@ -84,7 +80,6 @@ editItem (MenuItem item) = Deku.do
   setCreator /\ creatorEvent <- useState lineage.creator
   setValidCreator /\ validCreatorEvent <- useState (Just true)
 
-  -- Ensure we initialize with the right species value
   setSpecies /\ speciesEvent <- useState speciesValue
   setValidSpecies /\ validSpeciesEvent <- useState (Just true)
 
@@ -100,12 +95,11 @@ editItem (MenuItem item) = Deku.do
   setImg /\ imgEvent <- useState lineage.img
   setValidImg /\ validImgEvent <- useState (Just true)
 
-  -- Define dropdown configurations - ensure defaultValue matches item values
   let
     customCategoryConfig =
       { label: "Category"
       , options: map (\val -> { value: show val, label: show val })
-                (getAllEnumValues :: Array ItemCategory)
+          (getAllEnumValues :: Array ItemCategory)
       , defaultValue: categoryValue
       , emptyOption: Nothing
       }
@@ -113,12 +107,11 @@ editItem (MenuItem item) = Deku.do
     customSpeciesConfig =
       { label: "Species"
       , options: map (\val -> { value: show val, label: show val })
-                (getAllEnumValues :: Array Species)
+          (getAllEnumValues :: Array Species)
       , defaultValue: speciesValue
       , emptyOption: Nothing
       }
 
-  -- Form validation logic
   let
     isFormValid = ado
       vName <- validNameEvent
@@ -161,19 +154,16 @@ editItem (MenuItem item) = Deku.do
           , vImg
           ]
 
-  -- Render the UI
   D.div
     [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6"
     , DL.load_ \_ -> do
-        -- Log when component loads
         liftEffect $ Console.log $ "EditItem component loaded"
         liftEffect $ Console.log $ "Current category value: " <> categoryValue
         liftEffect $ Console.log $ "Current species value: " <> speciesValue
-        
-        -- Ensure state is correctly initialized
+
         setCategory categoryValue
         setValidCategory (Just true)
-        
+
         setSpecies speciesValue
         setValidSpecies (Just true)
     ]
@@ -189,10 +179,7 @@ editItem (MenuItem item) = Deku.do
     , makeField (measureUnitConfig item.measure_unit) setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
     , makeField (perPackageConfig item.per_package) setPerPackage setValidPerPackage validPerPackageEvent
     , makeField (subcategoryConfig item.subcategory) setSubcategory setValidSubcategory validSubcategoryEvent
-    
-    -- Use our updated makeDropdown for the category dropdown
     , makeDropdown customCategoryConfig setCategory setValidCategory validCategoryEvent
-    
     , makeField (descriptionConfig item.description) setDescription (const $ pure unit) (pure $ Just true)
     , makeField (tagsConfig (joinWith ", " item.tags)) setTags (const $ pure unit) (pure $ Just true)
     , makeField (effectsConfig (joinWith ", " item.effects)) setEffects (const $ pure unit) (pure $ Just true)
@@ -200,10 +187,7 @@ editItem (MenuItem item) = Deku.do
     , makeField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent
     , makeField (strainConfig lineage.strain) setStrain setValidStrain validStrainEvent
     , makeField (creatorConfig lineage.creator) setCreator setValidCreator validCreatorEvent
-    
-    -- Use our updated makeDropdown for the species dropdown
     , makeDropdown customSpeciesConfig setSpecies setValidSpecies validSpeciesEvent
-    
     , makeField (dominantTerpeneConfig lineage.dominant_terpene) setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
     , makeField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes (const $ pure unit) (pure $ Just true)
     , makeField (lineageConfig (joinWith ", " lineage.lineage)) setLineage (const $ pure unit) (pure $ Just true)
@@ -323,7 +307,8 @@ renderError message =
             [ DA.klass_ "mt-4" ]
             [ D.a
                 [ DA.href_ "/#/"
-                , DA.klass_ "text-blue-600 hover:underline" ]
+                , DA.klass_ "text-blue-600 hover:underline"
+                ]
                 [ text_ "Return to Inventory" ]
             ]
         ]

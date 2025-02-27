@@ -186,13 +186,11 @@ deleteMenuItem pool uuid = do
         (Only uuid)
 
 
-    affected <- withConnection pool $ \conn ->
+    withConnection pool $ \conn ->
       execute
         conn
         "DELETE FROM menu_items WHERE sku = ?"
         (Only uuid)
-
-    return affected
 
   case result of
     Left e -> do

@@ -1,4 +1,3 @@
--- FILE: backend/src/App.hs
 module App where
 
 import API

@@ -109,18 +109,19 @@ makeDropdown config setValue setValid validEvent =
             [ DA.klass_ inputKls
             , DL.load_ \_ -> do
                 liftEffect $ Console.log $ "Initializing dropdown " <> config.label <> " with default: " <> config.defaultValue
-                
+
                 setValue config.defaultValue
-                
-                let isEmptyOption = case config.emptyOption of
-                                    Just emptyOpt -> config.defaultValue == emptyOpt.value
-                                    Nothing -> config.defaultValue == ""
-                
+
+                let
+                  isEmptyOption = case config.emptyOption of
+                    Just emptyOpt -> config.defaultValue == emptyOpt.value
+                    Nothing -> config.defaultValue == ""
+
                 setValid (Just (not isEmptyOption))
             ]
             ( let
                 emptyOptions = case config.emptyOption of
-                  Just emptyOpt -> [emptyOpt]
+                  Just emptyOpt -> [ emptyOpt ]
                   Nothing -> []
 
                 allOptions = emptyOptions <> config.options
@@ -130,9 +131,10 @@ makeDropdown config setValue setValid validEvent =
                     [ DA.value_ opt.value
                     , DL.click_ \_ -> do
                         setValue opt.value
-                        let isEmpty = case config.emptyOption of
-                                      Just emptyOpt -> opt.value == emptyOpt.value
-                                      Nothing -> opt.value == ""
+                        let
+                          isEmpty = case config.emptyOption of
+                            Just emptyOpt -> opt.value == emptyOpt.value
+                            Nothing -> opt.value == ""
                         setValid (Just (not isEmpty))
                     ]
                     [ text_ opt.label ]
@@ -152,17 +154,21 @@ makeDropdown config setValue setValid validEvent =
     ]
 
 -- Helper function for creating a dropdown from an enum type
-makeEnumDropdown :: forall a. BoundedEnum a => Bounded a => Show a => 
-                   { label :: String, defaultValue :: String, includeEmptyOption :: Boolean } ->
-                   DropdownConfig
+makeEnumDropdown
+  :: forall a
+   . BoundedEnum a
+  => Bounded a
+  => Show a
+  => { label :: String, defaultValue :: String, includeEmptyOption :: Boolean }
+  -> DropdownConfig
 makeEnumDropdown { label, defaultValue, includeEmptyOption } =
   { label
   , options: map (\val -> { value: show val, label: show val })
-              (getAllEnumValues :: Array a)
+      (getAllEnumValues :: Array a)
   , defaultValue
-  , emptyOption: if includeEmptyOption 
-                 then Just { value: "", label: "Select..." }
-                 else Nothing
+  , emptyOption:
+      if includeEmptyOption then Just { value: "", label: "Select..." }
+      else Nothing
   }
 
 -- Field config builders that include validation
@@ -380,22 +386,22 @@ categoryConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownC
 categoryConfig { defaultValue, forNewItem } =
   { label: "Category"
   , options: map (\val -> { value: show val, label: show val })
-            (getAllEnumValues :: Array ItemCategory)
+      (getAllEnumValues :: Array ItemCategory)
   , defaultValue: defaultValue
-  , emptyOption: if forNewItem
-                 then Just { value: "", label: "Select..." }
-                 else Nothing
+  , emptyOption:
+      if forNewItem then Just { value: "", label: "Select..." }
+      else Nothing
   }
 
 speciesConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
 speciesConfig { defaultValue, forNewItem } =
   { label: "Species"
   , options: map (\val -> { value: show val, label: show val })
-            (getAllEnumValues :: Array Species)
+      (getAllEnumValues :: Array Species)
   , defaultValue: defaultValue
-  , emptyOption: if forNewItem
-                 then Just { value: "", label: "Select..." }
-                 else Nothing
+  , emptyOption:
+      if forNewItem then Just { value: "", label: "Select..." }
+      else Nothing
   }
 
 -- Style classes

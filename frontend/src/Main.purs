@@ -112,7 +112,7 @@ main = do
                 currentRoute.push $ Tuple r (renderError $ "Failed to fetch inventory: " <> err)
 
             liftEffect $ loadingState.push false
-            
+
         Delete uuid -> do
           let actualUuid = if uuid == "test" then testItemUUID else uuid
           Console.log $ "Loading item with UUID: " <> actualUuid <> " for deletion"

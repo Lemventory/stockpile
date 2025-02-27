@@ -79,12 +79,11 @@ createItem initialUUID = Deku.do
   setErrors /\ errorsValue <- useState []
   setFiber /\ _ <- useState (pure unit)
 
-  -- Updated dropdown configs with emptyOption field
   let
     emptyCategoryConfig =
       { label: "Category"
       , options: map (\val -> { value: show val, label: show val })
-                  (getAllEnumValues :: Array ItemCategory)
+          (getAllEnumValues :: Array ItemCategory)
       , defaultValue: ""
       , emptyOption: Just { value: "", label: "Select..." }
       }
@@ -92,7 +91,7 @@ createItem initialUUID = Deku.do
     emptySpeciesConfig =
       { label: "Species"
       , options: map (\val -> { value: show val, label: show val })
-                  (getAllEnumValues :: Array Species)
+          (getAllEnumValues :: Array Species)
       , defaultValue: ""
       , emptyOption: Just { value: "", label: "Select..." }
       }
@@ -207,13 +206,11 @@ createItem initialUUID = Deku.do
         , DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
             liftEffect $ Console.log $ "Using initialUUID: " <> initialUUID
-            -- Explicitly initialize dropdown state before render
             setCategory ""
             setValidCategory (Just false)
             setSpecies ""
             setValidSpecies (Just false)
-            
-            -- Force browser to recalculate dropdown state
+
             liftEffect $ Console.log "Forcing initialization of dropdown values"
         ]
         []

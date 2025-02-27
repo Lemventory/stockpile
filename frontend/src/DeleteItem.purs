@@ -30,7 +30,7 @@ deleteItem itemId itemName = Deku.do
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
         [ text_ "Delete Menu Item" ]
-        
+
     , D.div
         [ DA.klass_ "bg-red-50 p-4 rounded mb-4" ]
         [ D.p
@@ -40,7 +40,7 @@ deleteItem itemId itemName = Deku.do
             [ DA.klass_ "text-red-600 mt-2" ]
             [ text_ $ "Are you sure you want to delete '" <> itemName <> "'?" ]
         ]
-        
+
     , D.div
         [ DA.klass_ "flex space-x-4" ]
         [ D.button
@@ -76,7 +76,7 @@ deleteItem itemId itemName = Deku.do
             ]
             [ text_ "Cancel" ]
         ]
-        
+
     , D.div
         [ DA.klass_ "mt-4" ]
         [ successEvent <#~> \success ->

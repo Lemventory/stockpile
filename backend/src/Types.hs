@@ -126,7 +126,6 @@ newtype Inventory = Inventory
   }
   deriving (Show, Generic)
 
--- Custom ToJSON instance to ensure items are serialized as an array
 instance ToJSON Inventory where
   toJSON (Inventory {items = items}) = toJSON items
 
@@ -138,12 +137,11 @@ data InventoryResponse
   | Message Text
   deriving (Show, Generic)
 
--- Custom ToJSON instance to match PureScript expectations
 instance ToJSON InventoryResponse where
   toJSON (InventoryData inv) =
     object
       [ "type" .= T.pack "data"
-      , "value" .= toJSON inv -- This will use our custom Inventory instance
+      , "value" .= toJSON inv 
       ]
   toJSON (Message msg) =
     object
