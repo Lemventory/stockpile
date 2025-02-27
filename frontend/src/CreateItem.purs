@@ -243,13 +243,13 @@ createItem initialUUID = Deku.do
         , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
         , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
         , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
-        , F.makeDropdown emptyCategoryConfig setCategory setValidCategory validCategoryEvent
+        , F.makeDropdown (F.categoryConfig { defaultValue: "", forNewItem: true }) setCategory setValidCategory validCategoryEvent
         , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
         , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
         , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
         , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
         , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
-        , F.makeDropdown emptySpeciesConfig setSpecies setValidSpecies validSpeciesEvent
+        , F.makeDropdown (F.speciesConfig { defaultValue: "", forNewItem: true }) setSpecies setValidSpecies validSpeciesEvent
         , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
         , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
         , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
