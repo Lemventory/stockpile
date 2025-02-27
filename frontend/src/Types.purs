@@ -207,10 +207,18 @@ type FieldConfigRow r =
   | r
   )
 
+-- type DropdownConfig =
+--   { label :: String
+--   , options :: Array { value :: String, label :: String }
+--   , defaultValue :: String
+--   }
+
+-- Enhanced DropdownConfig type that includes emptyOption
 type DropdownConfig =
   { label :: String
   , options :: Array { value :: String, label :: String }
   , defaultValue :: String
+  , emptyOption :: Maybe { value :: String, label :: String } -- Optional empty/placeholder option
   }
 
 type TextFieldConfig r =

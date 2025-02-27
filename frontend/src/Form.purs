@@ -2,7 +2,6 @@ module Form where
 
 import Prelude
 
-import Data.Array ((:))
 import Data.Enum (class BoundedEnum)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
@@ -13,14 +12,16 @@ import Deku.DOM as D
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
+import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
 import FRP.Poll (Poll)
 import Types (DropdownConfig, ItemCategory, Species, ValidationRule(..), runValidation)
 import Utils (getAllEnumValues)
+import Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
 import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
-import Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 
 -- Field configuration type that includes validation
 type FieldConfig =
@@ -95,7 +96,6 @@ makeField config setValue setValid validEvent =
         ]
     ]
 
--- Create a dropdown field
 makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
 makeDropdown config setValue setValid validEvent =
   D.div_
@@ -105,16 +105,47 @@ makeDropdown config setValue setValid validEvent =
             [ text_ config.label ]
         , D.select
             [ DA.klass_ inputKls
+            , DL.load_ \_ -> do
+                -- Log the initialization 
+                liftEffect $ Console.log $ "Initializing dropdown " <> config.label <> " with default: " <> config.defaultValue
+                
+                -- Explicitly set the value state
+                setValue config.defaultValue
+                
+                -- Check if it's an empty option to set validity
+                let isEmptyOption = case config.emptyOption of
+                                     Just emptyOpt -> config.defaultValue == emptyOpt.value
+                                     Nothing -> config.defaultValue == ""
+                
+                -- Set validation state based on if default value is empty
+                setValid (Just (not isEmptyOption))
             , DL.change_ \evt -> do
                 for_ (target evt >>= Select.fromEventTarget) \selectElement -> do
                   v <- Select.value selectElement
+                  liftEffect $ Console.log $ "Dropdown " <> config.label <> " changed to: " <> v
                   setValue v
-                  setValid (Just (v /= ""))
+                  
+                  let isEmpty = case config.emptyOption of
+                                  Just emptyOpt -> v == emptyOpt.value
+                                  Nothing -> v == ""
+                  
+                  setValid (Just (not isEmpty))
             ]
-            ( config.options <#> \opt ->
-                D.option
-                  [ DA.value_ opt.value ]
-                  [ text_ opt.label ]
+            ( let
+                emptyOptions = case config.emptyOption of
+                  Just emptyOpt -> [emptyOpt]
+                  Nothing -> []
+                
+                allOptions = emptyOptions <> config.options
+              in
+                allOptions <#> \opt ->
+                  D.option
+                    [ DA.value_ opt.value
+                    , if opt.value == config.defaultValue
+                        then DA.selected_ "selected"
+                        else DA.selected_ ""
+                    ]
+                    [ text_ opt.label ]
             )
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
@@ -129,6 +160,20 @@ makeDropdown config setValue setValid validEvent =
             ]
         ]
     ]
+    
+-- Helper function for creating a dropdown from an enum type
+makeEnumDropdown :: forall a. BoundedEnum a => Bounded a => Show a => 
+                   { label :: String, defaultValue :: String, includeEmptyOption :: Boolean } ->
+                   DropdownConfig
+makeEnumDropdown { label, defaultValue, includeEmptyOption } =
+  { label
+  , options: map (\val -> { value: show val, label: show val })
+              (getAllEnumValues :: Array a)
+  , defaultValue
+  , emptyOption: if includeEmptyOption 
+                 then Just { value: "", label: "Select..." }
+                 else Nothing
+  }
 
 -- Field config builders that include validation
 nameConfig :: String -> FieldConfig
@@ -341,34 +386,26 @@ imgConfig defaultValue =
   , formatInput: trim
   }
 
--- Category and species dropdown configs
-categoryConfig :: DropdownConfig
-categoryConfig = makeEnumDropdown
+categoryConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
+categoryConfig { defaultValue, forNewItem } =
   { label: "Category"
-  , enumType: (bottom :: ItemCategory)
+  , options: map (\val -> { value: show val, label: show val })
+            (getAllEnumValues :: Array ItemCategory)
+  , defaultValue: defaultValue
+  , emptyOption: if forNewItem 
+                 then Just { value: "", label: "Select..." }
+                 else Nothing  -- No empty option when editing
   }
 
-speciesConfig :: DropdownConfig
-speciesConfig = makeEnumDropdown
+speciesConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
+speciesConfig { defaultValue, forNewItem } =
   { label: "Species"
-  , enumType: (bottom :: Species)
-  }
-
--- Create a dropdown for enum values
-makeEnumDropdown
-  :: ∀ a
-   . BoundedEnum a
-  => Bounded a
-  => Show a
-  => { label :: String, enumType :: a }
-  -> DropdownConfig
-makeEnumDropdown { label } =
-  { label
-  , options:
-      { value: "", label: "Select..." } :
-        map (\val -> { value: show val, label: show val })
-          (getAllEnumValues :: Array a)
-  , defaultValue: ""
+  , options: map (\val -> { value: show val, label: show val })
+            (getAllEnumValues :: Array Species)
+  , defaultValue: defaultValue
+  , emptyOption: if forNewItem
+                 then Just { value: "", label: "Select..." }
+                 else Nothing  -- No empty option when editing
   }
 
 -- Style classes

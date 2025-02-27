@@ -18,9 +18,9 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Form as F
-import Types (InventoryResponse(..))
+import Types (InventoryResponse(..), ItemCategory, Species)
 import UUIDGen (genUUID)
-import Utils (ensureInt, ensureNumber)
+import Utils (ensureInt, ensureNumber, getAllEnumValues)
 import Validation (validateMenuItem)
 
 createItem :: String -> Nut
@@ -79,6 +79,24 @@ createItem initialUUID = Deku.do
   setErrors /\ errorsValue <- useState []
   setFiber /\ _ <- useState (pure unit)
 
+  -- Updated dropdown configs with emptyOption field
+  let
+    emptyCategoryConfig =
+      { label: "Category"
+      , options: map (\val -> { value: show val, label: show val })
+                  (getAllEnumValues :: Array ItemCategory)
+      , defaultValue: ""
+      , emptyOption: Just { value: "", label: "Select..." }
+      }
+
+    emptySpeciesConfig =
+      { label: "Species"
+      , options: map (\val -> { value: show val, label: show val })
+                  (getAllEnumValues :: Array Species)
+      , defaultValue: ""
+      , emptyOption: Just { value: "", label: "Select..." }
+      }
+
   let
     isFormValid = ado
       vName <- validNameEvent
@@ -99,7 +117,6 @@ createItem initialUUID = Deku.do
       vSubcategory <- validSubcategoryEvent
       vLeaflyUrl <- validLeaflyUrlEvent
       vImg <- validImgEvent
-
       vDescription <- validDescriptionEvent
       vTags <- validTagsEvent
       vEffects <- validEffectsEvent
@@ -190,6 +207,14 @@ createItem initialUUID = Deku.do
         , DL.load_ \_ -> do
             liftEffect $ Console.log "CreateItem component loading"
             liftEffect $ Console.log $ "Using initialUUID: " <> initialUUID
+            -- Explicitly initialize dropdown state before render
+            setCategory ""
+            setValidCategory (Just false)
+            setSpecies ""
+            setValidSpecies (Just false)
+            
+            -- Force browser to recalculate dropdown state
+            liftEffect $ Console.log "Forcing initialization of dropdown values"
         ]
         []
 
@@ -218,13 +243,13 @@ createItem initialUUID = Deku.do
         , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
         , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
         , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
-        , F.makeDropdown F.categoryConfig setCategory setValidCategory validCategoryEvent
+        , F.makeDropdown emptyCategoryConfig setCategory setValidCategory validCategoryEvent
         , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
         , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
         , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
         , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
         , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
-        , F.makeDropdown F.speciesConfig setSpecies setValidSpecies validSpeciesEvent
+        , F.makeDropdown emptySpeciesConfig setSpecies setValidSpecies validSpeciesEvent
         , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
         , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
         , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
@@ -362,7 +387,6 @@ createItem initialUUID = Deku.do
             )
             submittingEvent
         ]
-
 
     , D.div
         [ DA.klass_ "mt-8 p-4 border rounded bg-gray-50" ]

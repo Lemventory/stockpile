@@ -19,10 +19,11 @@ import Deku.Hooks (useState)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
-import Types (InventoryResponse(..), MenuItem(..), StrainLineage(..))
-import Utils (ensureInt, ensureNumber)
+import Form (brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
+import Types (InventoryResponse(..), ItemCategory, MenuItem(..), Species, StrainLineage(..))
+import Utils (ensureInt, ensureNumber, getAllEnumValues)
 import Validation (validateMenuItem)
+
 
 editItem :: MenuItem -> Nut
 editItem menuItem@(MenuItem item) = Deku.do
@@ -94,10 +95,26 @@ editItem menuItem@(MenuItem item) = Deku.do
   setImg /\ imgEvent <- useState lineage.img
   setValidImg /\ validImgEvent <- useState (Just true)
 
-  -- Create dropdown configs with the current values
-  let 
-    customCategoryConfig = categoryConfig { defaultValue = show item.category }
-    customSpeciesConfig = speciesConfig { defaultValue = show lineage.species }
+  -- Create dropdown configs with updated structure to include emptyOption
+  let
+    categoryValue = show item.category
+    speciesValue = show lineage.species
+
+    customCategoryConfig =
+      { label: "Category"
+      , options: map (\val -> { value: show val, label: show val })
+                (getAllEnumValues :: Array ItemCategory)
+      , defaultValue: categoryValue  -- This is the key - set to existing value
+      , emptyOption: Nothing  -- Remove empty option when editing
+      }
+
+    customSpeciesConfig =
+      { label: "Species"
+      , options: map (\val -> { value: show val, label: show val })
+                (getAllEnumValues :: Array Species)
+      , defaultValue: speciesValue  -- This is the key - set to existing value
+      , emptyOption: Nothing  -- Remove empty option when editing
+      }
 
   let
     isFormValid = ado
@@ -144,9 +161,18 @@ editItem menuItem@(MenuItem item) = Deku.do
   D.div
     [ DA.klass_ "space-y-4 max-w-2xl mx-auto p-6"
     , DL.load_ \_ -> do
+        liftEffect $ Console.log $ "Creating dropdowns with categoryValue: " <> categoryValue
+        liftEffect $ Console.log $ "Creating dropdowns with speciesValue: " <> speciesValue
         liftEffect $ Console.log "EditItem component loaded with pre-fetched data"
-        liftEffect $ Console.log $ "Current category: " <> show item.category
-        liftEffect $ Console.log $ "Current species: " <> show lineage.species
+        liftEffect $ Console.log $ "Current category: " <> categoryValue
+        liftEffect $ Console.log $ "Current species: " <> speciesValue
+
+        setCategory categoryValue
+        setValidCategory (Just true)
+        
+        setSpecies speciesValue  
+        setValidSpecies (Just true)
+
     ]
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
