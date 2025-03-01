@@ -1,38 +1,4 @@
-module Types
-  ( DropdownConfig
-  , FieldConfig
-  , FieldConfigRecord(..)
-  , FieldConfigRow
-  , ForeignRequestBody(..)
-  , HTMLFormField
-  , Inventory(..)
-  , InventoryResponse(..)
-  , ItemCategory(..)
-  , MenuItem(..)
-  , MenuItemFormInput
-  , MenuItemRecord
-  , NumberFieldConfig
-  , Species(..)
-  , StrainLineage(..)
-  , StrainLineageFormInput
-  , TextFieldConfig
-  , Validated(..)
-  , ValidationPreset
-  , ValidationResult(..)
-  , ValidationRule(..)
-  , class FieldValidator
-  , class FormValue
-  , formField
-  , formFieldValidation
-  , formFieldValue
-  , fromFieldConfigRecord
-  , mkValidationRule
-  , runValidation
-  , validateField
-  , validationError
-  , fromFormValue
-  , toFieldConfigRecord
-  ) where
+module Types where
 
 import Prelude
 
