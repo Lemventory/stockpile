@@ -99,7 +99,6 @@ data Species
 derive instance eqItemSpecies :: Eq Species
 derive instance ordItemSpecies :: Ord Species
 
--- | Form input types
 type HTMLFormField (r :: Row Type) =
   ( __tag :: Proxy "HTMLFormField"
   , value :: String
@@ -158,7 +157,6 @@ type StrainLineageFormInput =
   , img :: String
   }
 
--- | Field configuration types
 type FieldConfig = Record (FieldConfigRow ())
 
 newtype FieldConfigRecord r = FieldConfigRecord (Record (FieldConfigRow r))
@@ -191,13 +189,14 @@ type NumberFieldConfig r =
   | FieldConfigRow r
   )
 
-toFieldConfigRecord :: forall r. Record (FieldConfigRow r) -> FieldConfigRecord r
+toFieldConfigRecord
+  :: forall r. Record (FieldConfigRow r) -> FieldConfigRecord r
 toFieldConfigRecord = FieldConfigRecord
 
-fromFieldConfigRecord :: forall r. FieldConfigRecord r -> Record (FieldConfigRow r)
+fromFieldConfigRecord
+  :: forall r. FieldConfigRecord r -> Record (FieldConfigRow r)
 fromFieldConfigRecord (FieldConfigRecord record) = record
 
--- | Core validation types and type classes
 data ValidationResult a
   = ValidationSuccess a
   | ValidationError String
@@ -222,14 +221,12 @@ type ValidationPreset =
   , formatInput :: String -> String
   }
 
--- Helper function to create ValidationRule
 mkValidationRule :: (String -> Boolean) -> ValidationRule
 mkValidationRule = ValidationRule
 
 runValidation :: ValidationRule -> String -> Boolean
 runValidation (ValidationRule f) = f
 
--- | Instances 
 instance Enum ItemCategory where
   succ Flower = Just PreRolls
   succ PreRolls = Just Vaporizers
@@ -328,7 +325,6 @@ instance Show Species where
   show SativaDominantHybrid = "SativaDominantHybrid"
   show Sativa = "Sativa"
 
--- | WriteForeign instances
 instance writeForeignMenuItem :: WriteForeign MenuItem where
   writeImpl (MenuItem item) = writeImpl
     { sort: item.sort
@@ -377,13 +373,13 @@ instance writeForeignFieldConfigRecord :: WriteForeign (FieldConfigRecord r) whe
     }
 
 instance writeForeignInventoryResponse :: WriteForeign InventoryResponse where
-  writeImpl (InventoryData inventory) = writeImpl { type: "data", value: inventory }
+  writeImpl (InventoryData inventory) = writeImpl
+    { type: "data", value: inventory }
   writeImpl (Message msg) = writeImpl { type: "message", value: msg }
 
 instance writeForeignValidationRule :: WriteForeign ValidationRule where
   writeImpl _ = writeImpl "<validation function>"
 
--- | ReadForeign instances
 instance readForeignMenuItem :: ReadForeign MenuItem where
   readImpl json = do
     sort <- readProp "sort" json >>= readImpl
@@ -476,12 +472,11 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
   readImpl f = do
     obj <- readImpl f
     case obj of
-      -- Try parsing as a direct inventory array first
+
       array | isArray array -> do
         inventory <- readImpl array :: F Inventory
         pure $ InventoryData inventory
 
-      -- Otherwise try parsing as a wrapped response
       _ -> do
         typeField <- readProp "type" obj >>= readImpl :: F String
         case typeField of
@@ -496,7 +491,6 @@ instance readForeignInventoryResponse :: ReadForeign InventoryResponse where
     isArray :: Foreign -> Boolean
     isArray value = typeOf value == "array"
 
--- | Show instances
 derive instance Generic MenuItem _
 
 instance showMenuItem :: Show MenuItem where
@@ -518,7 +512,6 @@ instance showStrainLineage :: Show StrainLineage where
 instance showValidationRule :: Show ValidationRule where
   show _ = "<validation function>"
 
--- | FormValue instances
 instance formValueString :: FormValue String where
   fromFormValue = ValidationSuccess <<< trim
 
@@ -564,8 +557,10 @@ instance formValueValidated :: (FieldValidator a) => FormValue (Validated a) whe
     Right value -> ValidationSuccess value
     Left err -> ValidationError err
 
--- | FieldValidator instances
-instance fieldValidatorValidated :: (FieldValidator a) => FieldValidator (Validated a) where
+instance fieldValidatorValidated ::
+  ( FieldValidator a
+  ) =>
+  FieldValidator (Validated a) where
   validateField str = do
     result <- validateField str
     pure $ Validated result

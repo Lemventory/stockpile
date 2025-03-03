@@ -18,9 +18,9 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Form as F
-import Types (InventoryResponse(..), ItemCategory, Species)
+import Types (InventoryResponse(..))
 import UUIDGen (genUUID)
-import Utils (ensureInt, ensureNumber, getAllEnumValues)
+import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
 
 createItem :: String -> Nut
@@ -78,23 +78,6 @@ createItem initialUUID = Deku.do
   setSubmitting /\ submittingEvent <- useState false
   setErrors /\ errorsValue <- useState []
   setFiber /\ _ <- useState (pure unit)
-
-  let
-    emptyCategoryConfig =
-      { label: "Category"
-      , options: map (\val -> { value: show val, label: show val })
-          (getAllEnumValues :: Array ItemCategory)
-      , defaultValue: ""
-      , emptyOption: Just { value: "", label: "Select..." }
-      }
-
-    emptySpeciesConfig =
-      { label: "Species"
-      , options: map (\val -> { value: show val, label: show val })
-          (getAllEnumValues :: Array Species)
-      , defaultValue: ""
-      , emptyOption: Just { value: "", label: "Select..." }
-      }
 
   let
     isFormValid = ado
@@ -227,38 +210,62 @@ createItem initialUUID = Deku.do
                 if null errs then
                   D.span [] []
                 else
-                  D.ul [ DA.klass_ "text-red-500 text-sm bg-red-50 p-4 rounded" ]
+                  D.ul
+                    [ DA.klass_ "text-red-500 text-sm bg-red-50 p-4 rounded" ]
                     (map (\err -> D.li_ [ text_ err ]) errs)
             ]
-
         , F.makeField (F.brandConfig "") setBrand setValidBrand validBrandEvent
         , F.makeField (F.nameConfig "") setName setValidName validNameEvent
         , F.makeField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent
         , F.makeField (F.sortConfig "") setSort setValidSort validSortEvent
         , F.makeField (F.priceConfig "") setPrice setValidPrice validPriceEvent
-        , F.makeField (F.quantityConfig "") setQuantity setValidQuantity validQuantityEvent
-        , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage validPerPackageEvent
-        , F.makeField (F.measureUnitConfig "") setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
-        , F.makeField (F.subcategoryConfig "") setSubcategory setValidSubcategory validSubcategoryEvent
-        , F.makeDropdown (F.categoryConfig { defaultValue: "", forNewItem: true }) setCategory setValidCategory validCategoryEvent
-        , F.makeField (F.descriptionConfig "") setDescription setValidDescription validDescriptionEvent
+        , F.makeField (F.quantityConfig "") setQuantity setValidQuantity
+            validQuantityEvent
+        , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage
+            validPerPackageEvent
+        , F.makeField (F.measureUnitConfig "") setMeasureUnit
+            setValidMeasureUnit
+            validMeasureUnitEvent
+        , F.makeField (F.subcategoryConfig "") setSubcategory
+            setValidSubcategory
+            validSubcategoryEvent
+        , F.makeDropdown
+            (F.categoryConfig { defaultValue: "", forNewItem: true })
+            setCategory
+            setValidCategory
+            validCategoryEvent
+        , F.makeField (F.descriptionConfig "") setDescription
+            setValidDescription
+            validDescriptionEvent
         , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent
-        , F.makeField (F.effectsConfig "") setEffects setValidEffects validEffectsEvent
+        , F.makeField (F.effectsConfig "") setEffects setValidEffects
+            validEffectsEvent
         , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent
         , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent
-        , F.makeDropdown (F.speciesConfig { defaultValue: "", forNewItem: true }) setSpecies setValidSpecies validSpeciesEvent
-        , F.makeField (F.strainConfig "") setStrain setValidStrain validStrainEvent
-        , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
-        , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes validTerpenesEvent
-        , F.makeField (F.lineageConfig "") setLineage setValidLineage validLineageEvent
-        , F.makeField (F.creatorConfig "") setCreator setValidCreator validCreatorEvent
-        , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+        , F.makeDropdown
+            (F.speciesConfig { defaultValue: "", forNewItem: true })
+            setSpecies
+            setValidSpecies
+            validSpeciesEvent
+        , F.makeField (F.strainConfig "") setStrain setValidStrain
+            validStrainEvent
+        , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene
+            setValidDominantTerpene
+            validDominantTerpeneEvent
+        , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes
+            validTerpenesEvent
+        , F.makeField (F.lineageConfig "") setLineage setValidLineage
+            validLineageEvent
+        , F.makeField (F.creatorConfig "") setCreator setValidCreator
+            validCreatorEvent
+        , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl
+            validLeaflyUrlEvent
         , F.makeField (F.imgConfig "") setImg setValidImg validImgEvent
         ]
-
     , D.button
         [ DA.klass_ $ F.buttonClass "green"
-        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not
+            isFormValid
         , DL.runOn DL.click $
             ( { sort: _
               , name: _
@@ -358,7 +365,6 @@ createItem initialUUID = Deku.do
                   Right menuItem -> do
                     liftEffect $ Console.info "Form validated successfully:"
                     liftEffect $ Console.logShow menuItem
-
                     result <- writeInventory menuItem
                     liftEffect case result of
                       Right (Message msg) -> do
@@ -401,42 +407,79 @@ createItem initialUUID = Deku.do
             , text $ map show isFormValid
             ]
         , D.div
-            [ DA.klass_ "debug-form-valid-items grid grid-cols-3 gap-2 text-xs" ]
+            [ DA.klass_ "debug-form-valid-items grid grid-cols-3 gap-2 text-xs"
+            ]
             [ validNameEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Name: " <> show v ]
             , validBrandEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Brand: " <> show v ]
             , validSkuEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "SKU: " <> show v ]
             , validPriceEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Price: " <> show v ]
             , validQuantityEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Quantity: " <> show v ]
             , validCategoryEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Category: " <> show v ]
             , validThcEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "THC: " <> show v ]
             , validCbgEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "CBG: " <> show v ]
             , validStrainEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Strain: " <> show v ]
             , validCreatorEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Creator: " <> show v ]
             , validSpeciesEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Species: " <> show v ]
             , validDominantTerpeneEvent <#~> \v -> D.div
-                [ DA.klass_ $ "p-1 " <> if fromMaybe false v then "text-green-600" else "text-red-600" ]
+                [ DA.klass_ $ "p-1 " <>
+                    if fromMaybe false v then "text-green-600"
+                    else "text-red-600"
+                ]
                 [ text_ $ "Dom Terpene: " <> show v ]
             ]
         ]

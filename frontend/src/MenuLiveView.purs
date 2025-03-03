@@ -49,7 +49,9 @@ renderInventory :: LiveViewConfig -> Inventory -> Nut
 renderInventory config inventory@(Inventory items) =
   let
     filteredItems =
-      if config.hideOutOfStock then filter (\(MenuItem item) -> item.quantity > 0) items
+      if config.hideOutOfStock then filter
+        (\(MenuItem item) -> item.quantity > 0)
+        items
       else items
 
     sortedItems = sortBy (compareMenuItems config) filteredItems
@@ -81,7 +83,8 @@ renderItem (MenuItem record) =
       [ D.div [ DA.klass_ "item-header" ]
           [ D.div []
               [ D.div [ DA.klass_ "item-brand" ] [ text_ record.brand ]
-              , D.div [ DA.klass_ "item-name" ] [ text_ ("'" <> record.name <> "'") ]
+              , D.div [ DA.klass_ "item-name" ]
+                  [ text_ ("'" <> record.name <> "'") ]
               ]
           , D.div [ DA.klass_ "item-img" ]
               [ D.img [ DA.alt_ "product image", DA.src_ meta.img ] [] ]
@@ -93,7 +96,14 @@ renderItem (MenuItem record) =
       , D.div [ DA.klass_ "item-strain_lineage" ]
           [ text_ ("Strain: " <> meta.strain) ]
       , D.div [ DA.klass_ "item-price" ]
-          [ text_ ("$" <> show record.price <> " (" <> record.per_package <> "" <> record.measure_unit <> ")") ]
+          [ text_
+              ( "$" <> show record.price <> " (" <> record.per_package <> ""
+                  <> record.measure_unit
+                  <> ")"
+              )
+          ]
+      , D.div [ DA.klass_ "item-description" ]
+          [ text_ ("description: " <> show record.description) ]
       , D.div [ DA.klass_ "item-quantity" ]
           [ text_ ("in stock: " <> show record.quantity) ]
       , D.div [ DA.klass_ "item-actions" ]

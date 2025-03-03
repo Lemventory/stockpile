@@ -27,14 +27,16 @@ alphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9-\\s]+$" noFlags of
   Right validRegex -> test validRegex str
 
 extendedAlphanumeric :: ValidationRule
-extendedAlphanumeric = ValidationRule \str -> case regex "^[A-Za-z0-9\\s\\-_&+',\\.\\(\\)]+$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
+extendedAlphanumeric = ValidationRule \str ->
+  case regex "^[A-Za-z0-9\\s\\-_&+',\\.\\(\\)]+$" noFlags of
+    Left _ -> false
+    Right validRegex -> test validRegex str
 
 percentage :: ValidationRule
-percentage = ValidationRule \str -> case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
-  Left _ -> false
-  Right validRegex -> test validRegex str
+percentage = ValidationRule \str ->
+  case regex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags of
+    Left _ -> false
+    Right validRegex -> test validRegex str
 
 dollarAmount :: ValidationRule
 dollarAmount = ValidationRule \str -> case Number.fromString str of
@@ -44,14 +46,37 @@ dollarAmount = ValidationRule \str -> case Number.fromString str of
 validMeasurementUnit :: ValidationRule
 validMeasurementUnit = ValidationRule \str ->
   let
-    units = [ "g", "mg", "kg", "oz", "lb", "ml", "l", "ea", "unit", "units", "pack", "packs", "eighth", "quarter", "half", "1/8", "1/4", "1/2" ]
+    units =
+      [ "g"
+      , "mg"
+      , "kg"
+      , "oz"
+      , "lb"
+      , "ml"
+      , "l"
+      , "ea"
+      , "unit"
+      , "units"
+      , "pack"
+      , "packs"
+      , "eighth"
+      , "quarter"
+      , "half"
+      , "1/8"
+      , "1/4"
+      , "1/2"
+      ]
     lowercaseStr = String.trim (str # String.toLower)
   in
     any (\unit -> unit == lowercaseStr) units
 
 validUrl :: ValidationRule
 validUrl = ValidationRule \str ->
-  case regex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags of
+  case
+    regex
+      "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$"
+      noFlags
+    of
     Left _ -> false
     Right validRegex -> test validRegex str
 
@@ -93,56 +118,89 @@ anyOf rules = ValidationRule \str ->
   any (\(ValidationRule rule) -> rule str) rules
 
 -- Validation presets for common fields
-requiredText :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+requiredText
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 requiredText =
   { validation: allOf [ nonEmpty, alphanumeric ]
   , errorMessage: "Required, text only"
   , formatInput: String.trim
   }
 
-requiredTextWithLimit :: Int -> { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+requiredTextWithLimit
+  :: Int
+  -> { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 requiredTextWithLimit limit =
   { validation: allOf [ nonEmpty, extendedAlphanumeric, maxLength limit ]
   , errorMessage: "Required, text only (max " <> show limit <> " chars)"
   , formatInput: String.trim
   }
 
-percentageField :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+percentageField
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 percentageField =
   { validation: percentage
   , errorMessage: "Required format: XX.XX%"
   , formatInput: String.trim
   }
 
-moneyField :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+moneyField
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 moneyField =
   { validation: allOf [ nonEmpty, dollarAmount ]
   , errorMessage: "Required, valid dollar amount"
   , formatInput: identity
   }
 
-urlField :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+urlField
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 urlField =
   { validation: allOf [ nonEmpty, validUrl ]
   , errorMessage: "Required, valid URL"
   , formatInput: String.trim
   }
 
-quantityField :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+quantityField
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 quantityField =
   { validation: allOf [ nonEmpty, nonNegativeInteger ]
   , errorMessage: "Required, non-negative whole number"
   , formatInput: String.trim
   }
 
-commaListField :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+commaListField
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 commaListField =
   { validation: commaList
   , errorMessage: "Must be a comma-separated list"
   , formatInput: String.trim
   }
 
-multilineText :: { validation :: ValidationRule, errorMessage :: String, formatInput :: String -> String }
+multilineText
+  :: { validation :: ValidationRule
+     , errorMessage :: String
+     , formatInput :: String -> String
+     }
 multilineText =
   { validation: nonEmpty
   , errorMessage: "Required"
@@ -158,7 +216,8 @@ validateString fieldName str =
 validatePercentage :: String -> String -> V (Array String) String
 validatePercentage fieldName str =
   if String.trim str == "" then invalid [ fieldName <> " is required" ]
-  else if not (test (unsafeRegex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags) str) then invalid [ fieldName <> " must be in the format XX.XX%" ]
+  else if not (test (unsafeRegex "^\\d{1,3}(\\.\\d{1,2})?%$" noFlags) str) then
+    invalid [ fieldName <> " must be in the format XX.XX%" ]
   else pure str
 
 validateNumber :: String -> String -> V (Array String) Number
@@ -176,7 +235,15 @@ validateInt fieldName str =
 validateUrl :: String -> String -> V (Array String) String
 validateUrl fieldName str =
   if String.trim str == "" then invalid [ fieldName <> " is required" ]
-  else if not (test (unsafeRegex "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$" noFlags) str) then invalid [ fieldName <> " must be a valid URL" ]
+  else if
+    not
+      ( test
+          ( unsafeRegex
+              "^(https?:\\/\\/)?(www\\.)?[a-zA-Z0-9][a-zA-Z0-9-]*(\\.[a-zA-Z0-9][a-zA-Z0-9-]*)+(\\/[\\w\\-\\.~:\\/?#[\\]@!$&'()*+,;=]*)*$"
+              noFlags
+          )
+          str
+      ) then invalid [ fieldName <> " must be a valid URL" ]
   else pure str
 
 validateUUID :: String -> String -> V (Array String) UUID
@@ -228,52 +295,61 @@ validateMenuItem input =
         validateString "Brand" input.brand `andThen` \brand ->
           validateNumber "Price" input.price `andThen` \price ->
             validateInt "Quantity" input.quantity `andThen` \quantity ->
-              validateString "Measure Unit" input.measure_unit `andThen` \measure_unit ->
-                validateString "Per Package" input.per_package `andThen` \per_package ->
-                  validateCategory "Category" input.category `andThen` \category ->
-                    validateString "Subcategory" input.subcategory `andThen` \subcategory ->
-                      validateStrainLineage input.strain_lineage `andThen` \strain_lineage ->
-                        validateInt "Sort" input.sort `andThen` \sort ->
-                          pure $ MenuItem
-                            { sort
-                            , sku
-                            , brand
-                            , name
-                            , price
-                            , measure_unit
-                            , per_package
-                            , quantity
-                            , category
-                            , subcategory
-                            , description: input.description
-                            , tags: parseCommaList input.tags
-                            , effects: parseCommaList input.effects
-                            , strain_lineage
-                            }
+              validateString "Measure Unit" input.measure_unit `andThen`
+                \measure_unit ->
+                  validateString "Per Package" input.per_package `andThen`
+                    \per_package ->
+                      validateCategory "Category" input.category `andThen`
+                        \category ->
+                          validateString "Subcategory" input.subcategory
+                            `andThen` \subcategory ->
+                              validateStrainLineage input.strain_lineage
+                                `andThen` \strain_lineage ->
+                                  validateInt "Sort" input.sort `andThen`
+                                    \sort ->
+                                      pure $ MenuItem
+                                        { sort
+                                        , sku
+                                        , brand
+                                        , name
+                                        , price
+                                        , measure_unit
+                                        , per_package
+                                        , quantity
+                                        , category
+                                        , subcategory
+                                        , description: input.description
+                                        , tags: parseCommaList input.tags
+                                        , effects: parseCommaList input.effects
+                                        , strain_lineage
+                                        }
 
 -- Separate validation for strain lineage
-validateStrainLineage :: StrainLineageFormInput -> V (Array String) StrainLineage
+validateStrainLineage
+  :: StrainLineageFormInput -> V (Array String) StrainLineage
 validateStrainLineage input =
   validatePercentage "THC" input.thc `andThen` \thc ->
     validatePercentage "CBG" input.cbg `andThen` \cbg ->
       validateString "Strain" input.strain `andThen` \strain ->
         validateString "Creator" input.creator `andThen` \creator ->
           validateSpecies "Species" input.species `andThen` \species ->
-            validateString "Dominant Terpene" input.dominant_terpene `andThen` \dominant_terpene ->
-              validateUrl "Leafly URL" input.leafly_url `andThen` \leafly_url ->
-                validateUrl "Image URL" input.img `andThen` \img ->
-                  pure $ StrainLineage
-                    { thc
-                    , cbg
-                    , strain
-                    , creator
-                    , species
-                    , dominant_terpene
-                    , terpenes: parseCommaList input.terpenes
-                    , lineage: parseCommaList input.lineage
-                    , leafly_url
-                    , img
-                    }
+            validateString "Dominant Terpene" input.dominant_terpene `andThen`
+              \dominant_terpene ->
+                validateUrl "Leafly URL" input.leafly_url `andThen`
+                  \leafly_url ->
+                    validateUrl "Image URL" input.img `andThen` \img ->
+                      pure $ StrainLineage
+                        { thc
+                        , cbg
+                        , strain
+                        , creator
+                        , species
+                        , dominant_terpene
+                        , terpenes: parseCommaList input.terpenes
+                        , lineage: parseCommaList input.lineage
+                        , leafly_url
+                        , img
+                        }
 
 -- Helper for unsafe regex creation in validatePercentage and validateUrl
 unsafeRegex :: String -> RegexFlags -> Regex

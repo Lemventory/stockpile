@@ -10,7 +10,6 @@ import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
-import Deku.DOM.Combinators as Combinators
 import Deku.DOM.Listeners as DL
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -21,7 +20,7 @@ import Utils (getAllEnumValues)
 import Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 import Web.Event.Event (target)
 import Web.HTML.HTMLInputElement (fromEventTarget, value) as Input
-import Web.HTML.HTMLSelectElement (fromEventTarget, setValue, value) as Select
+import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 
 -- Field configuration type that includes validation
@@ -34,8 +33,12 @@ type FieldConfig =
   , formatInput :: String -> String
   }
 
--- Create a standard form field with validation
-makeField :: FieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeField
+  :: FieldConfig
+  -> (String -> Effect Unit)
+  -> (Maybe Boolean -> Effect Unit)
+  -> Poll (Maybe Boolean)
+  -> Nut
 makeField config setValue setValid validEvent =
   D.div_
     [ D.div
@@ -49,17 +52,21 @@ makeField config setValue setValid validEvent =
               , DA.rows_ "4"
               , DL.keyup_ \evt -> do
                   let targetEvent = toEvent evt
-                  for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (runValidation config.validation formatted))
+                  for_ (target targetEvent >>= Input.fromEventTarget)
+                    \inputElement -> do
+                      v <- Input.value inputElement
+                      let formatted = config.formatInput v
+                      setValue formatted
+                      setValid
+                        (Just (runValidation config.validation formatted))
               , DL.input_ \evt -> do
-                  for_ (target evt >>= Input.fromEventTarget) \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (runValidation config.validation formatted))
+                  for_ (target evt >>= Input.fromEventTarget) \inputElement ->
+                    do
+                      v <- Input.value inputElement
+                      let formatted = config.formatInput v
+                      setValue formatted
+                      setValid
+                        (Just (runValidation config.validation formatted))
               , DA.klass_ (inputKls <> " resize-y")
               ]
               [ text_ config.defaultValue ]
@@ -69,17 +76,21 @@ makeField config setValue setValid validEvent =
               , DA.value_ config.defaultValue
               , DL.keyup_ \evt -> do
                   let targetEvent = toEvent evt
-                  for_ (target targetEvent >>= Input.fromEventTarget) \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (runValidation config.validation formatted))
+                  for_ (target targetEvent >>= Input.fromEventTarget)
+                    \inputElement -> do
+                      v <- Input.value inputElement
+                      let formatted = config.formatInput v
+                      setValue formatted
+                      setValid
+                        (Just (runValidation config.validation formatted))
               , DL.input_ \evt -> do
-                  for_ (target evt >>= Input.fromEventTarget) \inputElement -> do
-                    v <- Input.value inputElement
-                    let formatted = config.formatInput v
-                    setValue formatted
-                    setValid (Just (runValidation config.validation formatted))
+                  for_ (target evt >>= Input.fromEventTarget) \inputElement ->
+                    do
+                      v <- Input.value inputElement
+                      let formatted = config.formatInput v
+                      setValue formatted
+                      setValid
+                        (Just (runValidation config.validation formatted))
               , DA.klass_ inputKls
               ]
               []
@@ -97,8 +108,12 @@ makeField config setValue setValid validEvent =
         ]
     ]
 
--- Simplified dropdown implementation with direct option click handlers
-makeDropdown :: DropdownConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeDropdown
+  :: DropdownConfig
+  -> (String -> Effect Unit)
+  -> (Maybe Boolean -> Effect Unit)
+  -> Poll (Maybe Boolean)
+  -> Nut
 makeDropdown config setValue setValid validEvent =
   D.div_
     [ D.div
@@ -108,17 +123,50 @@ makeDropdown config setValue setValid validEvent =
         , D.select
             [ DA.klass_ inputKls
             , DL.load_ \_ -> do
-                liftEffect $ Console.log $ "Initializing dropdown " <> config.label <> " with default: " <> config.defaultValue
-
+                -- Set the initial value when component loads
                 setValue config.defaultValue
 
+                -- Check if the default value is empty for validation
                 let
-                  isEmptyOption = case config.emptyOption of
+                  isEmpty = case config.emptyOption of
                     Just emptyOpt -> config.defaultValue == emptyOpt.value
                     Nothing -> config.defaultValue == ""
 
-                setValid (Just (not isEmptyOption))
+                -- Set initial validation state
+                setValid (Just (not isEmpty))
+
+                liftEffect $ Console.log $
+                  "Dropdown " <> config.label
+                    <> " initialized with: "
+                    <> config.defaultValue
+                    <> ", valid: "
+                    <> show (not isEmpty)
+
+            , DL.change_ \evt -> do
+                for_ (target evt >>= Select.fromEventTarget) \selectElement ->
+                  do
+                    v <- Select.value selectElement
+
+                    -- Update the value
+                    setValue v
+
+                    -- Update validation status based on whether the value is empty
+                    let
+                      isEmpty = case config.emptyOption of
+                        Just emptyOpt -> v == emptyOpt.value
+                        Nothing -> v == ""
+
+                    setValid (Just (not isEmpty))
+
+                    liftEffect $ Console.log $
+                      "Dropdown " <> config.label
+                        <> " changed to: "
+                        <> v
+                        <> ", valid: "
+                        <> show (not isEmpty)
             ]
+
+            -- Generate options, including the empty option if specified
             ( let
                 emptyOptions = case config.emptyOption of
                   Just emptyOpt -> [ emptyOpt ]
@@ -127,18 +175,17 @@ makeDropdown config setValue setValid validEvent =
                 allOptions = emptyOptions <> config.options
               in
                 allOptions <#> \opt ->
-                  D.option
-                    [ DA.value_ opt.value
-                    , DL.click_ \_ -> do
-                        setValue opt.value
-                        let
-                          isEmpty = case config.emptyOption of
-                            Just emptyOpt -> opt.value == emptyOpt.value
-                            Nothing -> opt.value == ""
-                        setValid (Just (not isEmpty))
-                    ]
-                    [ text_ opt.label ]
+                  let
+                    isSelected = opt.value == config.defaultValue
+                  in
+                    D.option
+                      [ DA.value_ opt.value
+                      , if isSelected then DA.selected_ "selected"
+                        else DA.klass_ ""
+                      ]
+                      [ text_ opt.label ]
             )
+
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
             [ text
@@ -153,9 +200,8 @@ makeDropdown config setValue setValid validEvent =
         ]
     ]
 
--- Helper function for creating a dropdown from an enum type
 makeEnumDropdown
-  :: forall a
+  :: ∀ a
    . BoundedEnum a
   => Bounded a
   => Show a
@@ -269,7 +315,7 @@ descriptionConfig defaultValue =
   , defaultValue
   , validation: nonEmpty
   , errorMessage: "Description is required"
-  , formatInput: identity
+  , formatInput: trim
   }
 
 tagsConfig :: String -> FieldConfig
@@ -382,23 +428,25 @@ imgConfig defaultValue =
   , formatInput: trim
   }
 
-categoryConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
+categoryConfig
+  :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
 categoryConfig { defaultValue, forNewItem } =
   { label: "Category"
   , options: map (\val -> { value: show val, label: show val })
       (getAllEnumValues :: Array ItemCategory)
-  , defaultValue: defaultValue
+  , defaultValue
   , emptyOption:
       if forNewItem then Just { value: "", label: "Select..." }
       else Nothing
   }
 
-speciesConfig :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
+speciesConfig
+  :: { defaultValue :: String, forNewItem :: Boolean } -> DropdownConfig
 speciesConfig { defaultValue, forNewItem } =
   { label: "Species"
   , options: map (\val -> { value: show val, label: show val })
       (getAllEnumValues :: Array Species)
-  , defaultValue: defaultValue
+  , defaultValue
   , emptyOption:
       if forNewItem then Just { value: "", label: "Select..." }
       else Nothing

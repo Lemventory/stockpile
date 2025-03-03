@@ -67,11 +67,14 @@ deleteItem itemId itemName = Deku.do
                       setSubmitting false
             ]
             [ text $ map
-                (\isSubmitting -> if isSubmitting then "Deleting..." else "Confirm Delete")
+                ( \isSubmitting ->
+                    if isSubmitting then "Deleting..." else "Confirm Delete"
+                )
                 submittingEvent
             ]
         , D.a
-            [ DA.klass_ $ "inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium leading-4 text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            [ DA.klass_ $
+                "inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium leading-4 text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             , DA.href_ "/#/"
             ]
             [ text_ "Cancel" ]

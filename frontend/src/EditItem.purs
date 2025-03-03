@@ -16,12 +16,13 @@ import Deku.DOM.Listeners (runOn)
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
 import Deku.Hooks (useState)
+import Data.String.CodeUnits (length)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
-import Types (InventoryResponse(..), ItemCategory, MenuItem(..), Species, StrainLineage(..))
-import Utils (ensureInt, ensureNumber, getAllEnumValues)
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
+import Types (InventoryResponse(..), MenuItem(..), StrainLineage(..))
+import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
 
 editItem :: MenuItem -> Nut
@@ -65,8 +66,13 @@ editItem (MenuItem item) = Deku.do
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just true)
 
   setDescription /\ descriptionEvent <- useState item.description
+  setValidDescription /\ validDescriptionEvent <- useState (Just true)
+
   setTags /\ tagsEvent <- useState (joinWith ", " item.tags)
+  setValidTags /\ validTagsEvent <- useState (Just true)
+
   setEffects /\ effectsEvent <- useState (joinWith ", " item.effects)
+  setValidEffects /\ validEffectsEvent <- useState (Just true)
 
   setThc /\ thcEvent <- useState lineage.thc
   setValidThc /\ validThcEvent <- useState (Just true)
@@ -83,11 +89,15 @@ editItem (MenuItem item) = Deku.do
   setSpecies /\ speciesEvent <- useState speciesValue
   setValidSpecies /\ validSpeciesEvent <- useState (Just true)
 
-  setDominantTerpene /\ dominantTerpeneEvent <- useState lineage.dominant_terpene
+  setDominantTerpene /\ dominantTerpeneEvent <- useState
+    lineage.dominant_terpene
   setValidDominantTerpene /\ validDominantTerpeneEvent <- useState (Just true)
 
   setTerpenes /\ terpenesEvent <- useState (joinWith ", " lineage.terpenes)
+  setValidTerpenes /\ validTerpenesEvent <- useState (Just true)
+
   setLineage /\ lineageEvent <- useState (joinWith ", " lineage.lineage)
+  setValidLineage /\ validLineageEvent <- useState (Just true)
 
   setLeaflyUrl /\ leaflyUrlEvent <- useState lineage.leafly_url
   setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just true)
@@ -96,22 +106,11 @@ editItem (MenuItem item) = Deku.do
   setValidImg /\ validImgEvent <- useState (Just true)
 
   let
-    customCategoryConfig =
-      { label: "Category"
-      , options: map (\val -> { value: show val, label: show val })
-          (getAllEnumValues :: Array ItemCategory)
-      , defaultValue: categoryValue
-      , emptyOption: Nothing
-      }
-
-    customSpeciesConfig =
-      { label: "Species"
-      , options: map (\val -> { value: show val, label: show val })
-          (getAllEnumValues :: Array Species)
-      , defaultValue: speciesValue
-      , emptyOption: Nothing
-      }
-
+    customCategoryConfig = categoryConfig
+      { defaultValue: categoryValue, forNewItem: false }
+  let
+    customSpeciesConfig = speciesConfig
+      { defaultValue: speciesValue, forNewItem: false }
   let
     isFormValid = ado
       vName <- validNameEvent
@@ -161,6 +160,17 @@ editItem (MenuItem item) = Deku.do
         liftEffect $ Console.log $ "Current category value: " <> categoryValue
         liftEffect $ Console.log $ "Current species value: " <> speciesValue
 
+        -- Debug logging for description
+        liftEffect $ Console.log $ "Description value from backend: '"
+          <> item.description
+          <> "'"
+        liftEffect $ Console.log $ "Description length: " <> show
+          (length item.description)
+        liftEffect $ Console.log $ "Description config defaultValue: '"
+          <> (descriptionConfig item.description).defaultValue
+          <> "'"
+        -- Removed the problematic evalState line
+
         setCategory categoryValue
         setValidCategory (Just true)
 
@@ -173,32 +183,99 @@ editItem (MenuItem item) = Deku.do
     , makeField (nameConfig item.name) setName setValidName validNameEvent
     , makeField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent
     , makeField (brandConfig item.brand) setBrand setValidBrand validBrandEvent
-    , makeField (priceConfig (show item.price)) setPrice setValidPrice validPriceEvent
-    , makeField (quantityConfig (show item.quantity)) setQuantity setValidQuantity validQuantityEvent
-    , makeField (sortConfig (show item.sort)) setSort setValidSort validSortEvent
-    , makeField (measureUnitConfig item.measure_unit) setMeasureUnit setValidMeasureUnit validMeasureUnitEvent
-    , makeField (perPackageConfig item.per_package) setPerPackage setValidPerPackage validPerPackageEvent
-    , makeField (subcategoryConfig item.subcategory) setSubcategory setValidSubcategory validSubcategoryEvent
-    , makeDropdown customCategoryConfig setCategory setValidCategory validCategoryEvent
-    , makeField (descriptionConfig item.description) setDescription (const $ pure unit) (pure $ Just true)
-    , makeField (tagsConfig (joinWith ", " item.tags)) setTags (const $ pure unit) (pure $ Just true)
-    , makeField (effectsConfig (joinWith ", " item.effects)) setEffects (const $ pure unit) (pure $ Just true)
+    , makeField (priceConfig (show item.price)) setPrice setValidPrice
+        validPriceEvent
+    , makeField (quantityConfig (show item.quantity)) setQuantity
+        setValidQuantity
+        validQuantityEvent
+    , makeField (sortConfig (show item.sort)) setSort setValidSort
+        validSortEvent
+    , makeField (measureUnitConfig item.measure_unit) setMeasureUnit
+        setValidMeasureUnit
+        validMeasureUnitEvent
+    , makeField (perPackageConfig item.per_package) setPerPackage
+        setValidPerPackage
+        validPerPackageEvent
+    , makeField (subcategoryConfig item.subcategory) setSubcategory
+        setValidSubcategory
+        validSubcategoryEvent
+    , makeDropdown customCategoryConfig setCategory setValidCategory
+        validCategoryEvent
+
+    -- Debug rendering
+    , D.div [ DA.klass_ "debug-description-container" ]
+        [ D.pre [ DA.klass_ "text-xs text-red-500" ]
+            [ text_ $ "Debug - Description from backend: '" <> item.description
+                <> "'"
+            ]
+        ]
+
+    -- Description field
+    , makeField (descriptionConfig item.description) setDescription
+        setValidDescription
+        validDescriptionEvent
+
+    , makeField (tagsConfig (joinWith ", " item.tags)) setTags setValidTags
+        validTagsEvent
+    , makeField (effectsConfig (joinWith ", " item.effects)) setEffects
+        setValidEffects
+        validEffectsEvent
     , makeField (thcConfig lineage.thc) setThc setValidThc validThcEvent
     , makeField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent
-    , makeField (strainConfig lineage.strain) setStrain setValidStrain validStrainEvent
-    , makeField (creatorConfig lineage.creator) setCreator setValidCreator validCreatorEvent
-    , makeDropdown customSpeciesConfig setSpecies setValidSpecies validSpeciesEvent
-    , makeField (dominantTerpeneConfig lineage.dominant_terpene) setDominantTerpene setValidDominantTerpene validDominantTerpeneEvent
-    , makeField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes (const $ pure unit) (pure $ Just true)
-    , makeField (lineageConfig (joinWith ", " lineage.lineage)) setLineage (const $ pure unit) (pure $ Just true)
-    , makeField (leaflyUrlConfig lineage.leafly_url) setLeaflyUrl setValidLeaflyUrl validLeaflyUrlEvent
+    , makeField (strainConfig lineage.strain) setStrain setValidStrain
+        validStrainEvent
+    , makeField (creatorConfig lineage.creator) setCreator setValidCreator
+        validCreatorEvent
+    , makeDropdown customSpeciesConfig setSpecies setValidSpecies
+        validSpeciesEvent
+    , makeField (dominantTerpeneConfig lineage.dominant_terpene)
+        setDominantTerpene
+        setValidDominantTerpene
+        validDominantTerpeneEvent
+    , makeField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes
+        setValidTerpenes
+        validTerpenesEvent
+    , makeField (lineageConfig (joinWith ", " lineage.lineage)) setLineage
+        setValidLineage
+        validLineageEvent
+    , makeField (leaflyUrlConfig lineage.leafly_url) setLeaflyUrl
+        setValidLeaflyUrl
+        validLeaflyUrlEvent
     , makeField (imgConfig lineage.img) setImg setValidImg validImgEvent
 
+    -- Submit button
     , D.button
         [ DA.klass_ $ buttonClass "green"
-        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not isFormValid
+        , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not
+            isFormValid
         , runOn DL.click $
-            ( \sort name sku brand price measureUnit perPackage quantity category subcategory description tags effects thc cbg strain creator species dominantTerpene terpenes lineage leaflyUrl img -> do
+            ( \sort
+               name
+               sku
+               brand
+               price
+               measureUnit
+               perPackage
+               quantity
+               category
+               subcategory
+               description
+               tags
+               effects
+               thc
+               cbg
+               strain
+               creator
+               species
+               dominantTerpene
+               terpenes
+               lineage
+               leaflyUrl
+               img -> do
+
+                liftEffect $ Console.log $
+                  "Description value before submission: '" <> description <> "'"
+
                 setSubmitting true
                 void $ setFiber =<< launchAff do
                   let
@@ -233,6 +310,9 @@ editItem (MenuItem item) = Deku.do
                   liftEffect $ Console.group "Form Submission"
                   liftEffect $ Console.log "Form data:"
                   liftEffect $ Console.logShow formInput
+                  liftEffect $ Console.log $ "Description in form submission: '"
+                    <> description
+                    <> "'"
 
                   case validateMenuItem formInput of
                     Left err -> liftEffect do
@@ -245,13 +325,22 @@ editItem (MenuItem item) = Deku.do
                     Right menuItem -> do
                       liftEffect $ Console.info "Form validated successfully:"
                       liftEffect $ Console.logShow menuItem
+                      liftEffect $ Console.log $
+                        "Description after validation: '" <> description <> "'"
+
                       result <- updateInventory menuItem
                       liftEffect case result of
                         Right (Message msg) -> do
                           Console.info "Submission successful"
+                          Console.log $ "Description after submission: '"
+                            <> description
+                            <> "'"
                           setStatusMessage msg
                         Right (InventoryData _) -> do
                           Console.info "Item updated in inventory"
+                          Console.log $ "Description after successful update: '"
+                            <> description
+                            <> "'"
                           setStatusMessage "Item successfully updated!"
                         Left err -> do
                           Console.error "API Error:"
@@ -284,12 +373,27 @@ editItem (MenuItem item) = Deku.do
               <*> imgEvent
         ]
         [ text $ map
-            (\isSubmitting -> if isSubmitting then "Submitting..." else "Submit")
+            ( \isSubmitting ->
+                if isSubmitting then "Submitting..." else "Submit"
+            )
             submittingEvent
         ]
+
+    -- Status message
     , D.div
         [ DA.klass_ "mt-4 text-center" ]
         [ text statusMessageEvent ]
+
+    -- Debug display of current description value
+    , D.div
+        [ DA.klass_ "mt-4 p-2 bg-gray-100 text-xs" ]
+        [ D.h4 [ DA.klass_ "font-bold" ] [ text_ "Debug Info" ]
+        , D.div_
+            [ text $ descriptionEvent <#> \val -> "Current description state: '"
+                <> val
+                <> "'"
+            ]
+        ]
     ]
 
 renderError :: String -> Nut

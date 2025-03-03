@@ -26,7 +26,10 @@ import Types.UUID (UUID(..))
 
 parseUUID :: String -> Maybe UUID
 parseUUID str =
-  case regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" noFlags of
+  case
+    regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      noFlags
+    of
     Left _ -> Nothing
     Right r ->
       if test r str then Just $ UUID str
@@ -62,14 +65,17 @@ genUUID = do
     hex2 = padStart 4 (toHex r3) -- time_mid
     hex3 = padStart 4 (toHex versioned) -- time_hi_and_version
     hex4 = padStart 4 (toHex variant) -- clock_seq
-    hex5 = padStart 4 (toHex r6) <> padStart 4 (toHex r7) <> padStart 4 (toHex r8) -- node
+    hex5 = padStart 4 (toHex r6) <> padStart 4 (toHex r7) <> padStart 4
+      (toHex r8) -- node
     uuid = joinWith "-" [ hex1, hex2, hex3, hex4, hex5 ]
 
   pure $ UUID uuid
   where
   toHex = toStringAs hexadecimal
 
-generateClassName :: { category :: ItemCategory, subcategory :: String, species :: Species } -> String
+generateClassName
+  :: { category :: ItemCategory, subcategory :: String, species :: Species }
+  -> String
 generateClassName item =
   "species-" <> toClassName (show item.species)
     <> " category-"
@@ -124,7 +130,9 @@ formatDollarAmount str =
             let
               decimals = fromMaybe "" $ parts !! 1
             in
-              if String.length decimals >= 2 then fromMaybe "" (parts !! 0) <> "." <> take 2 decimals
+              if String.length decimals >= 2 then fromMaybe "" (parts !! 0)
+                <> "."
+                <> take 2 decimals
               else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
           _ -> str
     Nothing -> str

@@ -53,3 +53,13 @@ executable cheeblr-backend
     hs-source-dirs: app
     build-depends: cheeblr-backend
     pkgconfig-depends: libpq
+
+-- executable domain-modeler
+--     import: shared-properties
+--     main-is: SqlGenerator.hs
+--     hs-source-dirs: codegen
+--     build-depends: base
+--                 , filepath
+--                 , directory
+--                 , dhall
+--                 , text

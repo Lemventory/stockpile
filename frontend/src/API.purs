@@ -42,7 +42,8 @@ writeInventory menuItem = do
 readInventory :: Aff (Either String InventoryResponse)
 readInventory = do
   result <- attempt do
-    liftEffect $ Console.log $ "Fetching inventory from: " <> baseUrl <> "/inventory"
+    liftEffect $ Console.log $ "Fetching inventory from: " <> baseUrl <>
+      "/inventory"
     response <- fetch (baseUrl <> "/inventory")
       { method: GET
       , headers:
@@ -144,7 +145,8 @@ fetchInventoryFromHttp config = do
       liftEffect $ Console.log "Success: Got inventory data"
       pure $ Right response
 
-fetchInventory :: FetchConfig -> QueryMode -> Aff (Either String InventoryResponse)
+fetchInventory
+  :: FetchConfig -> QueryMode -> Aff (Either String InventoryResponse)
 fetchInventory config = case _ of
   JsonMode -> do
     liftEffect $ Console.log "Using JSON mode (local file)"

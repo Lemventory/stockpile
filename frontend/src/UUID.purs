@@ -25,7 +25,10 @@ instance writeForeignUUID :: WriteForeign UUID where
 
 parseUUID :: String -> Maybe UUID
 parseUUID str =
-  case regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" noFlags of
+  case
+    regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      noFlags
+    of
     Left _ -> Nothing
     Right r ->
       if test r str then Just $ UUID str

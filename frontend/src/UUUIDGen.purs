@@ -33,7 +33,8 @@ genUUID = do
     hex2 = padStart 4 (toHex r3) -- time_mid
     hex3 = padStart 4 (toHex versioned) -- time_hi_and_version
     hex4 = padStart 4 (toHex variant) -- clock_seq
-    hex5 = padStart 4 (toHex r6) <> padStart 4 (toHex r7) <> padStart 4 (toHex r8) -- node
+    hex5 = padStart 4 (toHex r6) <> padStart 4 (toHex r7) <> padStart 4
+      (toHex r8) -- node
     uuid = joinWith "-" [ hex1, hex2, hex3, hex4, hex5 ]
 
   pure $ UUID uuid
