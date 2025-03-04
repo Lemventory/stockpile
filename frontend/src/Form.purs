@@ -24,7 +24,6 @@ import Web.HTML.HTMLSelectElement (fromEventTarget, value) as Select
 import Web.UIEvent.KeyboardEvent (toEvent)
 import Web.HTML.HTMLTextAreaElement (fromEventTarget, value) as TextArea
 
--- Field configuration type that includes validation
 type FieldConfig =
   { label :: String
   , placeholder :: String
@@ -34,17 +33,21 @@ type FieldConfig =
   , formatInput :: String -> String
   }
 
--- Add password field configuration
-type PasswordFieldConfig = 
+type TextAreaConfig =
   { label :: String
   , placeholder :: String
   , defaultValue :: String
-  , validation :: ValidationRule
+  , rows :: String
+  , cols :: String
   , errorMessage :: String
-  , formatInput :: String -> String
   }
 
-makePasswordField :: PasswordFieldConfig -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makePasswordField
+  :: FieldConfig
+  -> (String -> Effect Unit)
+  -> (Maybe Boolean -> Effect Unit)
+  -> Poll (Maybe Boolean)
+  -> Nut
 makePasswordField config setValue setValid validEvent =
   D.div_
     [ D.div
@@ -54,7 +57,7 @@ makePasswordField config setValue setValid validEvent =
         , D.input
             [ DA.placeholder_ config.placeholder
             , DA.value_ config.defaultValue
-            , DA.xtype_ "password" -- Set input type to password
+            , DA.xtype_ "password"
             , DL.keyup_ \evt -> do
                 let targetEvent = toEvent evt
                 for_ (target targetEvent >>= Input.fromEventTarget)
@@ -89,17 +92,6 @@ makePasswordField config setValue setValid validEvent =
         ]
     ]
 
--- Create password field configuration
-passwordConfig :: String -> PasswordFieldConfig
-passwordConfig defaultValue =
-  { label: "Password"
-  , placeholder: "Enter password"
-  , defaultValue
-  , validation: nonEmpty
-  , errorMessage: "Password is required"
-  , formatInput: identity -- Don't trim passwords
-  }
-
 makeTextArea
   :: TextAreaConfig
   -> (String -> Effect Unit)
@@ -116,7 +108,8 @@ makeTextArea config setValue setValid validEvent =
             [ DA.placeholder_ config.placeholder
             , DA.cols_ config.cols
             , DA.rows_ config.rows
-            , DA.klass_ "rounded-md border-gray-300 shadow-sm border-2 mr-2 border-solid focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm resize-y"
+            , DA.klass_
+                "rounded-md border-gray-300 shadow-sm border-2 mr-2 border-solid focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm resize-y"
             , DL.keyup_ \evt -> do
                 let targetEvent = toEvent evt
                 for_ (target targetEvent >>= TextArea.fromEventTarget)
@@ -126,13 +119,14 @@ makeTextArea config setValue setValid validEvent =
                     setValid (Just true)
                     Console.log $ "TextArea keyup: '" <> v <> "'"
             , DL.input_ \evt -> do
-                for_ (target evt >>= TextArea.fromEventTarget) \textareaElement -> do
-                  v <- TextArea.value textareaElement
-                  setValue v
-                  setValid (Just true)
-                  Console.log $ "TextArea input: '" <> v <> "'"
+                for_ (target evt >>= TextArea.fromEventTarget)
+                  \textareaElement -> do
+                    v <- TextArea.value textareaElement
+                    setValue v
+                    setValid (Just true)
+                    Console.log $ "TextArea input: '" <> v <> "'"
             ]
-            [ text_ config.defaultValue ] -- Place the default value as content rather than using value attribute
+            [ text_ config.defaultValue ]
         , D.span
             [ DA.klass_ "text-red-500 text-xs" ]
             [ text
@@ -147,15 +141,15 @@ makeTextArea config setValue setValid validEvent =
         ]
     ]
 
--- Modified makeField to include a password option
-makeField
+-- Modified makeTextField to include a password option
+makeTextField
   :: FieldConfig
   -> (String -> Effect Unit)
   -> (Maybe Boolean -> Effect Unit)
   -> Poll (Maybe Boolean)
-  -> Boolean -- New parameter: isPw - Is this a password field?
+  -> Boolean
   -> Nut
-makeField config setValue setValid validEvent isPw =
+makeTextField config setValue setValid validEvent isPw =
   D.div_
     [ D.div
         [ DA.klass_ "flex items-center gap-2" ]
@@ -175,16 +169,21 @@ makeField config setValue setValid validEvent isPw =
                       setValue formatted
                       setValid
                         (Just (runValidation config.validation formatted))
-                      liftEffect $ Console.log $ "Description keyup: '" <> formatted <> "'"
+                      liftEffect $ Console.log $ "Description keyup: '"
+                        <> formatted
+                        <> "'"
               , DL.input_ \evt -> do
-                  for_ (target evt >>= TextArea.fromEventTarget) \textareaElement ->
-                    do
-                      v <- TextArea.value textareaElement
-                      let formatted = config.formatInput v
-                      setValue formatted
-                      setValid
-                        (Just (runValidation config.validation formatted))
-                      liftEffect $ Console.log $ "Description input: '" <> formatted <> "'"
+                  for_ (target evt >>= TextArea.fromEventTarget)
+                    \textareaElement ->
+                      do
+                        v <- TextArea.value textareaElement
+                        let formatted = config.formatInput v
+                        setValue formatted
+                        setValid
+                          (Just (runValidation config.validation formatted))
+                        liftEffect $ Console.log $ "Description input: '"
+                          <> formatted
+                          <> "'"
               , DA.klass_ (inputKls <> " resize-y")
               ]
               [ text_ config.defaultValue ]
@@ -227,7 +226,7 @@ makeField config setValue setValid validEvent isPw =
         ]
     ]
 
--- Convenience function that defaults to a non-password field
+-- defaults to a non-password field
 makeNormalField
   :: FieldConfig
   -> (String -> Effect Unit)
@@ -235,18 +234,14 @@ makeNormalField
   -> Poll (Maybe Boolean)
   -> Nut
 makeNormalField config setValue setValid validEvent =
-  makeField config setValue setValid validEvent false
+  makeTextField config setValue setValid validEvent false
 
-type TextAreaConfig =
-  { label :: String
-  , placeholder :: String
-  , defaultValue :: String
-  , rows :: String
-  , cols :: String
-  , errorMessage :: String
-  }
-
-makeDescriptionField :: String -> (String -> Effect Unit) -> (Maybe Boolean -> Effect Unit) -> Poll (Maybe Boolean) -> Nut
+makeDescriptionField
+  :: String
+  -> (String -> Effect Unit)
+  -> (Maybe Boolean -> Effect Unit)
+  -> Poll (Maybe Boolean)
+  -> Nut
 makeDescriptionField defaultValue setValue setValid validEvent =
   makeTextArea
     { label: "Description"
@@ -288,20 +283,21 @@ makeDropdown config setValue setValid validEvent =
                     <> ", valid: "
                     <> show (not isEmpty)
             , DL.change_ \evt -> do
-                for_ (target evt >>= Select.fromEventTarget) \selectElement -> do
-                  v <- Select.value selectElement
-                  setValue v
-                  let
-                    isEmpty = case config.emptyOption of
-                      Just emptyOpt -> v == emptyOpt.value
-                      Nothing -> v == ""
-                  setValid (Just (not isEmpty))
-                  liftEffect $ Console.log $
-                    "Dropdown " <> config.label
-                      <> " changed to: "
-                      <> v
-                      <> ", valid: "
-                      <> show (not isEmpty)
+                for_ (target evt >>= Select.fromEventTarget) \selectElement ->
+                  do
+                    v <- Select.value selectElement
+                    setValue v
+                    let
+                      isEmpty = case config.emptyOption of
+                        Just emptyOpt -> v == emptyOpt.value
+                        Nothing -> v == ""
+                    setValid (Just (not isEmpty))
+                    liftEffect $ Console.log $
+                      "Dropdown " <> config.label
+                        <> " changed to: "
+                        <> v
+                        <> ", valid: "
+                        <> show (not isEmpty)
             ]
             ( let
                 emptyOptions = case config.emptyOption of
@@ -360,6 +356,16 @@ nameConfig defaultValue =
   , validation: allOf [ nonEmpty, extendedAlphanumeric, maxLength 50 ]
   , errorMessage: "Name is required and must be less than 50 characters"
   , formatInput: trim
+  }
+
+passwordConfig :: String -> FieldConfig
+passwordConfig defaultValue =
+  { label: "Password"
+  , placeholder: "Enter password"
+  , defaultValue
+  , validation: nonEmpty
+  , errorMessage: "Password is required"
+  , formatInput: identity
   }
 
 skuConfig :: String -> FieldConfig

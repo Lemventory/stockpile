@@ -77,7 +77,7 @@ renderItem (MenuItem record) =
       , subcategory: record.subcategory
       , species: meta.species
       }
-    
+
     -- truncate the description for display
     formattedDescription = summarizeLongText record.description
   in

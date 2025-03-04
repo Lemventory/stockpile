@@ -20,7 +20,7 @@ import Data.String.CodeUnits (length)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDescriptionField, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDescriptionField, makeDropdown, makeTextField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
 import Types (InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
@@ -65,8 +65,7 @@ editItem (MenuItem item) = Deku.do
   setSubcategory /\ subcategoryEvent <- useState item.subcategory
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just true)
 
-  -- Initialize description with the actual value
-  setDescription /\ descriptionEvent <- useState item.description  
+  setDescription /\ descriptionEvent <- useState item.description
   setValidDescription /\ validDescriptionEvent <- useState (Just true)
 
   setTags /\ tagsEvent <- useState (joinWith ", " item.tags)
@@ -176,25 +175,33 @@ editItem (MenuItem item) = Deku.do
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
         [ text_ "Edit Menu Item" ]
-    , makeField (nameConfig item.name) setName setValidName validNameEvent false
-    , makeField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent false
-    , makeField (brandConfig item.brand) setBrand setValidBrand validBrandEvent false
-    , makeField (priceConfig (show item.price)) setPrice setValidPrice
-        validPriceEvent false
-    , makeField (quantityConfig (show item.quantity)) setQuantity
+    , makeTextField (nameConfig item.name) setName setValidName validNameEvent false
+    , makeTextField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent
+        false
+    , makeTextField (brandConfig item.brand) setBrand setValidBrand validBrandEvent
+        false
+    , makeTextField (priceConfig (show item.price)) setPrice setValidPrice
+        validPriceEvent
+        false
+    , makeTextField (quantityConfig (show item.quantity)) setQuantity
         setValidQuantity
-        validQuantityEvent false
-    , makeField (sortConfig (show item.sort)) setSort setValidSort
-        validSortEvent false
-    , makeField (measureUnitConfig item.measure_unit) setMeasureUnit
+        validQuantityEvent
+        false
+    , makeTextField (sortConfig (show item.sort)) setSort setValidSort
+        validSortEvent
+        false
+    , makeTextField (measureUnitConfig item.measure_unit) setMeasureUnit
         setValidMeasureUnit
-        validMeasureUnitEvent false
-    , makeField (perPackageConfig item.per_package) setPerPackage
+        validMeasureUnitEvent
+        false
+    , makeTextField (perPackageConfig item.per_package) setPerPackage
         setValidPerPackage
-        validPerPackageEvent false
-    , makeField (subcategoryConfig item.subcategory) setSubcategory
+        validPerPackageEvent
+        false
+    , makeTextField (subcategoryConfig item.subcategory) setSubcategory
         setValidSubcategory
-        validSubcategoryEvent false
+        validSubcategoryEvent
+        false
     , makeDropdown customCategoryConfig setCategory setValidCategory
         validCategoryEvent
 
@@ -202,33 +209,41 @@ editItem (MenuItem item) = Deku.do
         setValidDescription
         validDescriptionEvent
 
-    , makeField (tagsConfig (joinWith ", " item.tags)) setTags setValidTags
-        validTagsEvent false
-    , makeField (effectsConfig (joinWith ", " item.effects)) setEffects
+    , makeTextField (tagsConfig (joinWith ", " item.tags)) setTags setValidTags
+        validTagsEvent
+        false
+    , makeTextField (effectsConfig (joinWith ", " item.effects)) setEffects
         setValidEffects
-        validEffectsEvent false
-    , makeField (thcConfig lineage.thc) setThc setValidThc validThcEvent false
-    , makeField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent false
-    , makeField (strainConfig lineage.strain) setStrain setValidStrain
-        validStrainEvent false
-    , makeField (creatorConfig lineage.creator) setCreator setValidCreator
-        validCreatorEvent false
+        validEffectsEvent
+        false
+    , makeTextField (thcConfig lineage.thc) setThc setValidThc validThcEvent false
+    , makeTextField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent false
+    , makeTextField (strainConfig lineage.strain) setStrain setValidStrain
+        validStrainEvent
+        false
+    , makeTextField (creatorConfig lineage.creator) setCreator setValidCreator
+        validCreatorEvent
+        false
     , makeDropdown customSpeciesConfig setSpecies setValidSpecies
         validSpeciesEvent
-    , makeField (dominantTerpeneConfig lineage.dominant_terpene)
+    , makeTextField (dominantTerpeneConfig lineage.dominant_terpene)
         setDominantTerpene
         setValidDominantTerpene
-        validDominantTerpeneEvent false
-    , makeField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes
+        validDominantTerpeneEvent
+        false
+    , makeTextField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes
         setValidTerpenes
-        validTerpenesEvent false
-    , makeField (lineageConfig (joinWith ", " lineage.lineage)) setLineage
+        validTerpenesEvent
+        false
+    , makeTextField (lineageConfig (joinWith ", " lineage.lineage)) setLineage
         setValidLineage
-        validLineageEvent false
-    , makeField (leaflyUrlConfig lineage.leafly_url) setLeaflyUrl
+        validLineageEvent
+        false
+    , makeTextField (leaflyUrlConfig lineage.leafly_url) setLeaflyUrl
         setValidLeaflyUrl
-        validLeaflyUrlEvent false
-    , makeField (imgConfig lineage.img) setImg setValidImg validImgEvent false
+        validLeaflyUrlEvent
+        false
+    , makeTextField (imgConfig lineage.img) setImg setValidImg validImgEvent false
 
     , D.button
         [ DA.klass_ $ buttonClass "green"
@@ -374,9 +389,9 @@ editItem (MenuItem item) = Deku.do
     , D.div
         [ DA.klass_ "mt-4 p-4 border rounded bg-gray-50" ]
         [ D.h3 [ DA.klass_ "text-lg font-bold" ] [ text_ "Debug Info" ]
-        , D.div [ DA.klass_ "text-sm" ] 
+        , D.div [ DA.klass_ "text-sm" ]
             [ D.div_ [ text_ "Current description value: " ]
-            , D.pre [ DA.klass_ "bg-gray-100 p-2 rounded" ] 
+            , D.pre [ DA.klass_ "bg-gray-100 p-2 rounded" ]
                 [ text descriptionEvent ]
             ]
         ]

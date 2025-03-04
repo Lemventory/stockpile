@@ -181,18 +181,19 @@ invertOrdering LT = GT
 invertOrdering EQ = EQ
 invertOrdering GT = LT
 
-
 summarizeLongText :: String -> String
-summarizeLongText desc = 
+summarizeLongText desc =
   let
-    noLinebreaks = String.replace (String.Pattern "\n") (String.Replacement " ") desc
-    
+    noLinebreaks = String.replace (String.Pattern "\n") (String.Replacement " ")
+      desc
+
     condensedSpaces = unsafePartial case Regex.regex "\\s+" Regex.global of
       Right r -> Regex.replace r " " noLinebreaks
-    
+
     maxLength = 100
-    truncated = if String.length condensedSpaces > maxLength 
-                then String.take maxLength condensedSpaces <> "..." 
-                else condensedSpaces
+    truncated =
+      if String.length condensedSpaces > maxLength then
+        String.take maxLength condensedSpaces <> "..."
+      else condensedSpaces
   in
     truncated

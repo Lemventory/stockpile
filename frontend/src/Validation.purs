@@ -17,7 +17,6 @@ import Types (ItemCategory(..), MenuItem(..), MenuItemFormInput, Species(..), St
 import Types.UUID (UUID, parseUUID)
 import Utils (parseCommaList)
 
--- Core validation rules
 nonEmpty :: ValidationRule
 nonEmpty = ValidationRule \str -> String.trim str /= ""
 
@@ -108,7 +107,6 @@ validUUID = ValidationRule \str -> case parseUUID (String.trim str) of
 maxLength :: Int -> ValidationRule
 maxLength n = ValidationRule \str -> String.length str <= n
 
--- Rule combinators
 allOf :: Array ValidationRule -> ValidationRule
 allOf rules = ValidationRule \str ->
   all (\(ValidationRule rule) -> rule str) rules
@@ -117,7 +115,6 @@ anyOf :: Array ValidationRule -> ValidationRule
 anyOf rules = ValidationRule \str ->
   any (\(ValidationRule rule) -> rule str) rules
 
--- Validation presets for common fields
 requiredText
   :: { validation :: ValidationRule
      , errorMessage :: String
@@ -207,7 +204,6 @@ multilineText =
   , formatInput: identity
   }
 
--- Modern validation approach using Data.Validation.Semigroup for form validation
 validateString :: String -> String -> V (Array String) String
 validateString fieldName str =
   if String.trim str == "" then invalid [ fieldName <> " is required" ]
@@ -274,14 +270,12 @@ validateSpecies fieldName str = case str of
   "Sativa" -> pure Sativa
   _ -> invalid [ fieldName <> " has invalid species value" ]
 
--- Helper to convert validation result to Either with joined error messages
 mapValidationErrors :: forall a. V (Array String) a -> Either String a
 mapValidationErrors validation =
   case toEither validation of
     Left errors -> Left (joinWith ", " errors)
     Right value -> Right value
 
--- Main validation function for MenuItemFormInput
 validateMenuItem :: MenuItemFormInput -> Either String MenuItem
 validateMenuItem input =
   case toEither validationResult of
@@ -317,13 +311,12 @@ validateMenuItem input =
                                         , quantity
                                         , category
                                         , subcategory
-                                        , description: input.description -- Pass through as-is
+                                        , description: input.description
                                         , tags: parseCommaList input.tags
                                         , effects: parseCommaList input.effects
                                         , strain_lineage
                                         }
 
--- Separate validation for strain lineage
 validateStrainLineage
   :: StrainLineageFormInput -> V (Array String) StrainLineage
 validateStrainLineage input =
@@ -350,7 +343,6 @@ validateStrainLineage input =
                         , img
                         }
 
--- Helper for unsafe regex creation in validatePercentage and validateUrl
 unsafeRegex :: String -> RegexFlags -> Regex
 unsafeRegex pattern flags =
   case regex pattern flags of

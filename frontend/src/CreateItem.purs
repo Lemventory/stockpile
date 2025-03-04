@@ -71,7 +71,6 @@ createItem initialUUID = Deku.do
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just false)
   setValidLeaflyUrl /\ validLeaflyUrlEvent <- useState (Just false)
   setValidImg /\ validImgEvent <- useState (Just false)
-  -- Description is always valid
   setValidDescription /\ validDescriptionEvent <- useState (Just true)
   setValidTags /\ validTagsEvent <- useState (Just true)
   setValidEffects /\ validEffectsEvent <- useState (Just true)
@@ -216,21 +215,30 @@ createItem initialUUID = Deku.do
                     [ DA.klass_ "text-red-500 text-sm bg-red-50 p-4 rounded" ]
                     (map (\err -> D.li_ [ text_ err ]) errs)
             ]
-        , F.makeField (F.brandConfig "") setBrand setValidBrand validBrandEvent false
-        , F.makeField (F.nameConfig "") setName setValidName validNameEvent false
-        , F.makeField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent false
-        , F.makeField (F.sortConfig "") setSort setValidSort validSortEvent false
-        , F.makeField (F.priceConfig "") setPrice setValidPrice validPriceEvent false
-        , F.makeField (F.quantityConfig "") setQuantity setValidQuantity
-            validQuantityEvent false
-        , F.makeField (F.perPackageConfig "") setPerPackage setValidPerPackage
-            validPerPackageEvent false
-        , F.makeField (F.measureUnitConfig "") setMeasureUnit
+        , F.makeTextField (F.brandConfig "") setBrand setValidBrand validBrandEvent
+            false
+        , F.makeTextField (F.nameConfig "") setName setValidName validNameEvent
+            false
+        , F.makeTextField (F.skuConfig initialUUID) setSku setValidSku validSkuEvent
+            false
+        , F.makeTextField (F.sortConfig "") setSort setValidSort validSortEvent
+            false
+        , F.makeTextField (F.priceConfig "") setPrice setValidPrice validPriceEvent
+            false
+        , F.makeTextField (F.quantityConfig "") setQuantity setValidQuantity
+            validQuantityEvent
+            false
+        , F.makeTextField (F.perPackageConfig "") setPerPackage setValidPerPackage
+            validPerPackageEvent
+            false
+        , F.makeTextField (F.measureUnitConfig "") setMeasureUnit
             setValidMeasureUnit
-            validMeasureUnitEvent false
-        , F.makeField (F.subcategoryConfig "") setSubcategory
+            validMeasureUnitEvent
+            false
+        , F.makeTextField (F.subcategoryConfig "") setSubcategory
             setValidSubcategory
-            validSubcategoryEvent false
+            validSubcategoryEvent
+            false
         , F.makeDropdown
             (F.categoryConfig { defaultValue: "", forNewItem: false })
             setCategory
@@ -239,30 +247,38 @@ createItem initialUUID = Deku.do
         , F.makeDescriptionField "" setDescription
             setValidDescription
             validDescriptionEvent
-        , F.makeField (F.tagsConfig "") setTags setValidTags validTagsEvent false
-        , F.makeField (F.effectsConfig "") setEffects setValidEffects
-            validEffectsEvent false
-        , F.makeField (F.thcConfig "") setThc setValidThc validThcEvent false
-        , F.makeField (F.cbgConfig "") setCbg setValidCbg validCbgEvent false
+        , F.makeTextField (F.tagsConfig "") setTags setValidTags validTagsEvent
+            false
+        , F.makeTextField (F.effectsConfig "") setEffects setValidEffects
+            validEffectsEvent
+            false
+        , F.makeTextField (F.thcConfig "") setThc setValidThc validThcEvent false
+        , F.makeTextField (F.cbgConfig "") setCbg setValidCbg validCbgEvent false
         , F.makeDropdown
             (F.speciesConfig { defaultValue: "", forNewItem: false })
             setSpecies
             setValidSpecies
             validSpeciesEvent
-        , F.makeField (F.strainConfig "") setStrain setValidStrain
-            validStrainEvent false
-        , F.makeField (F.dominantTerpeneConfig "") setDominantTerpene
+        , F.makeTextField (F.strainConfig "") setStrain setValidStrain
+            validStrainEvent
+            false
+        , F.makeTextField (F.dominantTerpeneConfig "") setDominantTerpene
             setValidDominantTerpene
-            validDominantTerpeneEvent false
-        , F.makeField (F.terpenesConfig "") setTerpenes setValidTerpenes
-            validTerpenesEvent false
-        , F.makeField (F.lineageConfig "") setLineage setValidLineage
-            validLineageEvent false
-        , F.makeField (F.creatorConfig "") setCreator setValidCreator
-            validCreatorEvent false
-        , F.makeField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl
-            validLeaflyUrlEvent false
-        , F.makeField (F.imgConfig "") setImg setValidImg validImgEvent false
+            validDominantTerpeneEvent
+            false
+        , F.makeTextField (F.terpenesConfig "") setTerpenes setValidTerpenes
+            validTerpenesEvent
+            false
+        , F.makeTextField (F.lineageConfig "") setLineage setValidLineage
+            validLineageEvent
+            false
+        , F.makeTextField (F.creatorConfig "") setCreator setValidCreator
+            validCreatorEvent
+            false
+        , F.makeTextField (F.leaflyUrlConfig "") setLeaflyUrl setValidLeaflyUrl
+            validLeaflyUrlEvent
+            false
+        , F.makeTextField (F.imgConfig "") setImg setValidImg validImgEvent false
         ]
     , D.button
         [ DA.klass_ $ F.buttonClass "green"
@@ -322,7 +338,9 @@ createItem initialUUID = Deku.do
               setStatusMessage "Processing form submission..."
 
               -- debug for description field specifically
-              liftEffect $ Console.log $ "Description before submission: '" <> values.description <> "'"
+              liftEffect $ Console.log $ "Description before submission: '"
+                <> values.description
+                <> "'"
 
               void $ setFiber =<< launchAff do
                 let
@@ -355,7 +373,9 @@ createItem initialUUID = Deku.do
                     }
 
                 -- Add additional description debug logging
-                liftEffect $ Console.log $ "Description in formInput: '" <> formInput.description <> "'"
+                liftEffect $ Console.log $ "Description in formInput: '"
+                  <> formInput.description
+                  <> "'"
 
                 liftEffect $ Console.group "Form Submission"
                 liftEffect $ Console.log "Form data:"
