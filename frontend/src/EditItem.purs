@@ -20,7 +20,7 @@ import Data.String.CodeUnits (length)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, descriptionConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
+import Form (brandConfig, buttonClass, categoryConfig, cbgConfig, creatorConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, makeDescriptionField, makeDropdown, makeField, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
 import Types (InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Utils (ensureInt, ensureNumber)
 import Validation (validateMenuItem)
@@ -65,7 +65,8 @@ editItem (MenuItem item) = Deku.do
   setSubcategory /\ subcategoryEvent <- useState item.subcategory
   setValidSubcategory /\ validSubcategoryEvent <- useState (Just true)
 
-  setDescription /\ descriptionEvent <- useState item.description
+  -- Initialize description with the actual value
+  setDescription /\ descriptionEvent <- useState item.description  
   setValidDescription /\ validDescriptionEvent <- useState (Just true)
 
   setTags /\ tagsEvent <- useState (joinWith ", " item.tags)
@@ -160,16 +161,11 @@ editItem (MenuItem item) = Deku.do
         liftEffect $ Console.log $ "Current category value: " <> categoryValue
         liftEffect $ Console.log $ "Current species value: " <> speciesValue
 
-        -- Debug logging for description
         liftEffect $ Console.log $ "Description value from backend: '"
           <> item.description
           <> "'"
         liftEffect $ Console.log $ "Description length: " <> show
           (length item.description)
-        liftEffect $ Console.log $ "Description config defaultValue: '"
-          <> (descriptionConfig item.description).defaultValue
-          <> "'"
-        -- Removed the problematic evalState line
 
         setCategory categoryValue
         setValidCategory (Just true)
@@ -180,70 +176,60 @@ editItem (MenuItem item) = Deku.do
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
         [ text_ "Edit Menu Item" ]
-    , makeField (nameConfig item.name) setName setValidName validNameEvent
-    , makeField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent
-    , makeField (brandConfig item.brand) setBrand setValidBrand validBrandEvent
+    , makeField (nameConfig item.name) setName setValidName validNameEvent false
+    , makeField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent false
+    , makeField (brandConfig item.brand) setBrand setValidBrand validBrandEvent false
     , makeField (priceConfig (show item.price)) setPrice setValidPrice
-        validPriceEvent
+        validPriceEvent false
     , makeField (quantityConfig (show item.quantity)) setQuantity
         setValidQuantity
-        validQuantityEvent
+        validQuantityEvent false
     , makeField (sortConfig (show item.sort)) setSort setValidSort
-        validSortEvent
+        validSortEvent false
     , makeField (measureUnitConfig item.measure_unit) setMeasureUnit
         setValidMeasureUnit
-        validMeasureUnitEvent
+        validMeasureUnitEvent false
     , makeField (perPackageConfig item.per_package) setPerPackage
         setValidPerPackage
-        validPerPackageEvent
+        validPerPackageEvent false
     , makeField (subcategoryConfig item.subcategory) setSubcategory
         setValidSubcategory
-        validSubcategoryEvent
+        validSubcategoryEvent false
     , makeDropdown customCategoryConfig setCategory setValidCategory
         validCategoryEvent
 
-    -- Debug rendering
-    , D.div [ DA.klass_ "debug-description-container" ]
-        [ D.pre [ DA.klass_ "text-xs text-red-500" ]
-            [ text_ $ "Debug - Description from backend: '" <> item.description
-                <> "'"
-            ]
-        ]
-
-    -- Description field
-    , makeField (descriptionConfig item.description) setDescription
+    , makeDescriptionField item.description setDescription
         setValidDescription
         validDescriptionEvent
 
     , makeField (tagsConfig (joinWith ", " item.tags)) setTags setValidTags
-        validTagsEvent
+        validTagsEvent false
     , makeField (effectsConfig (joinWith ", " item.effects)) setEffects
         setValidEffects
-        validEffectsEvent
-    , makeField (thcConfig lineage.thc) setThc setValidThc validThcEvent
-    , makeField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent
+        validEffectsEvent false
+    , makeField (thcConfig lineage.thc) setThc setValidThc validThcEvent false
+    , makeField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent false
     , makeField (strainConfig lineage.strain) setStrain setValidStrain
-        validStrainEvent
+        validStrainEvent false
     , makeField (creatorConfig lineage.creator) setCreator setValidCreator
-        validCreatorEvent
+        validCreatorEvent false
     , makeDropdown customSpeciesConfig setSpecies setValidSpecies
         validSpeciesEvent
     , makeField (dominantTerpeneConfig lineage.dominant_terpene)
         setDominantTerpene
         setValidDominantTerpene
-        validDominantTerpeneEvent
+        validDominantTerpeneEvent false
     , makeField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes
         setValidTerpenes
-        validTerpenesEvent
+        validTerpenesEvent false
     , makeField (lineageConfig (joinWith ", " lineage.lineage)) setLineage
         setValidLineage
-        validLineageEvent
+        validLineageEvent false
     , makeField (leaflyUrlConfig lineage.leafly_url) setLeaflyUrl
         setValidLeaflyUrl
-        validLeaflyUrlEvent
-    , makeField (imgConfig lineage.img) setImg setValidImg validImgEvent
+        validLeaflyUrlEvent false
+    , makeField (imgConfig lineage.img) setImg setValidImg validImgEvent false
 
-    -- Submit button
     , D.button
         [ DA.klass_ $ buttonClass "green"
         , DA.disabled $ map show $ (||) <$> submittingEvent <*> map not
@@ -273,6 +259,7 @@ editItem (MenuItem item) = Deku.do
                leaflyUrl
                img -> do
 
+                -- debug logging for description
                 liftEffect $ Console.log $
                   "Description value before submission: '" <> description <> "'"
 
@@ -379,19 +366,18 @@ editItem (MenuItem item) = Deku.do
             submittingEvent
         ]
 
-    -- Status message
     , D.div
         [ DA.klass_ "mt-4 text-center" ]
         [ text statusMessageEvent ]
 
-    -- Debug display of current description value
+    -- debug information for description handling
     , D.div
-        [ DA.klass_ "mt-4 p-2 bg-gray-100 text-xs" ]
-        [ D.h4 [ DA.klass_ "font-bold" ] [ text_ "Debug Info" ]
-        , D.div_
-            [ text $ descriptionEvent <#> \val -> "Current description state: '"
-                <> val
-                <> "'"
+        [ DA.klass_ "mt-4 p-4 border rounded bg-gray-50" ]
+        [ D.h3 [ DA.klass_ "text-lg font-bold" ] [ text_ "Debug Info" ]
+        , D.div [ DA.klass_ "text-sm" ] 
+            [ D.div_ [ text_ "Current description value: " ]
+            , D.pre [ DA.klass_ "bg-gray-100 p-2 rounded" ] 
+                [ text descriptionEvent ]
             ]
         ]
     ]

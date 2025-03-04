@@ -14,7 +14,7 @@ import Effect.Class.Console as Console
 import FRP.Poll (Poll)
 import Types (Inventory(..), MenuItem(..), StrainLineage(..))
 import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
-import Utils (compareMenuItems, generateClassName)
+import Utils (compareMenuItems, generateClassName, summarizeLongText)
 
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut
 createMenuLiveView inventoryPoll loadingPoll errorPoll =
@@ -46,7 +46,7 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
     ]
 
 renderInventory :: LiveViewConfig -> Inventory -> Nut
-renderInventory config inventory@(Inventory items) =
+renderInventory config (Inventory items) =
   let
     filteredItems =
       if config.hideOutOfStock then filter
@@ -77,6 +77,9 @@ renderItem (MenuItem record) =
       , subcategory: record.subcategory
       , species: meta.species
       }
+    
+    -- truncate the description for display
+    formattedDescription = summarizeLongText record.description
   in
     D.div
       [ DA.klass_ ("inventory-item-card " <> className) ]
@@ -103,7 +106,7 @@ renderItem (MenuItem record) =
               )
           ]
       , D.div [ DA.klass_ "item-description" ]
-          [ text_ ("description: " <> show record.description) ]
+          [ text_ ("Description: " <> formattedDescription) ]
       , D.div [ DA.klass_ "item-quantity" ]
           [ text_ ("in stock: " <> show record.quantity) ]
       , D.div [ DA.klass_ "item-actions" ]

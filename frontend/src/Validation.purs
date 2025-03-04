@@ -288,7 +288,6 @@ validateMenuItem input =
     Left errors -> Left (joinWith ", " errors)
     Right result -> Right result
   where
-  -- Applicative validation that accumulates all errors
   validationResult =
     validateUUID "SKU" input.sku `andThen` \sku ->
       validateString "Name" input.name `andThen` \name ->
@@ -318,7 +317,7 @@ validateMenuItem input =
                                         , quantity
                                         , category
                                         , subcategory
-                                        , description: input.description
+                                        , description: input.description -- Pass through as-is
                                         , tags: parseCommaList input.tags
                                         , effects: parseCommaList input.effects
                                         , strain_lineage

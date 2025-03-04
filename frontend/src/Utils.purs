@@ -12,7 +12,6 @@ import Data.Int.Bits ((.|.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), joinWith, replace, split, take, toLower, trim)
-import Data.String (length) as String
 import Data.String.Pattern (Replacement(..))
 import Data.String.Regex (regex, test)
 import Data.String.Regex.Flags (noFlags)
@@ -23,6 +22,10 @@ import Effect.Random (random)
 import Types (ItemCategory, MenuItem(..), Species, StrainLineage(..))
 import Types.LiveViewConfig (LiveViewConfig, SortField(..), SortOrder(..))
 import Types.UUID (UUID(..))
+import Data.String as String
+import Data.String.Regex (regex, replace) as Regex
+import Data.String.Regex.Flags (global) as Regex
+import Partial.Unsafe (unsafePartial)
 
 parseUUID :: String -> Maybe UUID
 parseUUID str =
@@ -177,3 +180,19 @@ invertOrdering :: Ordering -> Ordering
 invertOrdering LT = GT
 invertOrdering EQ = EQ
 invertOrdering GT = LT
+
+
+summarizeLongText :: String -> String
+summarizeLongText desc = 
+  let
+    noLinebreaks = String.replace (String.Pattern "\n") (String.Replacement " ") desc
+    
+    condensedSpaces = unsafePartial case Regex.regex "\\s+" Regex.global of
+      Right r -> Regex.replace r " " noLinebreaks
+    
+    maxLength = 100
+    truncated = if String.length condensedSpaces > maxLength 
+                then String.take maxLength condensedSpaces <> "..." 
+                else condensedSpaces
+  in
+    truncated
