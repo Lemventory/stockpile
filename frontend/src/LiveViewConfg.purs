@@ -15,9 +15,9 @@ defaultConfig =
 defaultViewConfig :: LiveViewConfig
 defaultViewConfig =
   { sortFields:
-      [ SortByCategory /\ Ascending
-      , SortBySpecies /\ Descending
-      , SortByQuantity /\ Descending
+      [  SortByQuantity /\ Descending
+      ,  SortByCategory /\ Ascending
+      ,  SortBySpecies /\ Descending
       ]
   , hideOutOfStock: true
   , mode: HttpMode

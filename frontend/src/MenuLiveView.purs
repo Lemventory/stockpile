@@ -38,7 +38,7 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
             else
               D.div_ []
         ]
-    , D.div
+    , D.div 
         [ DA.klass_ "inventory-container" ]
         [ inventoryPoll <#~> \inventory ->
             renderInventory defaultViewConfig inventory
@@ -57,14 +57,14 @@ renderInventory config (Inventory items) =
     sortedItems = sortBy (compareMenuItems config) filteredItems
   in
     D.div
-      [ DA.klass_ "inventory-grid" ]
+      [ DA.klass_ "container" ]
       [ D.div [ DA.klass_ "inventory-stats" ]
           [ text $ pure $ "Total items: " <> show (length items) ]
       , if length items == 0 then
           D.div [ DA.klass_ "empty-inventory" ]
             [ text_ "No items in inventory" ]
         else
-          D.div [ DA.klass_ "inventory-items" ]
+          D.div [ DA.klass_ "inventory-grid" ]
             (map renderItem sortedItems)
       ]
 
@@ -78,7 +78,6 @@ renderItem (MenuItem record) =
       , species: meta.species
       }
 
-    -- truncate the description for display
     formattedDescription = summarizeLongText record.description
   in
     D.div
@@ -100,7 +99,7 @@ renderItem (MenuItem record) =
           [ text_ ("Strain: " <> meta.strain) ]
       , D.div [ DA.klass_ "item-price" ]
           [ text_
-              ( "$" <> show record.price <> " (" <> record.per_package <> ""
+              ( "$" <> show record.price <> " (" <> record.per_package <> " "
                   <> record.measure_unit
                   <> ")"
               )
@@ -111,17 +110,20 @@ renderItem (MenuItem record) =
           [ text_ ("in stock: " <> show record.quantity) ]
       , D.div [ DA.klass_ "item-actions" ]
           [ D.a
-              [ DA.klass_ "edit-button"
+              [ DA.klass_ "action-button edit-button"
               , DA.href_ ("/#/edit/" <> show record.sku)
+              , DA.title_ "Edit item"
               ]
-              [ text_ "Edit" ]
-          , D.span
-              [ DA.klass_ "text-gray-300 mx-2" ]
-              [ text_ "|" ]
+              [ D.i [ DA.klass_ "button-icon ion-edit" ] []
+              , text_ "Edit"
+              ]
           , D.a
-              [ DA.klass_ "delete-button text-red-500 hover:text-red-700"
+              [ DA.klass_ "action-button delete-button"
               , DA.href_ ("/#/delete/" <> show record.sku)
+              , DA.title_ "Delete item"
               ]
-              [ text_ "Delete" ]
+              [ D.i [ DA.klass_ "button-icon ion-trash-a" ] []
+              , text_ "Delete"
+              ]
           ]
       ]

@@ -33,13 +33,8 @@ route = root $ G.sum
 nav :: Poll Route -> Nut
 nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
   [ D.div [ DA.klass_ "container" ]
-      [ D.a
-          [ DA.klass_ "navbar-brand"
-          , DA.href_ "/#/"
-          ]
-          [ text_ "Inventory" ]
-      , D.ul
-          [ DA.klass_ "nav navbar-nav pull-xs-right" ]
+      [ D.div
+          [ DA.klass_ "nav navbar-nav pull-xs-right d-flex" ]
           [ navItem LiveView "/#/" "LiveView" currentRoute
           , navItem Create "/#/create" "Create Item" currentRoute
           , navItem (Edit "test") "/#/edit/test" "Edit Test Item" currentRoute
@@ -49,8 +44,8 @@ nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
 
 navItem :: Route -> String -> String -> Poll Route -> Nut
 navItem thisRoute href label currentRoute =
-  D.li
-    [ DA.klass_ "nav-item" ]
+  D.div
+    [ DA.klass_ "nav-item mx-2" ]
     [ D.a
         [ DA.href_ href
         , DA.klass $ currentRoute <#> \r ->
