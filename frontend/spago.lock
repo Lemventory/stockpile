@@ -26,8 +26,10 @@
             "fetch-yoga-json",
             "lists",
             "maybe",
+            "money",
             "newtype",
             "node-fs",
+            "numbers",
             "parsing",
             "prelude",
             "routing",
@@ -103,6 +105,7 @@
             "maybe",
             "media-types",
             "mmorph",
+            "money",
             "newtype",
             "node-buffer",
             "node-event-emitter",
@@ -125,6 +128,7 @@
             "quickcheck",
             "quickcheck-laws",
             "random",
+            "rationals",
             "record",
             "refs",
             "routing",
@@ -758,6 +762,20 @@
           "unsafe-reference",
           "web-html",
           "web-uievents"
+        ]
+      },
+      "money": {
+        "git": "https://github.com/harryprayiv/purescript-money.git",
+        "ref": "cbcbbaef9680425cb23e2757fd0f84dfd88fff53",
+        "dependencies": [
+          "console",
+          "effect",
+          "foldable-traversable",
+          "integers",
+          "lists",
+          "newtype",
+          "prelude",
+          "rationals"
         ]
       },
       "tidy": {
@@ -1664,6 +1682,21 @@
         "transformers"
       ]
     },
+    "money": {
+      "type": "git",
+      "url": "https://github.com/harryprayiv/purescript-money.git",
+      "rev": "cbcbbaef9680425cb23e2757fd0f84dfd88fff53",
+      "dependencies": [
+        "console",
+        "effect",
+        "foldable-traversable",
+        "integers",
+        "lists",
+        "newtype",
+        "prelude",
+        "rationals"
+      ]
+    },
     "newtype": {
       "type": "registry",
       "version": "5.0.0",
@@ -1966,6 +1999,16 @@
       "dependencies": [
         "effect",
         "integers"
+      ]
+    },
+    "rationals": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-58lUkv9LTanrMJ9U/IYf+i4+NibDZb6suVfLOK4OKhA=",
+      "dependencies": [
+        "integers",
+        "js-bigints",
+        "prelude"
       ]
     },
     "record": {
