@@ -2,12 +2,13 @@ module App where
 
 import API
 import Database
+import Database.Transaction (createTransactionTables)
 import Network.HTTP.Types.Header
 import Network.HTTP.Types.Method
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.Cors
 import Servant
-import Server
+import Server (combinedServer)
 import System.Posix.User (getLoginName)
 
 run :: IO ()
@@ -28,7 +29,10 @@ run = do
           }
 
   pool <- initializeDB (dbConfig config)
+  
+  -- Create database tables
   createTables pool
+  createTransactionTables pool
 
   putStrLn $ "Starting server on all interfaces, port " ++ show (serverPort config)
   putStrLn "=================================="
@@ -40,7 +44,7 @@ run = do
   let
     corsPolicy =
       CorsResourcePolicy
-        { corsOrigins = Nothing  -- Allow requests from any origin for LAN testing
+        { corsOrigins = Nothing
         , corsMethods = [methodGet, methodPost, methodPut, methodDelete, methodOptions]
         , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hOrigin, hContentLength]
         , corsExposedHeaders = Nothing
@@ -50,7 +54,6 @@ run = do
         , corsIgnoreFailures = False
         }
 
-    app = cors (const $ Just corsPolicy) $ serve inventoryAPI (server pool)
+    app = cors (const $ Just corsPolicy) $ serve api (combinedServer pool)
 
-  -- Use the defined app variable
   Warp.run (serverPort config) app

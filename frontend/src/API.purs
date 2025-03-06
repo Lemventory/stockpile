@@ -3,16 +3,20 @@ module API where
 import Prelude
 
 import Data.Either (Either(..))
+import Data.Newtype (unwrap)
 import Effect.Aff (Aff, attempt)
 import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
 import Effect.Class.Console as Console
 import Effect.Now (now)
 import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
+import NetworkConfig (currentConfig)
 import Types (Inventory, InventoryResponse(..), MenuItem)
 import Types.LiveViewConfig (QueryMode(..), FetchConfig)
+import Types.Transaction (Transaction)
+import Utils (uuidToString)
 import Yoga.JSON (writeJSON)
-import NetworkConfig (currentConfig)
 
 baseUrl :: String
 baseUrl = currentConfig.apiBaseUrl
@@ -154,3 +158,13 @@ fetchInventory config = case _ of
   HttpMode -> do
     liftEffect $ Console.log "Using HTTP mode (backend API)"
     fetchInventoryFromHttp config
+
+
+-- recordTransaction :: Transaction -> Aff (Either String String)
+-- recordTransaction transaction = do
+--   let tx = unwrap transaction
+--   liftEffect $ log $ "Recording transaction: " <> uuidToString tx.id
+  
+--   -- In a real implementation, this would send the transaction to the backend
+--   -- For now, we'll simulate a successful response
+--   pure $ Right $ "Transaction recorded successfully: " <> uuidToString tx.id

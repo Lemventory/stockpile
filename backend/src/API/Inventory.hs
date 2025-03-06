@@ -1,12 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module API where
+module API.Inventory where
 
 import Data.UUID
 import Servant
-import Types
+import Types.Inventory
+import API.Transaction (PosAPI, posAPI)
 
+-- Original inventory API
 type InventoryAPI =
   "inventory" :> Get '[JSON] InventoryResponse
     :<|> "inventory" :> ReqBody '[JSON] MenuItem :> Post '[JSON] InventoryResponse
@@ -15,3 +17,11 @@ type InventoryAPI =
 
 inventoryAPI :: Proxy InventoryAPI
 inventoryAPI = Proxy
+
+-- Combined API
+type API =
+  InventoryAPI
+    :<|> PosAPI
+
+api :: Proxy API
+api = Proxy

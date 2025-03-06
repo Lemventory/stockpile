@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Database where
+module DB.Database where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception (catch, throwIO, SomeException)
@@ -13,7 +13,7 @@ import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.PostgreSQL.Simple.Types (PGArray (..))
 import System.IO (hPutStrLn, stderr)
-import Types
+import Types.Inventory
 import Data.UUID
 import Servant (Handler)
 import Control.Monad.IO.Class (liftIO)

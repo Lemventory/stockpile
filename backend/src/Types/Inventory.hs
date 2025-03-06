@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Types where
+module Types.Inventory where
 
 import Data.Aeson
 import Data.Scientific
