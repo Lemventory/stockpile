@@ -1,47 +1,120 @@
 # Cheeblr Backend Documentation
 
-This document provides detailed information about the Haskell backend for the Cheeblr application.
-
 ## Table of Contents
 
 - [Overview](#overview)
-- [Technologies](#technologies)
 - [Architecture](#architecture)
+- [Core Components](#core-components)
 - [API Reference](#api-reference)
+- [Data Models](#data-models)
 - [Database Schema](#database-schema)
-- [Data Types](#data-types)
-- [Deployment](#deployment)
+- [Transaction Processing](#transaction-processing)
+- [Security and Configuration](#security-and-configuration)
 - [Development Guidelines](#development-guidelines)
 
 ## Overview
 
-The Cheeblr backend is a Haskell-based REST API server that provides inventory management functionality. It appears to be designed for a menu or catalog system, likely for a retail business in the cannabis industry based on the data model which includes fields like strain information, THC content, and effects.
+The Cheeblr backend is a Haskell-based API server built for inventory and transaction management in retail operations, with a focus on cannabis dispensary requirements. It provides comprehensive functionality for inventory tracking, point-of-sale operations, sales transactions, and compliance reporting.
 
-## Technologies
-
-The backend utilizes several key Haskell libraries and technologies:
-
-- **Servant**: A type-level web framework that provides type-safe routing and API specifications
-- **PostgreSQL**: Used as the primary database through the `postgresql-simple` library
-- **Warp**: A high-performance HTTP server implementation
-- **Resource Pooling**: Connection pooling for database access via the `resource-pool` library
-- **CORS Support**: Cross-Origin Resource Sharing middleware for web compatibility
-- **UUID**: Unique identifiers for inventory items
-- **JSON**: Data serialization and deserialization using Aeson
+The system is designed with a layered architecture following functional programming principles and leverages PostgreSQL for data persistence. It supports real-time inventory management, transaction processing, cash register operations, and financial reporting.
 
 ## Architecture
 
-The application follows a layered architecture approach:
+The backend follows a clean, layered architecture pattern:
 
-1. **API Layer** (`API.hs`): Defines the RESTful API endpoints using Servant's type-level DSL
-2. **Server Layer** (`Server.hs`): Implements the API handlers and routes requests to the appropriate business logic
-3. **Database Layer** (`Database.hs`): Manages database connections and provides CRUD operations for the data model
-4. **Application Core** (`App.hs`): Configures and bootstraps the application, setting up middleware and server options
-5. **Types** (`Types.hs`): Defines the domain model and data types used throughout the application
+### Architectural Layers
+
+1. **API Layer**: Defines the RESTful API endpoints using Servant's type-level DSL
+2. **Server Layer**: Implements the API handlers and routes requests
+3. **Database Layer**: Manages database interactions and provides CRUD operations
+4. **Application Core**: Configures and bootstraps the application
+5. **Types Layer**: Defines the domain models and data types
+
+### Key Technologies
+
+- **Servant**: Type-level web API definition and server implementation
+- **PostgreSQL**: Primary database with `postgresql-simple` library
+- **Warp**: High-performance HTTP server
+- **Resource Pooling**: Connection management via `resource-pool`
+- **CORS**: Cross-Origin Resource Sharing support for web integration
+
+### System Flow
+
+1. Client requests are received by the Warp server
+2. Servant routes requests to the appropriate handler
+3. Handlers process business logic and interact with the database layer
+4. Database layer manages PostgreSQL connections and executes queries
+5. Results are transformed back into API responses
+6. Responses are sent back to the client
+
+## Core Components
+
+### Main Application (`App.hs`)
+
+The application entry point handles server configuration, database initialization, and middleware setup:
+
+```haskell
+run :: IO ()
+run = do
+  currentUser <- getLoginName
+  let config =
+        AppConfig
+          { dbConfig =
+              DBConfig
+                { dbHost = "localhost"
+                , dbPort = 5432
+                , dbName = "cheeblr"
+                , dbUser = currentUser
+                , dbPassword = "postgres"
+                , poolSize = 10
+                }
+          , serverPort = 8080
+          }
+
+  pool <- initializeDB (dbConfig config)
+  createTables pool
+  createTransactionTables pool
+  
+  -- Server configuration and start
+  Warp.run (serverPort config) app
+```
+
+### API Definition (`API/Inventory.hs` and `API/Transaction.hs`)
+
+The API is defined using Servant's type-level DSL:
+
+#### Inventory API
+
+```haskell
+type InventoryAPI =
+  "inventory" :> Get '[JSON] InventoryResponse
+    :<|> "inventory" :> ReqBody '[JSON] MenuItem :> Post '[JSON] InventoryResponse
+    :<|> "inventory" :> ReqBody '[JSON] MenuItem :> Put '[JSON] InventoryResponse
+    :<|> "inventory" :> Capture "sku" UUID :> Delete '[JSON] InventoryResponse
+```
+
+#### Transaction API
+
+Provides comprehensive endpoints for transaction management:
+
+```haskell
+type TransactionAPI =
+  "transaction" :> Get '[JSON] [Transaction]
+    :<|> "transaction" :> Capture "id" UUID :> Get '[JSON] Transaction
+    :<|> "transaction" :> ReqBody '[JSON] Transaction :> Post '[JSON] Transaction
+    :<|> Multiple other transaction-related endpoints...
+```
+
+### Database Layer (`DB/Database.hs` and `DB/Transaction.hs`)
+
+Manages database connections and operations:
+
+- Connection pooling for efficient resource management
+- Retry logic with exponential backoff for connection failures
+- Prepared statements for query execution
+- Transaction safety
 
 ## API Reference
-
-The backend exposes a RESTful API for inventory management with the following endpoints:
 
 ### Inventory Endpoints
 
@@ -50,201 +123,344 @@ The backend exposes a RESTful API for inventory management with the following en
 | GET | `/inventory` | Retrieve all inventory items |
 | POST | `/inventory` | Add a new inventory item |
 | PUT | `/inventory` | Update an existing inventory item |
-| DELETE | `/inventory/:sku` | Delete an inventory item by SKU (UUID) |
+| DELETE | `/inventory/:sku` | Delete an inventory item by SKU |
 
-All endpoints use JSON for request and response bodies.
+### Transaction Endpoints
 
-### Response Format
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/transaction` | Get all transactions |
+| GET | `/transaction/:id` | Get a transaction by ID |
+| POST | `/transaction` | Create a new transaction |
+| PUT | `/transaction/:id` | Update a transaction |
+| POST | `/transaction/void/:id` | Void a transaction |
+| POST | `/transaction/refund/:id` | Refund a transaction |
+| POST | `/transaction/item` | Add an item to a transaction |
+| DELETE | `/transaction/item/:id` | Remove an item from a transaction |
+| POST | `/transaction/payment` | Add a payment to a transaction |
+| DELETE | `/transaction/payment/:id` | Remove a payment from a transaction |
+| POST | `/transaction/finalize/:id` | Finalize a transaction |
 
-All API responses follow a consistent format:
+### Register Management Endpoints
 
-```json
-{
-  "type": "data" | "message",
-  "value": <Inventory array or message text>
-}
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/register` | Get all registers |
+| GET | `/register/:id` | Get register by ID |
+| POST | `/register` | Create a register |
+| PUT | `/register/:id` | Update a register |
+| POST | `/register/open/:id` | Open a register |
+| POST | `/register/close/:id` | Close a register |
+
+### Ledger and Compliance Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/ledger/entry` | Get all ledger entries |
+| GET | `/ledger/account` | Get all accounts |
+| POST | `/ledger/report/daily` | Generate daily report |
+| POST | `/compliance/verification` | Verify customer compliance |
+| GET | `/compliance/record/:id` | Get compliance record |
+| POST | `/compliance/report` | Generate compliance report |
+
+## Data Models
+
+### Inventory Models
+
+The core inventory data model consists of:
+
+#### MenuItem
+
+Represents a product in the inventory:
+
+```haskell
+data MenuItem = MenuItem
+  { sort :: Int
+  , sku :: UUID
+  , brand :: Text
+  , name :: Text
+  , price :: Scientific
+  , measure_unit :: Text
+  , per_package :: Text
+  , quantity :: Int
+  , category :: ItemCategory
+  , subcategory :: Text
+  , description :: Text
+  , tags :: V.Vector Text
+  , effects :: V.Vector Text
+  , strain_lineage :: StrainLineage
+  }
+```
+
+#### StrainLineage
+
+Contains detailed information for cannabis products:
+
+```haskell
+data StrainLineage = StrainLineage
+  { thc :: Text
+  , cbg :: Text
+  , strain :: Text
+  , creator :: Text
+  , species :: Species
+  , dominant_terpene :: Text
+  , terpenes :: V.Vector Text
+  , lineage :: V.Vector Text
+  , leafly_url :: Text
+  , img :: Text
+  }
+```
+
+### Transaction Models
+
+#### Transaction
+
+The core transaction model:
+
+```haskell
+data Transaction = Transaction
+  { id :: UUID
+  , status :: TransactionStatus
+  , created :: DateTime
+  , completed :: Maybe DateTime
+  , customerId :: Maybe UUID
+  , employeeId :: UUID
+  , registerId :: UUID
+  , locationId :: UUID
+  , items :: [TransactionItem]
+  , payments :: [PaymentTransaction]
+  , subtotal :: Scientific
+  , discountTotal :: Scientific
+  , taxTotal :: Scientific
+  , total :: Scientific
+  , transactionType :: TransactionType
+  , isVoided :: Boolean
+  , voidReason :: Maybe Text
+  , isRefunded :: Boolean
+  , refundReason :: Maybe Text
+  , referenceTransactionId :: Maybe UUID
+  , notes :: Maybe Text
+  }
+```
+
+#### TransactionItem
+
+```haskell
+data TransactionItem = TransactionItem
+  { id :: UUID
+  , transactionId :: UUID
+  , menuItemSku :: UUID
+  , quantity :: Scientific
+  , pricePerUnit :: Scientific
+  , discounts :: [DiscountRecord]
+  , taxes :: [TaxRecord]
+  , subtotal :: Scientific
+  , total :: Scientific
+  }
+```
+
+#### PaymentTransaction
+
+```haskell
+data PaymentTransaction = PaymentTransaction
+  { id :: UUID
+  , transactionId :: UUID
+  , method :: PaymentMethod
+  , amount :: Scientific
+  , tendered :: Scientific
+  , change :: Scientific
+  , reference :: Maybe Text
+  , approved :: Boolean
+  , authorizationCode :: Maybe Text
+  }
 ```
 
 ## Database Schema
 
-The application uses two primary tables in PostgreSQL:
-
 ### menu_items Table
 
-Stores the base information about each menu item:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| sort | INT | Display order priority |
-| sku | UUID | Primary key, unique identifier |
-| brand | TEXT | Product brand name |
-| name | TEXT | Product name |
-| price | DECIMAL(10,2) | Product price |
-| measure_unit | TEXT | Unit of measurement (e.g., "g", "oz") |
-| per_package | TEXT | Amount per package |
-| quantity | INT | Available quantity |
-| category | TEXT | Product category (Flower, PreRolls, etc.) |
-| subcategory | TEXT | Product subcategory |
-| description | TEXT | Product description |
-| tags | TEXT[] | Array of product tags |
-| effects | TEXT[] | Array of effects the product has |
+```sql
+CREATE TABLE IF NOT EXISTS menu_items (
+    sort INT NOT NULL,
+    sku UUID PRIMARY KEY,
+    brand TEXT NOT NULL,
+    name TEXT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    measure_unit TEXT NOT NULL,
+    per_package TEXT NOT NULL,
+    quantity INT NOT NULL,
+    category TEXT NOT NULL,
+    subcategory TEXT NOT NULL,
+    description TEXT NOT NULL,
+    tags TEXT[] NOT NULL,
+    effects TEXT[] NOT NULL
+)
+```
 
 ### strain_lineage Table
 
-Stores detailed strain information with a foreign key relationship to menu_items:
+```sql
+CREATE TABLE IF NOT EXISTS strain_lineage (
+    sku UUID PRIMARY KEY REFERENCES menu_items(sku),
+    thc TEXT NOT NULL,
+    cbg TEXT NOT NULL,
+    strain TEXT NOT NULL,
+    creator TEXT NOT NULL,
+    species TEXT NOT NULL,
+    dominant_terpene TEXT NOT NULL,
+    terpenes TEXT[] NOT NULL,
+    lineage TEXT[] NOT NULL,
+    leafly_url TEXT NOT NULL,
+    img TEXT NOT NULL
+)
+```
 
-| Column | Type | Description |
-|--------|------|-------------|
-| sku | UUID | Primary key and foreign key to menu_items |
-| thc | TEXT | THC content information |
-| cbg | TEXT | CBG content information |
-| strain | TEXT | Strain name |
-| creator | TEXT | Strain creator/breeder |
-| species | TEXT | Species classification |
-| dominant_terpene | TEXT | Primary terpene |
-| terpenes | TEXT[] | Array of all terpenes |
-| lineage | TEXT[] | Array of ancestor strains |
-| leafly_url | TEXT | Link to Leafly information page |
-| img | TEXT | Image URL |
+### transaction Table
 
-## Data Types
+```sql
+CREATE TABLE IF NOT EXISTS transaction (
+  id UUID PRIMARY KEY,
+  status TEXT NOT NULL,
+  created TIMESTAMP WITH TIME ZONE NOT NULL,
+  completed TIMESTAMP WITH TIME ZONE,
+  customer_id UUID,
+  employee_id UUID NOT NULL,
+  register_id UUID NOT NULL,
+  location_id UUID NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  discount_total DECIMAL(10,2) NOT NULL,
+  tax_total DECIMAL(10,2) NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  transaction_type TEXT NOT NULL,
+  is_voided BOOLEAN NOT NULL DEFAULT FALSE,
+  void_reason TEXT,
+  is_refunded BOOLEAN NOT NULL DEFAULT FALSE,
+  refund_reason TEXT,
+  reference_transaction_id UUID,
+  notes TEXT
+)
+```
 
-The backend defines several key data types:
+Additional transaction-related tables include:
+- `transaction_item`: Stores line items within transactions
+- `payment_transaction`: Stores payment details
+- `discount`: Stores applied discounts
+- `transaction_tax`: Stores tax applications
+- `register`: Stores cash register information
 
-### MenuItem
+## Transaction Processing
 
-Represents a complete menu item with all its properties, including:
-- Basic product information (SKU, name, price, etc.)
-- Categorization data
-- Strain lineage details (as a nested structure)
+### Transaction Flow
 
-### StrainLineage
+1. **Creation**: Transaction is created with status `Created`
+2. **Item Addition**: Items are added to the transaction
+3. **Discount Application**: Optional discounts are applied
+4. **Payment Addition**: One or more payments are added
+5. **Finalization**: Transaction is finalized, changing status to `Completed`
 
-Contains detailed information about a cannabis strain, including:
-- Cannabinoid content (THC, CBG)
-- Strain information and genetics
-- Terpene profile
-- Species classification
+### Refund and Void Operations
 
-### ItemCategory
+The system supports two key transaction reversal operations:
 
-An enumeration of possible product categories:
-- Flower
-- PreRolls
-- Vaporizers
-- Edibles
-- Drinks
-- Concentrates
-- Topicals
-- Tinctures
-- Accessories
+#### Void Process
 
-### Species
+```haskell
+voidTransaction :: ConnectionPool -> UUID -> Text -> IO Transaction
+voidTransaction pool transactionId reason = do
+  -- Update transaction status to voided
+  -- Return updated transaction
+```
 
-An enumeration of cannabis species classifications:
-- Indica
-- IndicaDominantHybrid
-- Hybrid
-- SativaDominantHybrid
-- Sativa
+#### Refund Process
 
-### Inventory
+```haskell
+refundTransaction :: ConnectionPool -> UUID -> Text -> IO Transaction
+refundTransaction pool transactionId reason = do
+  -- Create new inverse transaction referencing original
+  -- Mark original as refunded
+  -- Return new refund transaction
+```
 
-A collection of menu items, represented as a vector for efficient operations.
+### Register Operations
 
-### InventoryResponse
+The system supports cash register operations:
 
-A unified response type that can either contain:
-- Full inventory data
-- A status message (success, error, etc.)
+```haskell
+openRegister :: ConnectionPool -> UUID -> OpenRegisterRequest -> IO Register
+closeRegister :: ConnectionPool -> UUID -> CloseRegisterRequest -> IO CloseRegisterResult
+```
 
-## Implementation Approaches
-
-The backend employs several noteworthy implementation approaches:
-
-### Database Connection Management
-
-- **Connection Pooling**: Uses a connection pool for efficient database access
-- **Retry Logic**: Implements connection retries with exponential backoff on database connection failures
-- **Resource Safety**: Ensures connections are properly closed with `withConnection` patterns
-
-### Error Handling
-
-- **Structured Error Responses**: Consistent error message format for client consumption
-- **Exception Catching**: Try/catch patterns to handle exceptions gracefully
-- **Logging**: Console logging of errors and important events
+## Security and Configuration
 
 ### CORS Configuration
 
-The application implements a permissive CORS policy to allow browser access from any origin, which is suitable for development but may need to be restricted in production:
+The backend implements a permissive CORS policy suitable for development:
 
 ```haskell
-CorsResourcePolicy
-  { corsOrigins = Nothing  -- Allow any origin
-  , corsMethods = [methodGet, methodPost, methodPut, methodDelete, methodOptions]
-  , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hOrigin, hContentLength]
-  , corsExposedHeaders = Nothing
-  , corsMaxAge = Just 3600
-  , corsVaryOrigin = False
-  , corsRequireOrigin = False
-  , corsIgnoreFailures = False
-  }
+corsPolicy =
+  CorsResourcePolicy
+    { corsOrigins = Nothing  -- Allow any origin
+    , corsMethods = [methodGet, methodPost, methodPut, methodDelete, methodOptions]
+    , corsRequestHeaders = [hContentType, hAccept, hAuthorization, hOrigin, hContentLength]
+    , corsExposedHeaders = Nothing
+    , corsMaxAge = Just 3600
+    , corsVaryOrigin = False
+    , corsRequireOrigin = False
+    , corsIgnoreFailures = False
+    }
 ```
-
-### Database Operations
-
-Database operations are implemented with the following approaches:
-
-- **Query Interpolation**: Uses the `sql` quasi-quoter for readable SQL queries
-- **Transaction Safety**: Ensures database operations maintain consistency
-- **Type Conversion**: Custom `FromRow` and `ToRow` instances to convert between Haskell types and database representations
-- **Array Handling**: Special handling for PostgreSQL arrays with the `PGArray` type
-
-## Development Guidelines
-
-### Environment Setup
-
-1. Ensure PostgreSQL is running using the provided Nix development environment
-2. Run `pg-start` to start the database
-3. Execute `pg-create-schema` to set up the required tables if needed
 
 ### Server Configuration
 
-The server is configured with the following default settings:
-
+Server defaults:
 - **Port**: 8080
 - **Database**: localhost:5432/cheeblr
 - **Username**: Current system user (obtained via `getLoginName`)
 - **Password**: "postgres"
 - **Connection Pool Size**: 10
 
-### Building and Running
+## Development Guidelines
 
-Build the project with:
+### Environment Setup
+
+1. Ensure PostgreSQL is installed and running
+2. Use the provided connection details or update for your environment
+3. Tables will be automatically created if they don't exist
+
+### Build and Run
+
+Build the project:
 ```bash
 cabal build
 ```
 
-Run the server with:
+Run the server:
 ```bash
 cabal run
 ```
 
-When started, the server will:
-1. Initialize the database connection pool
-2. Create tables if they don't exist
-3. Start listening on all interfaces on port 8080
+### Coding Patterns
 
-## Security Considerations
+The codebase employs several Haskell patterns:
 
-The current implementation has several security aspects to be aware of:
+1. **Resource Management**: Uses `withConnection` pattern to ensure resource cleanup
+2. **Error Handling**: Structured error responses and exception handling
+3. **Type Safety**: Leverages Haskell's type system for API definitions
+4. **Functional Composition**: Pipeline-style data transformations
 
-1. **Hardcoded Password**: The database password is hardcoded as "postgres" in the configuration
-2. **Open CORS Policy**: The server allows requests from any origin
-3. **Error Messages**: Detailed error messages may expose internal information
+### Security Considerations
 
 For production deployment, consider:
-- Using environment variables for sensitive configuration
-- Restricting CORS to specific origins
-- Sanitizing error messages sent to clients
-- Implementing authentication and authorization
+1. Using environment variables for sensitive configuration
+2. Restricting CORS to specific origins
+3. Implementing authentication and authorization
+4. Adding user roles and permissions
+5. Sanitizing error messages sent to clients
+
+### Database Optimization
+
+The backend uses several database optimization techniques:
+1. Connection pooling for efficient resource utilization
+2. Prepared statements to prevent SQL injection
+3. Transaction safety for data consistency
+4. Retrying failed connections with exponential backoff
