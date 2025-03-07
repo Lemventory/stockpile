@@ -5,10 +5,9 @@ import Prelude
 
 import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..), formatDiscrete)
-import Data.Finance.Money.Format (numeric, numericC)
+import Data.Finance.Money.Format (numericC)
 import Data.Int (floor, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (unwrap)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Number (fromString)
 import Data.String (trim)
 import Types.DiscreteUSD (DiscreteUSD, fromDiscrete, toDiscrete)

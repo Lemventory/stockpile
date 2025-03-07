@@ -11,7 +11,7 @@ import Fetch (Method(..), fetch)
 import Fetch.Yoga.Json (fromJSON)
 import NetworkConfig (currentConfig)
 import Types.Inventory (Inventory, InventoryResponse(..), MenuItem)
-import Types.LiveViewConfig (QueryMode(..), FetchConfig)
+import Config.LiveView (QueryMode(..), FetchConfig)
 import Yoga.JSON (writeJSON)
 
 baseUrl :: String

@@ -25,7 +25,7 @@ import Route (Route(..), nav, route)
 import Routing.Duplex (parse)
 import Routing.Hash (matchesWith)
 import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
-import Types.LiveViewConfig (defaultViewConfig)
+import Config.LiveView (defaultViewConfig)
 import Utils.UUIDGen (genUUID)
 
 testItemUUID :: String

@@ -13,7 +13,7 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Poll (Poll)
 import Types.Inventory (Inventory(..), MenuItem(..), StrainLineage(..))
-import Types.LiveViewConfig (LiveViewConfig, defaultViewConfig)
+import Config.LiveView (LiveViewConfig, defaultViewConfig)
 import Utils.Formatting (compareMenuItems, generateClassName, summarizeLongText)
 
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut

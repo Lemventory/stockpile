@@ -1,4 +1,4 @@
-module Types.LiveViewConfig where
+module Config.LiveView where
 
 import Prelude
 import Data.Tuple (Tuple)

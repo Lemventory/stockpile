@@ -18,7 +18,7 @@ import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Random (random)
 import Types.Inventory (ItemCategory, MenuItem(..), Species, StrainLineage(..)) 
-import Types.LiveViewConfig (LiveViewConfig, SortField(..), SortOrder(..))
+import Config.LiveView (LiveViewConfig, SortField(..), SortOrder(..))
 import Types.UUID (UUID(..))
 import Data.String as String
 import Data.String.Regex (regex, replace) as Regex
