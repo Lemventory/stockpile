@@ -7,11 +7,13 @@ import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..), formatDiscrete)
 import Data.Finance.Money.Format (numericC)
 import Data.Int (floor, toNumber)
+import Data.Int as Int
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Number (fromString)
 import Data.String (trim)
-import Types.DiscreteUSD (DiscreteUSD, fromDiscrete, toDiscrete)
 import Data.String as String
+import Data.String.Utils (padStart)
+import Types.DiscreteUSD (DiscreteUSD, fromDiscrete, toDiscrete)
 
 stringToDiscreteUSD :: String -> Maybe DiscreteUSD
 stringToDiscreteUSD str = do
@@ -21,8 +23,18 @@ stringToDiscreteUSD str = do
 numberToDiscreteUSD :: Number -> DiscreteUSD
 numberToDiscreteUSD num = fromDiscrete $ Discrete (floor (num * 100.0))
 
-formatMoney :: DiscreteUSD -> String
-formatMoney discreteUSD =
+formatMoney :: Discrete USD -> String
+formatMoney (Discrete cents) =
+  let
+    dollars = Int.toNumber cents / 100.0
+    formatted = if Int.toNumber (Int.floor (dollars * 100.0)) / 100.0 == dollars
+                then show (Int.floor dollars) <> "." <> padStart 2 (show (Int.floor ((dollars - dollars) * 100.0)))
+                else show dollars
+  in
+    "$" <> formatted
+
+formatMoney' :: DiscreteUSD -> String
+formatMoney' discreteUSD =
   let
     discrete = toDiscrete discreteUSD
     formatted = formatDiscrete numericC discrete

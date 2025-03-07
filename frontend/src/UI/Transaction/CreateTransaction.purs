@@ -6,8 +6,9 @@ import API.Inventory (readInventory)
 import Data.Array (filter, find, foldl, length, null, replicate, (:))
 import Data.Either (Either(..))
 import Data.Finance.Currency (USD)
-import Data.Finance.Money (Discrete(..))
+import Data.Finance.Money (Discrete(..), fromDiscrete)
 import Data.Foldable (for_)
+import Data.Int (fromNumber, toNumber)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
@@ -15,11 +16,9 @@ import Data.String (Pattern(..), indexOf, joinWith, trim)
 import Data.String as String
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Data.UUID (genUUID)
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
-import Deku.DOM.Attributes (target)
 import Deku.DOM.Attributes as DA
 import Deku.DOM.Listeners as DL
 import Deku.Do as Deku
@@ -28,17 +27,20 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Effect.Now (now)
+import Types.DiscreteUSD (toDiscrete)
 import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
 import Types.Transaction (PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
 import Types.UUID (UUID(..))
 import UI.Common.Form as F
 import Utils.Formatting (parseUUID)
+import Utils.Money (formatMoney')
+import Utils.UUIDGen (genUUID)
+import Web.Event.Event (Event, target)
+import Web.Event.Event as Event
 import Web.Event.Event as Event
 import Web.HTML.HTMLInputElement as Input
 import Web.HTML.HTMLSelectElement as Select
 import Web.HTML.HTMLTextAreaElement as TextArea
-import Web.Event.Event (Event)
-import Web.Event.Event as Event
 
 createTransaction :: Nut
 createTransaction = Deku.do
@@ -128,11 +130,23 @@ createTransaction = Deku.do
                     filteredItems =
                       searchTextValue <#~> \text ->
                         if text == ""
-                        then []
-                        else filter (\(MenuItem i) ->
-                          contains (toLowerCase i.name) (toLowerCase text) ||
-                          contains (toLowerCase i.brand) (toLowerCase text)
-                        ) items
+                        then D.div_ []
+                        else D.div_ (
+                          filter (\(MenuItem i) ->
+                            contains (toLowerCase i.name) (toLowerCase text) ||
+                            contains (toLowerCase i.brand) (toLowerCase text)
+                          ) items 
+                          <#> \item@(MenuItem i) ->
+                            D.div
+                              [ DA.klass_ "inventory-item p-2 border rounded cursor-pointer hover:bg-gray-100"
+                              , DL.click_ \_ -> do
+                                  setSelectedItem (Just item)
+                                  setItemQuantity "1"
+                              ]
+                              [ D.div [ DA.klass_ "font-semibold" ] [ text_ i.name ]
+                              , D.div [ DA.klass_ "text-sm" ] [ text_ ("$" <> show i.price) ]
+                              ]
+                        )
                   in
                     if null items
                       then D.div [ DA.klass_ "text-gray-500" ] [ text_ "No items found" ]
@@ -147,7 +161,7 @@ createTransaction = Deku.do
                             [ D.div [ DA.klass_ "font-semibold" ] [ text_ i.name ]
                             , D.div [ DA.klass_ "text-sm" ] [ text_ ("$" <> show i.price) ]
                             ]
-                        ) filteredItems)
+                        ) items)
               ]
           ]
           
@@ -182,61 +196,75 @@ createTransaction = Deku.do
                             ]
                             []
                         , D.button
-                            [ DA.klass_ (F.buttonClass "green")
-                            , DL.click_ \_ -> do
-                                case (readFloat itemQuantityValue) of
-                                  Nothing -> 
-                                    setStatusMessage "Invalid quantity"
-                                  Just qty -> void $ launchAff do
-                                    itemId <- liftEffect genUUID
-                                    transactionId <- liftEffect genUUID
-                                    now <- liftEffect now
+                          [ DA.klass_ (F.buttonClass "green")
+                          , DL.click_ \_ -> do
+                              itemQuantity <- itemQuantityValue
+                              case (readFloat itemQuantity) of
+                                Nothing -> do
+                                  liftEffect $ setStatusMessage "Invalid quantity"
+                                Just qty -> void $ launchAff do
+                                  itemId <- liftEffect genUUID
+                                  transactionId <- liftEffect genUUID
+                                  now <- liftEffect now
+
+                                  let
+                                    -- Create the Discrete USD first
+                                    priceInCents = Int.floor (item.price * 100.0)
+                                    price = Discrete priceInCents
                                     
-                                    let 
-                                      price = Discrete item.price * 100.0
-                                      itemSubtotal = price * (Discrete qty)
-                                      
-                                      -- For demo purposes, simple 10% tax calculation
-                                      itemTaxTotal = itemSubtotal * (Discrete 10) / (Discrete 100)
-                                      itemTotal = itemSubtotal + itemTaxTotal
-                                      
-                                      newItem = TransactionItem
-                                        { id: itemId
-                                        , transactionId: transactionId
-                                        , menuItemSku: item.sku
-                                        , quantity: qty
-                                        , pricePerUnit: price
-                                        , discounts: []
-                                        , taxes: 
-                                            [ { category: RegularSalesTax
-                                              , rate: 0.1
-                                              , amount: itemTaxTotal
-                                              , description: "Sales Tax"
-                                              }
-                                            ]
-                                        , subtotal: itemSubtotal
-                                        , total: itemTotal
-                                        }
+                                    -- Convert to DiscreteUSD for our internal representation
+                                    priceAsDiscreteUSD = fromDiscrete price
                                     
-                                    liftEffect do
-                                      -- Update transaction totals
-                                      currentSubtotal <- subtotalValue
-                                      currentTaxTotal <- taxTotalValue
-                                      currentTotal <- totalValue
-                                      
-                                      setSubtotal (currentSubtotal + itemSubtotal)
-                                      setTaxTotal (currentTaxTotal + itemTaxTotal)
-                                      setTotal (currentTotal + itemTotal)
-                                      
-                                      -- Add item to list
-                                      currentItems <- itemsValue
-                                      setItems (newItem : currentItems)
-                                      
-                                      -- Clear selection
-                                      setSelectedItem Nothing
-                                      setStatusMessage "Item added to transaction"
-                            ]
-                            [ text_ "Add to Transaction" ]
+                                    -- Calculate subtotal directly as DiscreteUSD
+                                    qtyAsInt = Int.floor qty
+                                    itemSubtotal = priceAsDiscreteUSD * (fromDiscrete (Discrete qtyAsInt))
+
+                                    -- Calculate tax as 10% of subtotal (still DiscreteUSD)
+                                    taxRate = 0.1
+                                    itemTaxTotal = fromNumber (itemSubtotal * taxRate)
+                                    
+                                    -- Total is subtotal + tax
+                                    itemTotal = itemSubtotal + itemTaxTotal
+
+                                    -- Create the new item
+                                    newItem = TransactionItem
+                                      { id: itemId
+                                      , transactionId: transactionId
+                                      , menuItemSku: item.sku
+                                      , quantity: qty
+                                      , pricePerUnit: priceAsDiscreteUSD
+                                      , discounts: []
+                                      , taxes:
+                                          [ { category: RegularSalesTax
+                                            , rate: taxRate
+                                            , amount: itemTaxTotal
+                                            , description: "Sales Tax"
+                                            }
+                                          ]
+                                      , subtotal: itemSubtotal
+                                      , total: itemTotal
+                                      }
+
+                                  liftEffect do
+                                    -- Update the transaction totals
+                                    currentSubtotal <- subtotalValue
+                                    currentTaxTotal <- taxTotalValue
+                                    currentTotal <- totalValue
+
+                                    -- Convert our DiscreteUSD to Discrete USD for the transaction totals
+                                    setSubtotal (currentSubtotal + toDiscrete itemSubtotal)
+                                    setTaxTotal (currentTaxTotal + toDiscrete itemTaxTotal)
+                                    setTotal (currentTotal + toDiscrete itemTotal)
+
+                                    -- Add item to the items list
+                                    currentItems <- itemsValue
+                                    setItems (newItem : currentItems)
+
+                                    -- Reset UI state
+                                    setSelectedItem Nothing
+                                    setStatusMessage "Item added to transaction"
+                          ]
+                          [ text_ "Add to Transaction" ]
                         ]
                     ]
           ]
@@ -280,10 +308,10 @@ createTransaction = Deku.do
                                         Nothing -> text_ "Unknown Item"
                                 ]
                             , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (show item.quantity) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney item.pricePerUnit) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney item.subtotal) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney taxTotal) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney item.total) ]
+                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' item.pricePerUnit) ]
+                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' item.subtotal) ]
+                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' taxTotal) ]
+                            , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' item.total) ]
                             , D.td [ DA.klass_ "p-2 text-center" ]
                                 [ D.button
                                     [ DA.klass_ "text-red-600 hover:text-red-800"
@@ -453,9 +481,9 @@ createTransaction = Deku.do
                       (payments <#> \(PaymentTransaction payment) ->
                         D.tr [ DA.klass_ "border-t" ]
                           [ D.td [ DA.klass_ "p-2" ] [ text_ (show payment.method) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney payment.amount) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney payment.tendered) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney payment.change) ]
+                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' payment.amount) ]
+                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' payment.tendered) ]
+                          , D.td [ DA.klass_ "p-2 text-right" ] [ text_ (formatMoney' payment.change) ]
                           , D.td [ DA.klass_ "p-2 text-center" ]
                               [ D.button
                                   [ DA.klass_ "text-red-600 hover:text-red-800"
@@ -483,18 +511,18 @@ createTransaction = Deku.do
           , D.div
               [ DA.klass_ "grid grid-cols-2 gap-2" ]
               [ D.div [ DA.klass_ "text-right font-semibold" ] [ text_ "Subtotal:" ]
-              , D.div [ DA.klass_ "text-right" ] [ subtotalValue <#~> \amount -> text_ (formatMoney amount) ]
+              , D.div [ DA.klass_ "text-right" ] [ subtotalValue <#~> \amount -> text_ (formatMoney' amount) ]
               , D.div [ DA.klass_ "text-right font-semibold" ] [ text_ "Discount:" ]
-              , D.div [ DA.klass_ "text-right" ] [ discountTotalValue <#~> \amount -> text_ (formatMoney amount) ]
+              , D.div [ DA.klass_ "text-right" ] [ discountTotalValue <#~> \amount -> text_ (formatMoney' amount) ]
               , D.div [ DA.klass_ "text-right font-semibold" ] [ text_ "Tax:" ]
-              , D.div [ DA.klass_ "text-right" ] [ taxTotalValue <#~> \amount -> text_ (formatMoney amount) ]
+              , D.div [ DA.klass_ "text-right" ] [ taxTotalValue <#~> \amount -> text_ (formatMoney' amount) ]
               , D.div [ DA.klass_ "text-right font-semibold text-lg border-t pt-1" ] [ text_ "Total:" ]
-              , D.div [ DA.klass_ "text-right text-lg border-t pt-1" ] [ totalValue <#~> \amount -> text_ (formatMoney amount) ]
+              , D.div [ DA.klass_ "text-right text-lg border-t pt-1" ] [ totalValue <#~> \amount -> text_ (formatMoney' amount) ]
               , D.div [ DA.klass_ "text-right font-semibold pt-4" ] [ text_ "Payment Total:" ]
               , D.div [ DA.klass_ "text-right pt-4" ] 
                   [ paymentsValue <#~> \payments -> 
                       let paymentTotal = foldl (\acc (PaymentTransaction p) -> acc + p.amount) (Discrete 0) payments
-                      in text_ (formatMoney paymentTotal)
+                      in text_ (formatMoney' paymentTotal)
                   ]
               , D.div [ DA.klass_ "text-right font-semibold" ] [ text_ "Remaining:" ]
               , D.div [ DA.klass_ "text-right" ] 
@@ -505,7 +533,7 @@ createTransaction = Deku.do
                       in 
                         if remaining <= Discrete 0
                           then D.span [ DA.klass_ "text-green-600" ] [ text_ "$0.00" ]
-                          else D.span [ DA.klass_ "text-red-600" ] [ text_ (formatMoney remaining) ]
+                          else D.span [ DA.klass_ "text-red-600" ] [ text_ (formatMoney' remaining) ]
                   ]
               ]
           ]
@@ -641,16 +669,16 @@ createTransaction = Deku.do
           ]
     ]
 
--- Helper functions
-formatMoney :: Discrete USD -> String
-formatMoney (Discrete cents) =
-  let
-    dollars = Int.toNumber cents / 100.0
-    formatted = if Int.toNumber (Int.floor (dollars * 100.0)) / 100.0 == dollars
-                then show (Int.floor dollars) <> "." <> padStart 2 (show (Int.floor ((dollars - dollars) * 100.0)))
-                else show dollars
-  in
-    "$" <> formatted
+-- -- Helper functions
+-- formatMoney' :: Discrete USD -> String
+-- formatMoney' (Discrete cents) =
+--   let
+--     dollars = Int.toNumber cents / 100.0
+--     formatted = if Int.toNumber (Int.floor (dollars * 100.0)) / 100.0 == dollars
+--                 then show (Int.floor dollars) <> "." <> padStart 2 (show (Int.floor ((dollars - dollars) * 100.0)))
+--                 else show dollars
+--   in
+--     "$" <> formatted
 
 readFloat :: String -> Maybe Number
 readFloat str = Number.fromString (trim str)

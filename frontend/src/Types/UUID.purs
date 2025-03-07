@@ -42,8 +42,5 @@ parseUUID str =
       if test r str then Just $ UUID str
       else Nothing
 
-uuidToString :: UUID -> String
-uuidToString (UUID uuid) = uuid
-
 emptyUUID :: UUID
 emptyUUID = UUID "00000000-0000-0000-0000-000000000000"

@@ -11,8 +11,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), joinWith, replace, split, take, toLower, trim)
 import Data.String.Pattern (Replacement(..))
-import Data.String.Regex (regex, test)
-import Data.String.Regex.Flags (noFlags)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
@@ -25,22 +23,8 @@ import Data.String.Regex (regex, replace) as Regex
 import Data.String.Regex.Flags (global) as Regex
 import Partial.Unsafe (unsafePartial)
 
-parseUUID :: String -> Maybe UUID
-parseUUID str =
-  case
-    regex "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-      noFlags
-    of
-    Left _ -> Nothing
-    Right r ->
-      if test r str then Just $ UUID str
-      else Nothing
-
 uuidToString :: UUID -> String
 uuidToString (UUID uuid) = uuid
-
-emptyUUID :: UUID
-emptyUUID = UUID "00000000-0000-0000-0000-000000000000"
 
 generateClassName
   :: { category :: ItemCategory, subcategory :: String, species :: Species }

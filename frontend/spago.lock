@@ -35,6 +35,7 @@
             "prelude",
             "routing",
             "routing-duplex",
+            "stringutils",
             "transformers",
             "tuples",
             "uuid",
@@ -139,6 +140,7 @@
             "spec",
             "st",
             "strings",
+            "stringutils",
             "tailrec",
             "these",
             "transformers",
@@ -2164,6 +2166,19 @@
         "tuples",
         "unfoldable",
         "unsafe-coerce"
+      ]
+    },
+    "stringutils": {
+      "type": "registry",
+      "version": "0.0.12",
+      "integrity": "sha256-t63QWBlp49U0nRqUcFryKflSJsNKGTQAHKjn24/+ooI=",
+      "dependencies": [
+        "arrays",
+        "integers",
+        "maybe",
+        "partial",
+        "prelude",
+        "strings"
       ]
     },
     "tailrec": {

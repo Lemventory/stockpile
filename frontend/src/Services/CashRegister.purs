@@ -20,15 +20,17 @@ import Data.JSDate (fromInstant)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Maybe (Maybe)
 import Data.Maybe (fromMaybe)
+import Data.Newtype (unwrap)
 import Deku.DOM.SVG.Attributes (d)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
-import Effect.Now (now)
-import Effect.Now (nowDateTime)
+import Effect.Now (now, nowDateTime)
 import Types.DiscreteUSD (fromDiscrete, toDiscrete)
-import Types.UUID (UUID(..), uuidToString)
+import Types.UUID (UUID(..))
+import Utils.Formatting (uuidToString)
 import Utils.UUIDGen (genUUID)
+import Web.Event.Event (timeStamp)
 
 data RegisterError
   = InvalidTransaction
@@ -303,35 +305,44 @@ finalizeTransaction ::
 finalizeTransaction builder = do
   liftEffect $ log "Finalizing transaction"
 
-  -- Validate transaction
   if null builder.items
     then do
       liftEffect $ log "Cannot finalize transaction with no items"
       pure $ Left InvalidTransaction
     else do
-      let totalPayments = foldl (\acc p -> acc + p.amount) (Discrete 0) builder.payments
+      -- Use proper accumulation with PaymentTransaction pattern match
+      let totalPayments = foldl (\acc (PaymentTransaction p) -> 
+            acc + p.amount) 
+            (fromDiscrete (Discrete 0)) builder.payments
 
-      if totalPayments < builder.total
+      if totalPayments < fromDiscrete builder.total
         then do
           liftEffect $ log "Insufficient payment to complete transaction"
           pure $ Left InsufficientPayment
         else do
-          -- Generate transaction ID
           transactionId <- liftEffect genUUID
+          timestamp <- liftEffect nowDateTime
 
-          -- Get current timestamp
-          timestamp <- liftEffect now
+          let discountTotal = foldl (\acc d -> acc + d.amount) (fromDiscrete (Discrete 0)) builder.discounts
 
-          -- Calculate discount total
-          let discountTotal = foldl (\acc d -> acc + d.amount) (Discrete 0) builder.discounts
-
-          -- Update item and payment transaction IDs
           let
-            updatedItems = map (\item -> item { transactionId = transactionId }) builder.items
-            updatedPayments = map (\payment -> payment { transactionId = transactionId }) builder.payments
+            -- Create a new array of TransactionItems with updated transactionId
+            updatedItems = map 
+              (\item -> 
+                let TransactionItem ti = item
+                in TransactionItem (ti { transactionId = transactionId })
+              ) 
+              builder.items
+              
+            -- Update the payments with the new transactionId  
+            updatedPayments = map
+              (\payment ->
+                let PaymentTransaction p = payment
+                in PaymentTransaction (p { transactionId = transactionId })
+              )
+              builder.payments
 
-            -- Create final transaction
-            transaction =
+            transaction = Transaction
               { id: transactionId
               , status: Completed
               , created: timestamp
@@ -342,10 +353,10 @@ finalizeTransaction builder = do
               , location: builder.location
               , items: updatedItems
               , payments: updatedPayments
-              , subtotal: builder.subtotal
+              , subtotal: fromDiscrete builder.subtotal
               , discountTotal
-              , taxTotal: builder.taxTotal
-              , total: builder.total
+              , taxTotal: fromDiscrete builder.taxTotal
+              , total: fromDiscrete builder.total
               , transactionType: Sale
               , isVoided: false
               , voidReason: Nothing
@@ -363,31 +374,33 @@ finalizeTransaction builder = do
 generateReceipt :: Transaction -> String
 generateReceipt transaction =
   let
+    txData = unwrap transaction
+    
     receiptHeader =
       "===================================\n" <>
       "        CANNABIS DISPENSARY        \n" <>
       "===================================\n" <>
-      "Transaction: " <> uuidToString transaction.id <> "\n" <>
-      "Date: " <> show transaction.created <> "\n" <>
+      "Transaction: " <> uuidToString txData.id <> "\n" <>
+      "Date: " <> show txData.created <> "\n" <>
       "\n"
 
-    itemLines = foldl (\acc item -> acc <> formatTransactionItem item) "" transaction.items
+    itemLines = foldl (\acc item -> acc <> formatTransactionItem item) "" txData.items
 
     subtotalLine =
       "\n" <>
-      "Subtotal:         " <> formatDiscrete numeric transaction.subtotal <> "\n"
+      "Subtotal:         " <> formatDiscrete numeric (toDiscrete txData.subtotal) <> "\n"
 
     discountLine =
-      if transaction.discountTotal > Discrete 0
-        then "Discount:         -" <> formatDiscrete numeric transaction.discountTotal <> "\n"
+      if txData.discountTotal > fromDiscrete (Discrete 0)
+        then "Discount:         -" <> formatDiscrete numeric (toDiscrete txData.discountTotal) <> "\n"
         else ""
 
-    taxLine = "Tax:              " <> formatDiscrete numeric transaction.taxTotal <> "\n"
+    taxLine = "Tax:              " <> formatDiscrete numeric (toDiscrete txData.taxTotal) <> "\n"
 
     totalLine =
-      "TOTAL:            " <> formatDiscrete numericC transaction.total <> "\n\n"
+      "TOTAL:            " <> formatDiscrete numericC (toDiscrete txData.total) <> "\n\n"
 
-    paymentLines = foldl (\acc payment -> acc <> formatPayment payment) "" transaction.payments
+    paymentLines = foldl (\acc payment -> acc <> formatPayment payment) "" txData.payments
 
     receiptFooter =
       "===================================\n" <>
@@ -622,7 +635,7 @@ processRefund originalTransaction itemIdsToRefund reason employeeId = do
     makeRefundItem item =
       item {
         transactionId = dummyTransactionId,
-        subtotal = negate item.subtotal,
+        subtotal = negate (fromDiscrete item.subtotal),
         total = negate item.total,
         taxes = map (\tax -> tax { amount = negate tax.amount }) item.taxes
       }

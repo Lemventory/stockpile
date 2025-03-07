@@ -2,24 +2,21 @@ module Accounting.Compliance where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
-import Data.Either (Either(..))
 import Data.Array (foldl, null, filter, length)
-import Data.UUID (UUID, genUUID, toString)
+import Data.DateTime (DateTime)
+import Data.Either (Either(..))
 import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..))
-import Data.DateTime (DateTime)
+import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
 import Effect.Now (now)
+import Types.Inventory
 import Types.Transaction
-  ( MenuItem
-  , Transaction
-  , TransactionItem
-  , ItemCategory(..)
-  , TransactionType(..)
-  )
+import Types.UUID (UUID)
+import Utils.Formatting (uuidToString)
+import Utils.UUIDGen (genUUID)
 import Services.CashRegister (RegisterError(..))
 
 -- | Compliance verification type
@@ -111,23 +108,22 @@ type ComplianceRecord =
   , notes :: Maybe String
   }
 
--- | Reporting status
 data ReportingStatus
-  = NotRequired
+  = ReportNotRequired
   | Pending
   | Submitted
   | Acknowledged
-  | Failed
+  | ReportFailed  
 
 derive instance eqReportingStatus :: Eq ReportingStatus
 derive instance ordReportingStatus :: Ord ReportingStatus
 
 instance showReportingStatus :: Show ReportingStatus where
-  show NotRequired = "Not Required"
+  show ReportNotRequired = "Not Required"
   show Pending = "Pending"
   show Submitted = "Submitted"
   show Acknowledged = "Acknowledged"
-  show Failed = "Failed"
+  show ReportFailed = "Failed"
 
 -- | Default purchase limits (would come from regulatory configuration)
 defaultPurchaseLimits :: Array PurchaseLimit
@@ -148,7 +144,7 @@ checkCustomerEligibility customerId maybeDocument isMedical employeeId = do
   -- In a real implementation, this would check against a customer database
   -- and perform document verification
   
-  liftEffect $ log $ "Checking eligibility for customer " <> toString customerId
+  liftEffect $ log $ "Checking eligibility for customer " <> uuidToString customerId
   
   -- Get current timestamp
   timestamp <- liftEffect now
@@ -212,7 +208,7 @@ checkPurchaseLimits ::
   Array Transaction -> -- Previous transactions (for daily limits)
   Aff (Either ComplianceError Boolean)
 checkPurchaseLimits customerId items previousTransactions = do
-  liftEffect $ log $ "Checking purchase limits for customer " <> toString customerId
+  liftEffect $ log $ "Checking purchase limits for customer " <> uuidToString customerId
   
   -- In a real implementation, this would calculate the total purchased amounts
   -- by category for the day, including the current transaction, and compare
@@ -233,29 +229,26 @@ checkPurchaseLimits customerId items previousTransactions = do
       pure $ Left PurchaseLimitExceeded
 
 -- | Create compliance record for a transaction
-createComplianceRecord :: 
-  Transaction -> 
+createComplianceRecord ::
+  Transaction ->
   Array CustomerVerification ->
   Aff (Either ComplianceError ComplianceRecord)
 createComplianceRecord transaction verifications = do
-  liftEffect $ log $ "Creating compliance record for transaction " <> toString transaction.id
-  
-  -- Generate record ID
+  liftEffect $ log $ "Creating compliance record for transaction " <> uuidToString transaction.id
+
   recordId <- liftEffect genUUID
-  
-  -- Get current timestamp
+
   timestamp <- liftEffect now
-  
-  -- Determine if transaction requires state reporting
-  let 
+
+  let
     requiresReporting = containsCannabisProducts transaction.items
-    
+
     isCompliant = not (null verifications)
-    
-    reportingStatus = if requiresReporting then Pending else NotRequired
-  
-  let 
-    complianceRecord = 
+
+    reportingStatus = if requiresReporting then Pending else ReportNotRequired
+
+  let
+    complianceRecord =
       { id: recordId
       , transactionId: transaction.id
       , verifications
@@ -266,34 +259,30 @@ createComplianceRecord transaction verifications = do
       , referenceId: Nothing
       , notes: Nothing
       }
-  
-  liftEffect $ log $ "Compliance record created: " <> toString recordId
-  
+
+  liftEffect $ log $ "Compliance record created: " <> uuidToString recordId
+
   pure $ Right complianceRecord
 
 -- | Submit transaction to state tracking system
-submitToStateTracking :: 
-  Transaction -> 
+submitToStateTracking ::
+  Transaction ->
   ComplianceRecord ->
   Aff (Either ComplianceError { updatedRecord :: ComplianceRecord, referenceId :: String })
 submitToStateTracking transaction record = do
-  liftEffect $ log $ "Submitting transaction to state tracking system: " <> toString transaction.id
-  
-  -- In a real implementation, this would integrate with state tracking systems
-  -- like METRC, BioTrack, etc.
-  
-  -- Simulate a successful submission
-  let 
-    referenceId = "ST-" <> toString transaction.id
-    
+  liftEffect $ log $ "Submitting transaction to state tracking system: " <> uuidToString transaction.id
+
+  let
+    referenceId = "ST-" <> uuidToString transaction.id
+
     updatedRecord = record {
-      reportingStatus = Submitted,
+      reportingStatus = Submitted,  -- This stays as Submitted
       reportedAt = Just (unsafeCoerce "2025-03-05T00:00:00Z"),
       referenceId = Just referenceId
     }
-  
+
   liftEffect $ log $ "Successfully submitted to state tracking system. Reference: " <> referenceId
-  
+
   pure $ Right { updatedRecord, referenceId }
 
 -- | Generate compliance report
@@ -313,7 +302,7 @@ generateComplianceReport startDate endDate locationId = do
     report = 
       "Compliance Report\n" <>
       "=================\n" <>
-      "Location: " <> toString locationId <> "\n" <>
+      "Location: " <> uuidToString locationId <> "\n" <>
       "Period: " <> show startDate <> " to " <> show endDate <> "\n" <>
       "Transactions: 42\n" <>
       "Compliant: 42\n" <>
