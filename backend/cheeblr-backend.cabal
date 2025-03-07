@@ -42,7 +42,14 @@ common shared-properties
 
 library
     import: shared-properties
-    exposed-modules: App, Database, Server, Types, API
+    exposed-modules: App
+               , DB.Database
+               , DB.Transaction
+               , Server
+               , Types.Inventory
+               , Types.Transaction
+               , API.Inventory
+               , API.Transaction
     build-depends: refined
                 , string-conversions
     hs-source-dirs: src

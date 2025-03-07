@@ -9,7 +9,7 @@ import Data.Newtype (unwrap)
 import Effect.Aff (Aff)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
-import Types (Inventory(..), InventoryResponse(..), MenuItem(..))
+import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
 import Types.UUID (UUID)
 import Yoga.JSON (readJSON_, writeJSON)
 

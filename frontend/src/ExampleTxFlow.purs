@@ -1,0 +1,93 @@
+module Accounting.ExampleTxFlow where
+
+-- import Prelude
+
+-- import Data.Maybe (Maybe(..))
+-- import Data.Either (Either(..))
+-- import Effect.Aff (Aff)
+-- import Effect.Class (liftEffect)
+-- import Effect.Console (log)
+-- import Data.Finance.Currency (USD)
+-- import Data.Finance.Money (Discrete(..))
+-- import CashRegister.System 
+--   ( initializeTransaction
+--   , addItem
+--   , applyTransactionDiscount
+--   , addPayment
+--   , finalizeTransaction
+--   , RegisterError
+--   )
+-- import Ledger.System
+--   ( createSaleEntries
+--   , recordTransaction
+--   , LedgerError
+--   )
+-- import Types.Transaction
+--   ( TransactionStatus(..)
+--   , PaymentMethod(..)
+--   , DiscountType(..)
+--   , ItemCategory(..)
+--   , Species(..)
+--   )
+
+-- -- | Example transaction flow for a cannabis dispensary
+-- exampleTransaction :: Aff (Either String String)
+-- exampleTransaction = do
+--   -- Employee starts a new transaction
+--   liftEffect $ log "Starting new transaction"
+  
+--   let 
+--     -- Example IDs
+--     employeeId = "emp-123"
+--     registerId = "reg-456"
+--     locationId = "loc-789"
+--     customer = Just "cust-101"
+    
+--     -- Start building the transaction
+--     initialTransaction = initializeTransaction employeeId registerId locationId
+    
+--     -- Add first product: Blue Dream Flower
+--     blueProduct = {
+--       id: "prod-001",
+--       sku: "FLW-BLUE-3.5G",
+--       name: "Blue Dream",
+--       price: Discrete 4500, -- $45.00
+--       metadata: {
+--         category: Flower,
+--         subcategory: "Premium",
+--         strain: Just "Blue Dream",
+--         thcPercentage: Just "24.5%",
+--         cbdPercentage: Just "0.1%",
+--         species: Just Hybrid,
+--         terpenes: ["Myrcene", "Pinene", "Caryophyllene"],
+--         isPrepackaged: true
+--       }
+--     }
+    
+--     -- Add second product: Cannabis-infused gummies
+--     gummyProduct = {
+--       id: "prod-002",
+--       sku: "EDI-GUM-100MG",
+--       name: "Berry Blast Gummies",
+--       price: Discrete 2500, -- $25.00
+--       metadata: {
+--         category: Edibles,
+--         subcategory: "Gummies",
+--         strain: Nothing,
+--         thcPercentage: Just "10mg/piece",
+--         cbdPercentage: Nothing,
+--         species: Nothing,
+--         terpenes: [],
+--         isPrepackaged: true
+--       }
+--     }
+    
+--     -- Add third product: Vape cartridge
+--     vapeProduct = {
+--       id: "prod-003",
+--       sku: "VAP-CART-1G",
+--       name: "OG Kush Cartridge",
+--       price: Discrete 5000, -- $50.00
+--       metadata: {
+--         category: Vaporizers,
+--         subcategory: "

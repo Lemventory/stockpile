@@ -1,30 +1,30 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Server where
 
-import API
+import API.Inventory
 import Control.Exception (SomeException, try)
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Pool as Pool
-import Data.Text (pack)
-import Database
 import Database.PostgreSQL.Simple
+import Data.Pool (Pool)
 import Servant
-import Types
+import DB.Database (getAllMenuItems, insertMenuItem, updateExistingMenuItem, deleteMenuItem)
+import Types.Inventory
+import API.Transaction (PosAPI)
+import Data.Text (pack)
+import qualified Data.Pool as Pool
 
-data AppConfig = AppConfig
-  { dbConfig :: DBConfig
-  , serverPort :: Int
-  }
+-- Temporary implementation until we create Server.Transaction module
+posServer :: Pool Connection -> Server PosAPI
+posServer _ = error "Transaction API not implemented yet"
 
 server :: Pool.Pool Connection -> Server InventoryAPI
 server pool =
   getInventory
     :<|> addMenuItem
     :<|> updateMenuItem
-    :<|> deleteMenuItem pool 
+    :<|> deleteMenuItem pool  -- Call the imported function directly
   where
     getInventory :: Handler InventoryResponse
     getInventory = do
@@ -39,14 +39,14 @@ server pool =
       liftIO $ print item
       result <- liftIO $ try $ do
         insertMenuItem pool item
-        let response = Message "Item added successfully"
+        let response = Message (pack "Item added successfully")
         liftIO $ putStrLn $ "Sending response: " ++ show (encode response)
         return response
       case result of
         Right msg -> return msg
         Left (e :: SomeException) -> do
-          let errMsg = pack $ "Error inserting item: " <> show e
-          let response = Message errMsg
+          let errMsg = "Error inserting item: " <> show e
+          let response = Message (pack errMsg)
           liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
 
@@ -55,14 +55,19 @@ server pool =
       liftIO $ putStrLn "Received request to update menu item"
       liftIO $ print item
       result <- liftIO $ try $ do
-        _ <- updateExistingMenuItem pool item
-        let response = Message "Item updated successfully"
+        updateExistingMenuItem pool item
+        let response = Message (pack "Item updated successfully")
         liftIO $ putStrLn $ "Sending response: " ++ show (encode response)
         return response
       case result of
         Right msg -> return msg
         Left (e :: SomeException) -> do
-          let errMsg = pack $ "Error updating item: " <> show e
-          let response = Message errMsg
+          let errMsg = "Error updating item: " <> show e
+          let response = Message (pack errMsg)
           liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
+
+combinedServer :: Pool Connection -> Server API
+combinedServer pool =
+  server pool
+    :<|> posServer pool

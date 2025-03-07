@@ -14,6 +14,7 @@
             "arrays",
             "console",
             "css",
+            "datetime",
             "debug",
             "deku-core",
             "deku-css",

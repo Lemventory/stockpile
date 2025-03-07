@@ -1,9 +1,8 @@
 module Main where
 
 import Prelude
-import Types (Inventory(..), InventoryResponse(..), MenuItem(..))
 
-import API (fetchInventory, readInventory)
+import API.Inventory (fetchInventory, readInventory)
 import Control.Monad.ST.Class (liftST)
 import CreateItem (createItem)
 import Data.Array (find, length)
@@ -25,8 +24,9 @@ import MenuLiveView (createMenuLiveView)
 import Route (Route(..), nav, route)
 import Routing.Duplex (parse)
 import Routing.Hash (matchesWith)
+import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
 import Types.LiveViewConfig (defaultViewConfig)
-import UUIDGen (genUUID)
+import Utils.UUIDGen (genUUID)
 
 testItemUUID :: String
 testItemUUID = "4e58b3e6-3fd4-425c-b6a3-4f033a76859c"

@@ -10,6 +10,7 @@ package:
     - arrays
     - console
     - css
+    - datetime
     - debug
     - deku-core
     - deku-css
@@ -22,12 +23,12 @@ package:
     - fetch-yoga-json
     - lists
     - maybe
+    - money
     - newtype
     - node-fs
     - numbers
     - parsing
     - prelude
-    - money
     - routing
     - routing-duplex
     - transformers
@@ -47,14 +48,14 @@ workspace:
       git: "https://github.com/harryprayiv/purescript-money.git"
       ref: "cbcbbaef9680425cb23e2757fd0f84dfd88fff53"
       dependencies:
-      - console
-      - effect
-      - foldable-traversable
-      - integers
-      - lists
-      - newtype
-      - prelude
-      - rationals
+        - console
+        - effect
+        - foldable-traversable
+        - integers
+        - lists
+        - newtype
+        - prelude
+        - rationals
     hyrule:
       git: "https://github.com/mikesol/purescript-hyrule.git"
       ref: "a2a32e02a0d8518d906ec5fb3192261f63667338"
