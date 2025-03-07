@@ -64,87 +64,91 @@ createTransactionTables pool = withConnection pool $ \conn -> do
   do
     results <- query_ conn "SELECT 1 FROM information_schema.tables WHERE table_name = 'transaction'" :: IO [Only Int]
     case results of
-      [] -> do  -- Now this matches the expected type [Only Int] from the query
+      [] -> do
         hPutStrLn stderr "Transaction tables not found, creating..."
-        void $ execute_ conn  -- Use void to discard the Int64 result
-          "CREATE TABLE IF NOT EXISTS transaction (\
-          \  id UUID PRIMARY KEY,\
-          \  status TEXT NOT NULL,\
-          \  created TIMESTAMP WITH TIME ZONE NOT NULL,\
-          \  completed TIMESTAMP WITH TIME ZONE,\
-          \  customer_id UUID,\
-          \  employee_id UUID NOT NULL,\
-          \  register_id UUID NOT NULL,\
-          \  location_id UUID NOT NULL,\
-          \  subtotal DECIMAL(10,2) NOT NULL,\
-          \  discount_total DECIMAL(10,2) NOT NULL,\
-          \  tax_total DECIMAL(10,2) NOT NULL,\
-          \  total DECIMAL(10,2) NOT NULL,\
-          \  transaction_type TEXT NOT NULL,\
-          \  is_voided BOOLEAN NOT NULL DEFAULT FALSE,\
-          \  void_reason TEXT,\
-          \  is_refunded BOOLEAN NOT NULL DEFAULT FALSE,\
-          \  refund_reason TEXT,\
-          \  reference_transaction_id UUID,\
-          \  notes TEXT\
-          \)"
+        void $ execute_ conn
+          [sql|
+            CREATE TABLE IF NOT EXISTS transaction (
+              id UUID PRIMARY KEY,
+              status TEXT NOT NULL,
+              created TIMESTAMP WITH TIME ZONE NOT NULL,
+              completed TIMESTAMP WITH TIME ZONE,
+              customer_id UUID,
+              employee_id UUID NOT NULL,
+              register_id UUID NOT NULL,
+              location_id UUID NOT NULL,
+              subtotal DECIMAL(10,2) NOT NULL,
+              discount_total DECIMAL(10,2) NOT NULL,
+              tax_total DECIMAL(10,2) NOT NULL,
+              total DECIMAL(10,2) NOT NULL,
+              transaction_type TEXT NOT NULL,
+              is_voided BOOLEAN NOT NULL DEFAULT FALSE,
+              void_reason TEXT,
+              is_refunded BOOLEAN NOT NULL DEFAULT FALSE,
+              refund_reason TEXT,
+              reference_transaction_id UUID,
+              notes TEXT
+            )
+          |]
       _ -> do
         hPutStrLn stderr "Transaction tables already exist"
         pure ()
 
 -- Transaction Functions --
-
--- | Get all transactions
 getAllTransactions :: ConnectionPool -> IO [Transaction]
 getAllTransactions pool = withConnection pool $ \conn ->
   Database.PostgreSQL.Simple.query_ conn
-    "SELECT \
-    \  t.id, \
-    \  t.status, \
-    \  t.created, \
-    \  t.completed, \
-    \  t.customer_id, \
-    \  t.employee_id, \
-    \  t.register_id, \
-    \  t.location_id, \
-    \  t.subtotal, \
-    \  t.discount_total, \
-    \  t.tax_total, \
-    \  t.total, \
-    \  t.transaction_type, \
-    \  t.is_voided, \
-    \  t.void_reason, \
-    \  t.is_refunded, \
-    \  t.refund_reason, \
-    \  t.reference_transaction_id, \
-    \  t.notes \
-    \FROM transaction t \
-    \ORDER BY t.created DESC"
+    [sql|
+      SELECT 
+        t.id, 
+        t.status, 
+        t.created, 
+        t.completed, 
+        t.customer_id, 
+        t.employee_id, 
+        t.register_id, 
+        t.location_id, 
+        t.subtotal, 
+        t.discount_total, 
+        t.tax_total, 
+        t.total, 
+        t.transaction_type, 
+        t.is_voided, 
+        t.void_reason, 
+        t.is_refunded, 
+        t.refund_reason, 
+        t.reference_transaction_id, 
+        t.notes 
+      FROM transaction t 
+      ORDER BY t.created DESC
+    |]
 
 getTransactionById :: ConnectionPool -> UUID -> IO (Maybe Transaction)
 getTransactionById pool transactionId = withConnection pool $ \conn -> do
-  let query_str = "SELECT \
-      \t.id, \
-      \t.status, \
-      \t.created, \
-      \t.completed, \
-      \t.customer_id, \
-      \t.employee_id, \
-      \t.register_id, \
-      \t.location_id, \
-      \t.subtotal, \
-      \t.discount_total, \
-      \t.tax_total, \
-      \t.total, \
-      \t.transaction_type, \
-      \t.is_voided, \
-      \t.void_reason, \
-      \t.is_refunded, \
-      \t.refund_reason, \
-      \t.reference_transaction_id, \
-      \t.notes \
-      \FROM transaction t \
-      \WHERE t.id = ?"
+  let query_str = [sql|
+      SELECT 
+        t.id, 
+        t.status, 
+        t.created, 
+        t.completed, 
+        t.customer_id, 
+        t.employee_id, 
+        t.register_id, 
+        t.location_id, 
+        t.subtotal, 
+        t.discount_total, 
+        t.tax_total, 
+        t.total, 
+        t.transaction_type, 
+        t.is_voided, 
+        t.void_reason, 
+        t.is_refunded, 
+        t.refund_reason, 
+        t.reference_transaction_id, 
+        t.notes 
+      FROM transaction t 
+      WHERE t.id = ?
+    |]
 
   results <- Database.PostgreSQL.Simple.query conn query_str (Database.PostgreSQL.Simple.Only transactionId)
 
@@ -157,16 +161,18 @@ getTransactionById pool transactionId = withConnection pool $ \conn -> do
 
 getTransactionItemsByTransactionId :: Database.PostgreSQL.Simple.Connection -> UUID -> IO [TransactionItem]
 getTransactionItemsByTransactionId conn transactionId = do
-  let query_str = "SELECT \
-      \id, \
-      \transaction_id, \
-      \menu_item_sku, \
-      \quantity, \
-      \price_per_unit, \
-      \subtotal, \
-      \total \
-      \FROM transaction_item \
-      \WHERE transaction_id = ?"
+  let query_str = [sql|
+      SELECT 
+        id, 
+        transaction_id, 
+        menu_item_sku, 
+        quantity, 
+        price_per_unit, 
+        subtotal, 
+        total 
+      FROM transaction_item 
+      WHERE transaction_id = ?
+    |]
 
   items <- Database.PostgreSQL.Simple.query conn query_str (Database.PostgreSQL.Simple.Only transactionId)
 
@@ -178,91 +184,101 @@ getTransactionItemsByTransactionId conn transactionId = do
 
 getDiscountsByTransactionItemId :: Database.PostgreSQL.Simple.Connection -> UUID -> IO [DiscountRecord]
 getDiscountsByTransactionItemId conn itemId = do
-  let query_str = "SELECT \
-      \d.type, \
-      \d.amount, \
-      \d.percent, \
-      \d.reason, \
-      \d.approved_by \
-      \FROM discount d \
-      \WHERE d.transaction_item_id = ?"
+  let query_str = [sql|
+      SELECT 
+        d.type, 
+        d.amount, 
+        d.percent, 
+        d.reason, 
+        d.approved_by 
+      FROM discount d 
+      WHERE d.transaction_item_id = ?
+    |]
 
   Database.PostgreSQL.Simple.query conn query_str (Database.PostgreSQL.Simple.Only itemId)
+
 
 getTaxesByTransactionItemId :: Database.PostgreSQL.Simple.Connection -> UUID -> IO [TaxRecord]
 getTaxesByTransactionItemId conn itemId = do
-  let query_str = "SELECT \
-      \t.category, \
-      \t.rate, \
-      \t.amount, \
-      \t.description \
-      \FROM transaction_tax t \
-      \WHERE t.transaction_item_id = ?"
+  let query_str = [sql|
+      SELECT 
+        t.category, 
+        t.rate, 
+        t.amount, 
+        t.description 
+      FROM transaction_tax t 
+      WHERE t.transaction_item_id = ?
+    |]
 
   Database.PostgreSQL.Simple.query conn query_str (Database.PostgreSQL.Simple.Only itemId)
 
+
 getPaymentsByTransactionId :: Database.PostgreSQL.Simple.Connection -> UUID -> IO [PaymentTransaction]
 getPaymentsByTransactionId conn transactionId = do
-  let query_str = "SELECT \
-      \id, \
-      \transaction_id, \
-      \method, \
-      \amount, \
-      \tendered, \
-      \change_amount, \
-      \reference, \
-      \approved, \
-      \authorization_code \
-      \FROM payment_transaction \
-      \WHERE transaction_id = ?"
+  let query_str = [sql|
+      SELECT 
+        id, 
+        transaction_id, 
+        method, 
+        amount, 
+        tendered, 
+        change_amount, 
+        reference, 
+        approved, 
+        authorization_code 
+      FROM payment_transaction 
+      WHERE transaction_id = ?
+    |]
 
   Database.PostgreSQL.Simple.query conn query_str (Database.PostgreSQL.Simple.Only transactionId)
 
--- | Create a new transaction
+
 createTransaction :: ConnectionPool -> Transaction -> IO Transaction
 createTransaction pool transaction = withConnection pool $ \conn -> do
-  -- Convert the INSERT query to string concatenation format
-  let insert_str = "INSERT INTO transaction ( \
-      \id, \
-      \status, \
-      \created, \
-      \completed, \
-      \customer_id, \
-      \employee_id, \
-      \register_id, \
-      \location_id, \
-      \subtotal, \
-      \discount_total, \
-      \tax_total, \
-      \total, \
-      \transaction_type, \
-      \is_voided, \
-      \void_reason, \
-      \is_refunded, \
-      \refund_reason, \
-      \reference_transaction_id, \
-      \notes \
-      \) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
-      \RETURNING \
-      \id, \
-      \status, \
-      \created, \
-      \completed, \
-      \customer_id, \
-      \employee_id, \
-      \register_id, \
-      \location_id, \
-      \subtotal, \
-      \discount_total, \
-      \tax_total, \
-      \total, \
-      \transaction_type, \
-      \is_voided, \
-      \void_reason, \
-      \is_refunded, \
-      \refund_reason, \
-      \reference_transaction_id, \
-      \notes"
+
+  let insert_str = [sql|
+      INSERT INTO transaction (
+        id, 
+        status, 
+        created, 
+        completed, 
+        customer_id, 
+        employee_id, 
+        register_id, 
+        location_id, 
+        subtotal, 
+        discount_total, 
+        tax_total, 
+        total, 
+        transaction_type, 
+        is_voided, 
+        void_reason, 
+        is_refunded, 
+        refund_reason, 
+        reference_transaction_id, 
+        notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING
+        id, 
+        status, 
+        created, 
+        completed, 
+        customer_id, 
+        employee_id, 
+        register_id, 
+        location_id, 
+        subtotal, 
+        discount_total, 
+        tax_total, 
+        total, 
+        transaction_type, 
+        is_voided, 
+        void_reason, 
+        is_refunded, 
+        refund_reason, 
+        reference_transaction_id, 
+        notes
+    |]
 
   [newTransaction] <- Database.PostgreSQL.Simple.query conn insert_str (
     transactionId transaction,
@@ -286,14 +302,10 @@ createTransaction pool transaction = withConnection pool $ \conn -> do
     transactionNotes transaction
    )
 
-  -- Insert transaction items
   newItems <- mapM (insertTransactionItem conn) (transactionItems transaction)
-
-  -- Insert payment transactions
   newPayments <- mapM (insertPaymentTransaction conn) (transactionPayments transaction)
-
-  -- Return the complete transaction
   pure $ newTransaction { transactionItems = newItems, transactionPayments = newPayments }
+
 
 -- | Insert a transaction item
 insertTransactionItem :: Database.PostgreSQL.Simple.Connection -> TransactionItem -> IO TransactionItem
@@ -863,16 +875,18 @@ createRegister pool register = withConnection pool $ \conn ->
 
 updateRegister :: ConnectionPool -> UUID -> Register -> IO Register
 updateRegister pool registerId register = withConnection pool $ \conn -> do
-  let update_str = "UPDATE register SET \
-      \name = ?, \
-      \location_id = ?, \
-      \is_open = ?, \
-      \current_drawer_amount = ?, \
-      \expected_drawer_amount = ?, \
-      \opened_at = ?, \
-      \opened_by = ?, \
-      \last_transaction_time = ? \
-      \WHERE id = ?"
+  let update_str = [sql|
+    UPDATE register SET
+      name = ?,
+      location_id = ?,
+      is_open = ?,
+      current_drawer_amount = ?,
+      expected_drawer_amount = ?,
+      opened_at = ?,
+      opened_by = ?,
+      last_transaction_time = ?
+    WHERE id = ?
+  |]
 
   Database.PostgreSQL.Simple.execute conn update_str (
     registerName register,
@@ -886,23 +900,25 @@ updateRegister pool registerId register = withConnection pool $ \conn -> do
     registerId
    )
 
-  -- Get the updated register
   maybeRegister <- getRegisterById pool registerId
   case maybeRegister of
     Just updatedRegister -> pure updatedRegister
     Nothing -> error $ "Register not found after update: " ++ show registerId
 
+
 openRegister :: ConnectionPool -> UUID -> OpenRegisterRequest -> IO Register
 openRegister pool registerId request = withConnection pool $ \conn -> do
   now <- liftIO getCurrentTime
 
-  let update_str = "UPDATE register SET \
-      \is_open = TRUE, \
-      \current_drawer_amount = ?, \
-      \expected_drawer_amount = ?, \
-      \opened_at = ?, \
-      \opened_by = ? \
-      \WHERE id = ?"
+  let update_str = [sql|
+    UPDATE register SET
+      is_open = TRUE,
+      current_drawer_amount = ?,
+      expected_drawer_amount = ?,
+      opened_at = ?,
+      opened_by = ?
+    WHERE id = ?
+  |]
 
   Database.PostgreSQL.Simple.execute conn update_str (
     openRegisterStartingCash request,
@@ -912,30 +928,31 @@ openRegister pool registerId request = withConnection pool $ \conn -> do
     registerId
     )
 
-  -- Get the updated register
   maybeRegister <- getRegisterById pool registerId
   case maybeRegister of
     Just updatedRegister -> pure updatedRegister
     Nothing -> error $ "Register not found after opening: " ++ show registerId
+
 
 -- | Close a register
 closeRegister :: ConnectionPool -> UUID -> CloseRegisterRequest -> IO CloseRegisterResult
 closeRegister pool registerId request = withConnection pool $ \conn -> do
   now <- liftIO getCurrentTime
 
-  -- Get the current register
   maybeRegister <- getRegisterById pool registerId
   case maybeRegister of
     Nothing -> error $ "Register not found: " ++ show registerId
     Just register -> do
-      -- Calculate variance
+
       let variance = registerExpectedDrawerAmount register - closeRegisterCountedCash request
 
-      let update_str = "UPDATE register SET \
-          \is_open = FALSE, \
-          \current_drawer_amount = ?, \
-          \last_transaction_time = ? \
-          \WHERE id = ?"
+      let update_str = [sql|
+        UPDATE register SET
+          is_open = FALSE,
+          current_drawer_amount = ?,
+          last_transaction_time = ?
+        WHERE id = ?
+      |]
 
       Database.PostgreSQL.Simple.execute conn update_str (
         closeRegisterCountedCash request,
@@ -943,7 +960,6 @@ closeRegister pool registerId request = withConnection pool $ \conn -> do
         registerId
         )
 
-      -- Get the updated register
       maybeUpdatedRegister <- getRegisterById pool registerId
       case maybeUpdatedRegister of
         Nothing -> error $ "Register not found after closing: " ++ show registerId
