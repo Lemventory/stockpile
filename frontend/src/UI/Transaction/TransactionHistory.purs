@@ -1,27 +1,19 @@
 module UI.Transaction.TransactionHistory where
 
-import API.Transaction
+import API.Transaction (getAllTransactions, getTransaction)
 import Prelude
 
-import Data.Array (drop, filter, find, foldl, length, null, replicate, snoc, sortBy, (!!), (:))
-import Data.DateTime (DateTime(..))
+import Data.Array (filter, foldl, length, null, sortBy)
+import Data.DateTime (DateTime)
 import Data.Either (Either(..))
-import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..))
-import Data.Finance.Money.Extended (DiscreteMoney, toDiscrete)
-import Data.Finance.Money.Format (numeric, numericC)
-import Data.Finance.Money (formatDiscrete)
+import Data.Finance.Money.Extended (fromDiscrete', toDiscrete)
 import Data.Foldable (for_)
-import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), joinWith, toLower)
-import Data.String as String
-import Data.String.CodeUnits (contains, indexOf)
-import Data.String.Utils (padStart)
-import Data.Time (diff)
-import Data.Time.Duration (Milliseconds(..))
+import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), toLower)
+import Data.String.CodeUnits (contains)
 import Data.Tuple.Nested ((/\))
-import Deku.Control (text, text_)
+import Deku.Control (text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
@@ -31,20 +23,14 @@ import Deku.Hooks (useState, (<#~>))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Effect.Now (now)
-import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Types.Transaction (Transaction(..), TransactionItem(..), PaymentTransaction(..), TransactionStatus(..), TransactionType(..))
-import Types.UUID (UUID(..))
+import Types.Transaction (PaymentTransaction(..), Transaction(..), TransactionItem(..), TransactionStatus(..))
+import Types.UUID (UUID)
 import UI.Common.Form as F
 import Utils.Money (formatMoney)
-import Web.UIEvent.MouseEvent (MouseEvent)
-import Web.UIEvent.MouseEvent as MouseEvent
-import Web.Event.Event (Event, target)
-import Web.Event.Event (stopPropagation)
-import Web.Event.Event as Event
+import Web.Event.Event (target)
+import Web.Event.Event (stopPropagation) as Event
 import Web.HTML.HTMLInputElement as Input
-import Web.HTML.HTMLSelectElement as Select
-import Web.HTML.HTMLTextAreaElement as TextArea
+import Web.PointerEvent.PointerEvent as PointerEvent
 
 transactionHistory :: Nut
 transactionHistory = Deku.do
@@ -215,7 +201,7 @@ transactionHistory = Deku.do
                                             [ DA.klass_ "text-blue-600 hover:text-blue-800 mr-2"
                                             , DL.click_ \evt -> do
                                                 -- Convert PointerEvent to Event using MouseEvent.toEvent
-                                                Event.stopPropagation (MouseEvent.toEvent evt)
+                                                Event.stopPropagation (PointerEvent.toEvent evt)
                                                 loadTransactionDetails tx.id
                                             ]
                                             [ text_ "View" ]
@@ -289,9 +275,9 @@ transactionHistory = Deku.do
                   , D.tbody_
                       ( tx.items <#> \(TransactionItem item) ->
                           let
-                            taxTotal = foldl (\acc tax -> acc + tax.amount)
-                              (Discrete 0)
-                              item.taxes
+                            taxTotal = foldl (\acc tax -> acc + toDiscrete tax.amount)
+                                (Discrete 0)
+                                item.taxes
                           in
                             D.tr [ DA.klass_ "border-t" ]
                               [ D.td [ DA.klass_ "p-2" ]
@@ -303,7 +289,7 @@ transactionHistory = Deku.do
                               , D.td [ DA.klass_ "p-2 text-right" ]
                                   [ text_ (formatMoney item.subtotal) ]
                               , D.td [ DA.klass_ "p-2 text-right" ]
-                                  [ text_ (formatMoney taxTotal) ]
+                                  [ text_ (formatMoney (fromDiscrete' taxTotal)) ] -- now the error propagates down to here instead
                               , D.td [ DA.klass_ "p-2 text-right" ]
                                   [ text_ (formatMoney item.total) ]
                               ]

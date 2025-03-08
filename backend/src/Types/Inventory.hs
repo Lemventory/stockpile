@@ -6,16 +6,16 @@
 module Types.Inventory where
 
 import Data.Aeson
-import Data.Scientific
+    ( ToJSON(toJSON), FromJSON(parseJSON), object, KeyValue((.=)) )
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.UUID
+import Data.UUID ( UUID )
 import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.FromRow (FromRow (..), field)
 import Database.PostgreSQL.Simple.ToField (ToField (..))
 import Database.PostgreSQL.Simple.ToRow (ToRow (..))
 import Database.PostgreSQL.Simple.Types (PGArray (..))
-import GHC.Generics
+import GHC.Generics ( Generic )
 
 data Species
   = Indica
@@ -59,7 +59,7 @@ data MenuItem = MenuItem
   , sku :: UUID
   , brand :: Text
   , name :: Text
-  , price :: Scientific
+  , price :: Int
   , measure_unit :: Text
   , per_package :: Text
   , quantity :: Int

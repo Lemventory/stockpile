@@ -117,29 +117,31 @@ addItemToTransaction
   -> Number
   -> Aff (Either RegisterError TransactionBuilder)
 addItemToTransaction builder menuItem quantity = do
-  liftEffect $ log $ "Adding item to transaction: " <> menuItem.name
+  -- First, unwrap the MenuItem to get access to its fields
+  let MenuItem menuItemRecord = menuItem
+  
+  liftEffect $ log $ "Adding item to transaction: " <> menuItemRecord.name
 
-  if menuItem.quantity <= 0 then do
+  if menuItemRecord.quantity <= 0 then do
     liftEffect $ log "Item is out of stock"
     pure $ Left InventoryUnavailable
   else if quantity <= 0.0 then do
     liftEffect $ log "Invalid quantity"
     pure $ Left InvalidTransaction
   else do
-
     itemId <- liftEffect genUUID
 
     let
-      itemPrice = Discrete (menuItem.price * 100.0)
-      itemSubtotal = itemPrice * (Discrete (quantity))
+      itemPrice = Discrete (menuItemRecord.price * 100.0)
+      itemSubtotal = itemPrice * (Discrete (Int.floor quantity))
 
       taxes = calculateTaxes itemSubtotal menuItem
-      itemTaxTotal = foldl (\acc tax -> acc + tax.amount) (Discrete 0) taxes
+      itemTaxTotal = foldl (\acc tax -> acc + (toDiscrete tax.amount)) (Discrete 0) taxes
 
       newItem =
         { id: itemId
         , transactionId: dummyTransactionId
-        , menuItemSku: menuItem.sku
+        , menuItemSku: menuItemRecord.sku
         , quantity
         , pricePerUnit: fromDiscrete' itemPrice
         , discounts: []
@@ -181,13 +183,16 @@ applyDiscount builder discountType reason maybeApprover = do
     liftEffect $ log "Cannot apply discount to empty transaction"
     pure $ Left InvalidTransaction
   else do
-
     let
       discountAmount = case discountType of
         PercentOff percentage ->
           let
-            discountValue = builder.subtotal * (Discrete (percentage * 100.0)) /
-              (Discrete 100)
+            percentAsInt = Int.floor (percentage * 100.0)
+            -- Instead of division with /, use integer division on the raw Int
+            rawSubtotal = unwrap builder.subtotal
+            rawPercent = percentAsInt
+            -- Multiply and then divide by 100 using integer arithmetic
+            discountValue = Discrete (rawSubtotal * rawPercent / 100)
           in
             discountValue
 
@@ -196,8 +201,11 @@ applyDiscount builder discountType reason maybeApprover = do
           else amount
 
         BuyOneGetOne ->
-
-          builder.subtotal / (Discrete 2)
+          -- Similarly for division by 2
+          let
+            rawValue = unwrap builder.subtotal
+          in
+            Discrete (rawValue / 2)
 
         Custom _ amount ->
           if amount > builder.subtotal then builder.subtotal
@@ -238,12 +246,18 @@ addPayment builder method amount tendered reference = do
     liftEffect $ log "Invalid payment amount"
     pure $ Left InvalidPaymentAmount
   else do
-
     paymentId <- liftEffect genUUID
 
     let
-      currentPaymentTotal = foldl (\acc p -> acc + (toDiscrete p.amount)) (Discrete 0)
+      -- Fix 1: Properly unwrap PaymentTransaction in the fold
+      currentPaymentTotal = foldl 
+        (\acc p -> 
+          let PaymentTransaction payment = p
+          in acc + (toDiscrete payment.amount)
+        ) 
+        (Discrete 0)
         builder.payments
+        
       remainingBalance = builder.total - currentPaymentTotal
 
       actualPaymentAmount =
@@ -255,7 +269,8 @@ addPayment builder method amount tendered reference = do
           actualPaymentAmount
         else Discrete 0
 
-      newPayment =
+      -- Create the payment record
+      newPaymentRecord =
         { id: paymentId
         , transactionId: dummyTransactionId
         , method
@@ -267,7 +282,8 @@ addPayment builder method amount tendered reference = do
         , authorizationCode: Nothing
         }
 
-      newPayments = newPayment : builder.payments
+      -- Fix 2: Wrap the record in PaymentTransaction constructor
+      newPayments = PaymentTransaction newPaymentRecord : builder.payments
       newPaymentTotal = currentPaymentTotal + actualPaymentAmount
 
       newStatus =
@@ -552,13 +568,13 @@ calculateTaxes amount menuItem =
       _ -> false
 
     -- Convert the Discrete USD to an Int value we can work with
-    amountInCents = toDiscrete amount
+    amountInCents = Int.toNumber (unwrap amount)
     
     -- Calculate tax amounts using integer arithmetic
-    salesTaxAmount = Discrete (Int.floor (Int.toNumber amountInCents * salesTaxRate))
+    salesTaxAmount = Discrete (Int.floor (amountInCents * salesTaxRate))
     cannabisTaxAmount =
       if isCannabisProduct then 
-        Discrete (Int.floor (Int.toNumber amountInCents * cannabisTaxRate))
+        Discrete (Int.floor (amountInCents * cannabisTaxRate))
       else Discrete 0
 
     salesTax =

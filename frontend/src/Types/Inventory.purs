@@ -3,9 +3,12 @@ module Types.Inventory where
 import Prelude
 
 import Data.Enum (class BoundedEnum, class Enum, Cardinality(..))
+import Data.Finance.Currency (USD)
+import Data.Finance.Money (Discrete(..))
 import Data.Generic.Rep (class Generic)
+import Data.Int as Int
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Foreign (Foreign, F, ForeignError(..), fail, typeOf)
 import Foreign.Index (readProp)
@@ -31,7 +34,7 @@ type MenuItemRecord =
   , sku :: UUID
   , brand :: String
   , name :: String
-  , price :: Number
+  , price :: Discrete USD
   , measure_unit :: String
   , per_package :: String
   , quantity :: Int
@@ -220,7 +223,7 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , sku: item.sku
     , brand: item.brand
     , name: item.name
-    , price: item.price
+    , price: (Int.toNumber (unwrap item.price)) / 100.0 
     , measure_unit: item.measure_unit
     , per_package: item.per_package
     , quantity: item.quantity
@@ -292,7 +295,7 @@ instance readForeignMenuItem :: ReadForeign MenuItem where
       , sku
       , brand
       , name
-      , price
+      , price: Discrete (Int.floor (price * 100.0))
       , measure_unit
       , per_package
       , quantity

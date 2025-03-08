@@ -90,7 +90,7 @@ createTables pool = withConnection pool $ \conn -> do
             sku UUID PRIMARY KEY,
             brand TEXT NOT NULL,
             name TEXT NOT NULL,
-            price DECIMAL(10,2) NOT NULL,
+            price INTEGER NOT NULL,
             measure_unit TEXT NOT NULL,
             per_package TEXT NOT NULL,
             quantity INT NOT NULL,

@@ -4,9 +4,12 @@ import Prelude
 
 import Data.DateTime (DateTime)
 import Data.Finance.Currency (USD)
+import Data.Finance.Money (Discrete(..))
 import Data.Finance.Money.Extended (DiscreteMoney)
-import Data.Maybe (Maybe)
-import Data.Newtype (class Newtype)
+import Data.Int as Int
+import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap)
+import Data.Number as Number
 import Data.String (drop, take)
 import Foreign (ForeignError(..), fail)
 import Foreign.Index (readProp)
@@ -121,11 +124,17 @@ instance readForeignPaymentMethod :: ReadForeign PaymentMethod where
         if take 6 other == "OTHER:" then pure $ Other (drop 6 other)
         else pure $ Other other
 
+-- data DiscountType
+--   = PercentOff Number
+--   | AmountOff String
+--   | BuyOneGetOne
+--   | Custom String String
+
 data DiscountType
-  = PercentOff Number
-  | AmountOff String
+  = PercentOff Number        -- Keep as Number (0.0-1.0 or 0-100)
+  | AmountOff (Discrete USD) -- Use actual money type
   | BuyOneGetOne
-  | Custom String String
+  | Custom String (Discrete USD)
 
 derive instance eqDiscountType :: Eq DiscountType
 derive instance ordDiscountType :: Ord DiscountType
@@ -133,12 +142,14 @@ derive instance ordDiscountType :: Ord DiscountType
 instance writeForeignDiscountType :: WriteForeign DiscountType where
   writeImpl (PercentOff pct) = writeImpl
     { type: "PERCENT_OFF", percent: pct, amount: 0.0 }
-  writeImpl (AmountOff amt) = writeImpl
-    { type: "AMOUNT_OFF", percent: 0.0, amount: amt }
+  writeImpl (AmountOff amount) = writeImpl 
+    -- First convert to Number, then divide, then show
+    { type: "AMOUNT_OFF", percent: 0.0, amount: show ((Int.toNumber (unwrap amount)) / 100.0) }
   writeImpl BuyOneGetOne = writeImpl
     { type: "BUY_ONE_GET_ONE", percent: 0.0, amount: 0.0 }
-  writeImpl (Custom name amt) = writeImpl
-    { type: "CUSTOM", name, percent: 0.0, amount: amt }
+  writeImpl (Custom name amount) = writeImpl
+    -- Same for Custom
+    { type: "CUSTOM", name, percent: 0.0, amount: show ((Int.toNumber (unwrap amount)) / 100.0) }
 
 instance readForeignDiscountType :: ReadForeign DiscountType where
   readImpl f = do
@@ -146,12 +157,18 @@ instance readForeignDiscountType :: ReadForeign DiscountType where
     discType <- readProp "type" obj >>= readImpl
     case discType of
       "PERCENT_OFF" -> PercentOff <$> (readProp "percent" obj >>= readImpl)
-      "AMOUNT_OFF" -> AmountOff <$> (readProp "amount" obj >>= readImpl)
+      "AMOUNT_OFF" -> do
+        amountStr <- readProp "amount" obj >>= readImpl
+        case Number.fromString amountStr of
+          Just n -> pure $ AmountOff (Discrete (Int.floor (n * 100.0)))
+          Nothing -> fail (ForeignError $ "Invalid amount: " <> amountStr)
       "BUY_ONE_GET_ONE" -> pure BuyOneGetOne
       "CUSTOM" -> do
         name <- readProp "name" obj >>= readImpl
-        amount <- readProp "amount" obj >>= readImpl
-        pure $ Custom name amount
+        amountStr <- readProp "amount" obj >>= readImpl
+        case Number.fromString amountStr of
+          Just n -> pure $ Custom name (Discrete (Int.floor (n * 100.0)))
+          Nothing -> fail (ForeignError $ "Invalid amount: " <> amountStr)
       _ -> fail (ForeignError $ "Invalid DiscountType: " <> discType)
 
 data TaxCategory

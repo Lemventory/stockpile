@@ -274,7 +274,7 @@ createTransaction = Deku.do
                                     
                                     -- Get the current items and then set them
                                     currItems <- itemsValue
-                                    setItems (newItem : currItems)
+                                    void $ liftEffect $ setItems (newItem : currItems)
                                       
                                     setSelectedItem Nothing
                                     setStatusMessage "Item added to transaction"

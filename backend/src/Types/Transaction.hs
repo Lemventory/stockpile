@@ -62,9 +62,9 @@ instance FromJSON TaxCategory
 
 data DiscountType
   = PercentOff Scientific
-  | AmountOff Scientific
+  | AmountOff Int
   | BuyOneGetOne
-  | Custom Text Scientific
+  | Custom Text Int
   deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON DiscountType
@@ -73,7 +73,7 @@ instance FromJSON DiscountType
 data TaxRecord = TaxRecord
   { taxCategory :: TaxCategory
   , taxRate :: Scientific
-  , taxAmount :: Scientific
+  , taxAmount :: Int
   , taxDescription :: Text
   } deriving (Show, Eq, Generic)
 
@@ -82,7 +82,7 @@ instance FromJSON TaxRecord
 
 data DiscountRecord = DiscountRecord
   { discountType :: DiscountType
-  , discountAmount :: Scientific
+  , discountAmount :: Int
   , discountReason :: Text
   , discountApprovedBy :: Maybe UUID
   } deriving (Show, Eq, Generic)
@@ -94,12 +94,12 @@ data TransactionItem = TransactionItem
   { transactionItemId :: UUID
   , transactionItemTransactionId :: UUID
   , transactionItemMenuItemSku :: UUID
-  , transactionItemQuantity :: Scientific
-  , transactionItemPricePerUnit :: Scientific
+  , transactionItemQuantity :: Int
+  , transactionItemPricePerUnit :: Int
   , transactionItemDiscounts :: [DiscountRecord]
   , transactionItemTaxes :: [TaxRecord]
-  , transactionItemSubtotal :: Scientific
-  , transactionItemTotal :: Scientific
+  , transactionItemSubtotal :: Int
+  , transactionItemTotal :: Int
   } deriving (Show, Eq, Generic)
 
 instance ToJSON TransactionItem
@@ -109,9 +109,9 @@ data PaymentTransaction = PaymentTransaction
   { paymentId :: UUID
   , paymentTransactionId :: UUID
   , paymentMethod :: PaymentMethod
-  , paymentAmount :: Scientific
-  , paymentTendered :: Scientific
-  , paymentChange :: Scientific
+  , paymentAmount :: Int
+  , paymentTendered :: Int
+  , paymentChange :: Int
   , paymentReference :: Maybe Text
   , paymentApproved :: Bool
   , paymentAuthorizationCode :: Maybe Text
@@ -131,10 +131,10 @@ data Transaction = Transaction
   , transactionLocationId :: UUID
   , transactionItems :: [TransactionItem]
   , transactionPayments :: [PaymentTransaction]
-  , transactionSubtotal :: Scientific
-  , transactionDiscountTotal :: Scientific
-  , transactionTaxTotal :: Scientific
-  , transactionTotal :: Scientific
+  , transactionSubtotal :: Int
+  , transactionDiscountTotal :: Int
+  , transactionTaxTotal :: Int
+  , transactionTotal :: Int
   , transactionType :: TransactionType
   , transactionIsVoided :: Bool
   , transactionVoidReason :: Maybe Text
@@ -188,7 +188,7 @@ data LedgerEntry = LedgerEntry
   { ledgerEntryId :: UUID
   , ledgerEntryTransactionId :: UUID
   , ledgerEntryAccountId :: UUID
-  , ledgerEntryAmount :: Scientific
+  , ledgerEntryAmount :: Int
   , ledgerEntryIsDebit :: Bool
   , ledgerEntryTimestamp :: UTCTime
   , ledgerEntryType :: LedgerEntryType
@@ -328,15 +328,15 @@ instance FromRow DiscountRecord where
       <*> field  -- discountApprovedBy
 
 -- Helper to parse the discount type from DB columns
-parseDiscountType :: Text -> Maybe Scientific -> DiscountType
-parseDiscountType typ (Just percent)
-  | typ == "PERCENT_OFF" = PercentOff percent
-  | typ == "AMOUNT_OFF" = AmountOff percent
+parseDiscountType :: Text -> Maybe Int -> DiscountType
+parseDiscountType typ (Just val)
+  | typ == "PERCENT_OFF" = PercentOff (fromIntegral val / 100) 
+  | typ == "AMOUNT_OFF" = AmountOff val  
   | typ == "BUY_ONE_GET_ONE" = BuyOneGetOne
-  | otherwise = Custom typ percent
-parseDiscountType typ _ 
+  | otherwise = Custom typ val
+parseDiscountType typ _
   | typ == "BUY_ONE_GET_ONE" = BuyOneGetOne
-  | otherwise = AmountOff 0  -- fallback
+  | otherwise = AmountOff 0
 
 -- FromRow instance for TaxRecord
 instance FromRow TaxRecord where

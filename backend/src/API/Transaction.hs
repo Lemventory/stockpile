@@ -7,7 +7,6 @@ import Data.UUID
 import Servant
 import Types.Transaction
 import Data.Text
-import Data.Scientific
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
@@ -63,7 +62,7 @@ posAPI = Proxy
 -- | Request/response types for register operations
 data OpenRegisterRequest = OpenRegisterRequest
   { openRegisterEmployeeId :: UUID
-  , openRegisterStartingCash :: Scientific
+  , openRegisterStartingCash :: Int
   } deriving (Show, Eq, Generic)
 
 instance ToJSON OpenRegisterRequest
@@ -71,7 +70,7 @@ instance FromJSON OpenRegisterRequest
 
 data CloseRegisterRequest = CloseRegisterRequest
   { closeRegisterEmployeeId :: UUID
-  , closeRegisterCountedCash :: Scientific
+  , closeRegisterCountedCash :: Int
   } deriving (Show, Eq, Generic)
 
 instance ToJSON CloseRegisterRequest
@@ -79,7 +78,7 @@ instance FromJSON CloseRegisterRequest
 
 data CloseRegisterResult = CloseRegisterResult
   { closeRegisterResultRegister :: Register
-  , closeRegisterResultVariance :: Scientific
+  , closeRegisterResultVariance :: Int
   } deriving (Show, Eq, Generic)
 
 instance ToJSON CloseRegisterResult
@@ -95,10 +94,10 @@ instance ToJSON DailyReportRequest
 instance FromJSON DailyReportRequest
 
 data DailyReportResult = DailyReportResult
-  { dailyReportCash :: Scientific
-  , dailyReportCard :: Scientific
-  , dailyReportOther :: Scientific
-  , dailyReportTotal :: Scientific
+  { dailyReportCash :: Int
+  , dailyReportCard :: Int
+  , dailyReportOther :: Int
+  , dailyReportTotal :: Int
   , dailyReportTransactions :: Int
   } deriving (Show, Eq, Generic)
 
@@ -127,8 +126,8 @@ data Register = Register
   , registerName :: Text
   , registerLocationId :: UUID
   , registerIsOpen :: Bool
-  , registerCurrentDrawerAmount :: Scientific
-  , registerExpectedDrawerAmount :: Scientific
+  , registerCurrentDrawerAmount :: Int
+  , registerExpectedDrawerAmount :: Int
   , registerOpenedAt :: Maybe UTCTime
   , registerOpenedBy :: Maybe UUID
   , registerLastTransactionTime :: Maybe UTCTime
