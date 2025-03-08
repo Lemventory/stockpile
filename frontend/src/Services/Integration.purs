@@ -100,55 +100,58 @@ type TestResults =
   , certificateUrl :: Maybe String
   }
 
-updateInventoryForTransaction ::
-  Transaction ->
-  Aff (Either InventoryError (Array InventoryUpdate))
+updateInventoryForTransaction
+  :: Transaction
+  -> Aff (Either InventoryError (Array InventoryUpdate))
 updateInventoryForTransaction tx = do
-  liftEffect $ log $ "Updating inventory for transaction: " <> show (unwrap tx).id
+  liftEffect $ log $ "Updating inventory for transaction: " <> show
+    (unwrap tx).id
   pure $ Right []
 
-checkInventoryAvailability ::
-  Array TransactionItem ->
-  Aff (Either InventoryError Boolean)
+checkInventoryAvailability
+  :: Array TransactionItem
+  -> Aff (Either InventoryError Boolean)
 checkInventoryAvailability txnItems = do
-  liftEffect $ log $ "Checking inventory availability for " <> show (length txnItems) <> " items"
+  liftEffect $ log $ "Checking inventory availability for "
+    <> show (length txnItems)
+    <> " items"
   pure $ Right true
 
-recordInventoryAdjustment ::
-  UUID ->
-  Number ->
-  String ->
-  UUID ->
-  Aff (Either InventoryError InventoryAdjustment)
+recordInventoryAdjustment
+  :: UUID
+  -> Number
+  -> String
+  -> UUID
+  -> Aff (Either InventoryError InventoryAdjustment)
 recordInventoryAdjustment itemId quantityChange reason employeeId = do
   liftEffect $ log $ "Recording inventory adjustment for item " <> show itemId
-  pure $ Right {
-    id: "adj-123",
-    inventoryItemId: itemId,
-    quantityChange,
-    reason,
-    performedBy: employeeId,
-    timestamp: defaultDateTime,
-    notes: Nothing
-  }
+  pure $ Right
+    { id: "adj-123"
+    , inventoryItemId: itemId
+    , quantityChange
+    , reason
+    , performedBy: employeeId
+    , timestamp: defaultDateTime
+    , notes: Nothing
+    }
 
-reconcileInventory ::
-  UUID ->
-  Array { inventoryItemId :: UUID, countedQuantity :: Number } ->
-  UUID ->
-  Aff (Either InventoryError InventoryReconciliation)
+reconcileInventory
+  :: UUID
+  -> Array { inventoryItemId :: UUID, countedQuantity :: Number }
+  -> UUID
+  -> Aff (Either InventoryError InventoryReconciliation)
 reconcileInventory locationId countItems employeeId = do
   liftEffect $ log $ "Reconciling inventory at location " <> show locationId
-  pure $ Right {
-    id: "recon-123",
-    locationId,
-    performedBy: employeeId,
-    performedAt: defaultDateTime,
-    items: [],
-    totalVariance: 0.0,
-    isApproved: false,
-    approvedBy: Nothing
-  }
+  pure $ Right
+    { id: "recon-123"
+    , locationId
+    , performedBy: employeeId
+    , performedAt: defaultDateTime
+    , items: []
+    , totalVariance: 0.0
+    , isApproved: false
+    , approvedBy: Nothing
+    }
 
 data InventoryError
   = InsufficientStock
@@ -210,24 +213,25 @@ type InventoryUpdate =
   , timestamp :: DateTime
   }
 
-generateInventoryReport ::
-  UUID ->
-  Maybe ItemCategory ->
-  Aff (Either InventoryError InventoryReport)
+generateInventoryReport
+  :: UUID
+  -> Maybe ItemCategory
+  -> Aff (Either InventoryError InventoryReport)
 generateInventoryReport locationId catFilter = do
-  liftEffect $ log $ "Generating inventory report for location " <> show locationId
+  liftEffect $ log $ "Generating inventory report for location " <> show
+    locationId
   case catFilter of
     Just cat -> liftEffect $ log $ "Filtering by category: " <> show cat
     Nothing -> liftEffect $ log "No category filter applied"
 
-  pure $ Right {
-    locationId,
-    generatedAt: defaultDateTime,
-    totalItems: 0,
-    totalValue: Discrete 0,
-    itemsByCategory: [],
-    lowStockItems: []
-  }
+  pure $ Right
+    { locationId
+    , generatedAt: defaultDateTime
+    , totalItems: 0
+    , totalValue: Discrete 0
+    , itemsByCategory: []
+    , lowStockItems: []
+    }
 
 type InventoryReport =
   { locationId :: UUID
@@ -249,16 +253,16 @@ defaultDateTime :: DateTime
 defaultDateTime =
   let
     -- Create the date component using toEnum to safely create Year, Month, and Day
-    date = unsafePartial $ canonicalDate 
-            (fromJust $ toEnum 2025)
-            (fromJust $ toEnum 3) 
-            (fromJust $ toEnum 5)
-    
+    date = unsafePartial $ canonicalDate
+      (fromJust $ toEnum 2025)
+      (fromJust $ toEnum 3)
+      (fromJust $ toEnum 5)
+
     -- Create time component
-    time = Time 
-            (unsafePartial $ fromJust $ toEnum 0)
-            (unsafePartial $ fromJust $ toEnum 0)
-            (unsafePartial $ fromJust $ toEnum 0)
-            (unsafePartial $ fromJust $ toEnum 0)
-  in 
+    time = Time
+      (unsafePartial $ fromJust $ toEnum 0)
+      (unsafePartial $ fromJust $ toEnum 0)
+      (unsafePartial $ fromJust $ toEnum 0)
+      (unsafePartial $ fromJust $ toEnum 0)
+  in
     DateTime date time

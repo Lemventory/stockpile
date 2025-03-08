@@ -80,7 +80,8 @@ removeTransactionItem itemId = do
     Left err -> Left $ "Remove item error: " <> show err
     Right _ -> Right unit
 
-addPaymentTransaction :: PaymentTransaction -> Aff (Either String PaymentTransaction)
+addPaymentTransaction
+  :: PaymentTransaction -> Aff (Either String PaymentTransaction)
 addPaymentTransaction payment = do
   result <- attempt do
     let content = writeJSON payment
@@ -104,7 +105,8 @@ addPaymentTransaction payment = do
 removePaymentTransaction :: UUID -> Aff (Either String Unit)
 removePaymentTransaction paymentId = do
   result <- attempt do
-    liftEffect $ Console.log $ "Removing payment from transaction: " <> show paymentId
+    liftEffect $ Console.log $ "Removing payment from transaction: " <> show
+      paymentId
 
     _ <- fetch (baseUrl <> "/transaction/payment/" <> show paymentId)
       { method: DELETE
@@ -125,7 +127,8 @@ finalizeTransaction transactionId = do
   result <- attempt do
     liftEffect $ Console.log $ "Finalizing transaction: " <> show transactionId
 
-    response <- fetch (baseUrl <> "/transaction/finalize/" <> show transactionId)
+    response <- fetch
+      (baseUrl <> "/transaction/finalize/" <> show transactionId)
       { method: POST
       , headers:
           { "Content-Type": "application/json"

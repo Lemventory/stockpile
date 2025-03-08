@@ -15,13 +15,17 @@ import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Random (random)
-import Types.Inventory (ItemCategory, MenuItem(..), Species, StrainLineage(..)) 
+import Types.Inventory (ItemCategory, MenuItem(..), Species, StrainLineage(..))
 import Config.LiveView (LiveViewConfig, SortField(..), SortOrder(..))
 import Types.UUID (UUID(..))
 import Data.String as String
 import Data.String.Regex (regex, replace) as Regex
 import Data.String.Regex.Flags (global) as Regex
 import Partial.Unsafe (unsafePartial)
+import Data.Int as Int
+import Data.Maybe (Maybe, fromMaybe)
+import Data.String (trim)
+
 
 uuidToString :: UUID -> String
 uuidToString (UUID uuid) = uuid
@@ -147,3 +151,85 @@ summarizeLongText desc =
       else condensedSpaces
   in
     truncated
+
+
+-- stringToDiscrete :: String -> Maybe Discrete
+-- stringToDiscrete str = do
+--   num <- fromString (trim str)
+--   pure $ fromDiscrete $ Discrete (floor (num * 100.0))
+
+-- numberToDiscrete :: Number -> Discrete
+-- numberToDiscrete num = fromDiscrete $ Discrete (floor (num * 100.0))
+
+-- formatMoney :: Discrete -> String
+-- formatMoney (Discrete cents) =
+--   let
+--     dollars = Int.toNumber cents / 100.0
+--     formatted = if Int.toNumber (Int.floor (dollars * 100.0)) / 100.0 == dollars
+--                 then show (Int.floor dollars) <> "." <> padStart 2 (show (Int.floor ((dollars - dollars) * 100.0)))
+--                 else show dollars
+--   in
+--     "$" <> formatted
+
+-- formatMoney' :: Discrete -> String
+-- formatMoney' discreteUSD =
+--   let
+--     discrete = toDiscrete discreteUSD
+--     formatted = formatDiscrete numericC discrete
+--   in
+--     if formatted == "USD 0.00"
+--       then "$0.00"
+--       else "$" <> drop 4 formatted
+--   where
+--     drop :: Int -> String -> String
+--     drop n inputStr =
+--       if n >= 0 && n < length inputStr
+--         then substring n (length inputStr) inputStr
+--         else inputStr
+
+--     substring :: Int -> Int -> String -> String
+--     substring start end inputStr =
+--       if start < 0 || end < 0 || start > end || start >= length inputStr
+--         then ""
+--         else take (end - start) (drop start inputStr)
+
+--     take :: Int -> String -> String
+--     take n inputStr =
+--       if n <= 0
+--         then ""
+--         else substring 0 n inputStr
+
+--     length :: String -> Int
+--     length inputStr = stringLength inputStr
+
+--     stringLength :: String -> Int
+--     stringLength "" = 0
+--     stringLength input = 1 + stringLength (String.drop 1 input)
+
+-- centsToFormattedString :: Int -> String
+-- centsToFormattedString cents =
+--   let dollars = toNumber cents / 100.0
+--   in "$" <> show dollars
+
+-- discreteUSDToCents :: Discrete -> Int
+-- discreteUSDToCents dUSD =
+--   case toDiscrete dUSD of
+--     Discrete cents -> cents
+
+-- discreteToDiscrete :: Discrete -> Discrete
+-- discreteToDiscrete = fromDiscrete
+
+-- discreteUSDToDiscrete :: Discrete -> Discrete
+-- discreteUSDToDiscrete = toDiscrete
+
+-- parseMoney :: String -> Discrete
+-- parseMoney str = fromMaybe (fromDiscrete $ Discrete 0) (stringToDiscrete str)
+
+-- ensureDollarSign :: String -> String
+-- ensureDollarSign inputStr =
+--   if take 1 inputStr == "$"
+--     then inputStr
+--     else "$" <> inputStr
+--   where
+--     take :: Int -> String -> String
+--     take n str = String.take n str

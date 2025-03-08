@@ -38,7 +38,7 @@ createMenuLiveView inventoryPoll loadingPoll errorPoll =
             else
               D.div_ []
         ]
-    , D.div 
+    , D.div
         [ DA.klass_ "inventory-container" ]
         [ inventoryPoll <#~> \inventory ->
             renderInventory defaultViewConfig inventory

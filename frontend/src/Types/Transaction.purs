@@ -3,14 +3,15 @@ module Types.Transaction where
 import Prelude
 
 import Data.DateTime (DateTime)
+import Data.Finance.Currency (USD)
+import Data.Finance.Money.Extended (DiscreteMoney)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
-import Data.String as String
+import Data.String (drop, take)
 import Foreign (ForeignError(..), fail)
 import Foreign.Index (readProp)
 import Types.UUID (UUID)
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeImpl, readImpl)
-import Types.DiscreteUSD (DiscreteUSD)
 
 data LedgerError
   = UnbalancedTransaction
@@ -116,24 +117,28 @@ instance readForeignPaymentMethod :: ReadForeign PaymentMethod where
       "GIFT_CARD" -> pure GiftCard
       "STORED_VALUE" -> pure StoredValue
       "MIXED" -> pure Mixed
-      other -> if take 6 other == "OTHER:"
-               then pure $ Other (drop 6 other)
-               else pure $ Other other
+      other ->
+        if take 6 other == "OTHER:" then pure $ Other (drop 6 other)
+        else pure $ Other other
 
 data DiscountType
   = PercentOff Number
-  | AmountOff DiscreteUSD
+  | AmountOff String
   | BuyOneGetOne
-  | Custom String DiscreteUSD
+  | Custom String String
 
 derive instance eqDiscountType :: Eq DiscountType
 derive instance ordDiscountType :: Ord DiscountType
 
 instance writeForeignDiscountType :: WriteForeign DiscountType where
-  writeImpl (PercentOff pct) = writeImpl { type: "PERCENT_OFF", percent: pct, amount: 0.0 }
-  writeImpl (AmountOff amt) = writeImpl { type: "AMOUNT_OFF", percent: 0.0, amount: amt }
-  writeImpl BuyOneGetOne = writeImpl { type: "BUY_ONE_GET_ONE", percent: 0.0, amount: 0.0 }
-  writeImpl (Custom name amt) = writeImpl { type: "CUSTOM", name, percent: 0.0, amount: amt }
+  writeImpl (PercentOff pct) = writeImpl
+    { type: "PERCENT_OFF", percent: pct, amount: 0.0 }
+  writeImpl (AmountOff amt) = writeImpl
+    { type: "AMOUNT_OFF", percent: 0.0, amount: amt }
+  writeImpl BuyOneGetOne = writeImpl
+    { type: "BUY_ONE_GET_ONE", percent: 0.0, amount: 0.0 }
+  writeImpl (Custom name amt) = writeImpl
+    { type: "CUSTOM", name, percent: 0.0, amount: amt }
 
 instance readForeignDiscountType :: ReadForeign DiscountType where
   readImpl f = do
@@ -183,13 +188,13 @@ instance readForeignTaxCategory :: ReadForeign TaxCategory where
 type TaxRecord =
   { category :: TaxCategory
   , rate :: Number
-  , amount :: DiscreteUSD
+  , amount :: DiscreteMoney USD
   , description :: String
   }
 
 type DiscountRecord =
   { type :: DiscountType
-  , amount :: DiscreteUSD
+  , amount :: DiscreteMoney USD
   , reason :: String
   , approvedBy :: Maybe UUID
   }
@@ -199,11 +204,11 @@ newtype TransactionItem = TransactionItem
   , transactionId :: UUID
   , menuItemSku :: UUID
   , quantity :: Number
-  , pricePerUnit :: DiscreteUSD
+  , pricePerUnit :: DiscreteMoney USD
   , discounts :: Array DiscountRecord
   , taxes :: Array TaxRecord
-  , subtotal :: DiscreteUSD
-  , total :: DiscreteUSD
+  , subtotal :: DiscreteMoney USD
+  , total :: DiscreteMoney USD
   }
 
 derive instance newtypeTransactionItem :: Newtype TransactionItem _
@@ -220,9 +225,9 @@ newtype PaymentTransaction = PaymentTransaction
   { id :: UUID
   , transactionId :: UUID
   , method :: PaymentMethod
-  , amount :: DiscreteUSD
-  , tendered :: DiscreteUSD
-  , change :: DiscreteUSD
+  , amount :: DiscreteMoney USD
+  , tendered :: DiscreteMoney USD
+  , change :: DiscreteMoney USD
   , reference :: Maybe String
   , approved :: Boolean
   , authorizationCode :: Maybe String
@@ -249,10 +254,10 @@ newtype Transaction = Transaction
   , location :: UUID
   , items :: Array TransactionItem
   , payments :: Array PaymentTransaction
-  , subtotal :: DiscreteUSD
-  , discountTotal :: DiscreteUSD
-  , taxTotal :: DiscreteUSD
-  , total :: DiscreteUSD
+  , subtotal :: DiscreteMoney USD
+  , discountTotal :: DiscreteMoney USD
+  , taxTotal :: DiscreteMoney USD
+  , total :: DiscreteMoney USD
   , transactionType :: TransactionType
   , isVoided :: Boolean
   , voidReason :: Maybe String
@@ -267,29 +272,29 @@ derive instance eqTransaction :: Eq Transaction
 derive instance ordTransaction :: Ord Transaction
 
 instance writeForeignTransaction :: WriteForeign Transaction where
-  writeImpl (Transaction tx) = writeImpl {
-    id: tx.id,
-    status: tx.status,
-    created: tx.created,
-    completed: tx.completed,
-    customer: tx.customer,
-    employee: tx.employee,
-    register: tx.register,
-    location: tx.location,
-    items: tx.items,
-    payments: tx.payments,
-    subtotal: tx.subtotal,
-    discountTotal: tx.discountTotal,
-    taxTotal: tx.taxTotal,
-    total: tx.total,
-    transactionType: tx.transactionType,
-    isVoided: tx.isVoided,
-    voidReason: tx.voidReason,
-    isRefunded: tx.isRefunded,
-    refundReason: tx.refundReason,
-    referenceTransactionId: tx.referenceTransactionId,
-    notes: tx.notes
-  }
+  writeImpl (Transaction tx) = writeImpl
+    { id: tx.id
+    , status: tx.status
+    , created: tx.created
+    , completed: tx.completed
+    , customer: tx.customer
+    , employee: tx.employee
+    , register: tx.register
+    , location: tx.location
+    , items: tx.items
+    , payments: tx.payments
+    , subtotal: tx.subtotal
+    , discountTotal: tx.discountTotal
+    , taxTotal: tx.taxTotal
+    , total: tx.total
+    , transactionType: tx.transactionType
+    , isVoided: tx.isVoided
+    , voidReason: tx.voidReason
+    , isRefunded: tx.isRefunded
+    , refundReason: tx.refundReason
+    , referenceTransactionId: tx.referenceTransactionId
+    , notes: tx.notes
+    }
 
 instance readForeignTransaction :: ReadForeign Transaction where
   readImpl f = Transaction <$> readImpl f
@@ -337,7 +342,7 @@ newtype LedgerEntry = LedgerEntry
   { id :: UUID
   , transactionId :: UUID
   , accountId :: UUID
-  , amount :: DiscreteUSD
+  , amount :: DiscreteMoney USD
   , isDebit :: Boolean
   , timestamp :: DateTime
   , entryType :: LedgerEntryType
@@ -457,34 +462,41 @@ instance readForeignAccount :: ReadForeign Account where
 
 instance showTransaction :: Show Transaction where
   show (Transaction t) =
-    "Transaction { id: " <> show t.id <>
-    ", total: " <> show t.total <>
-    ", status: " <> show t.status <> " }"
+    "Transaction { id: " <> show t.id
+      <> ", total: "
+      <> show t.total
+      <> ", status: "
+      <> show t.status
+      <> " }"
 
 instance showTransactionItem :: Show TransactionItem where
   show (TransactionItem ti) =
-    "TransactionItem { sku: " <> show ti.menuItemSku <>
-    ", quantity: " <> show ti.quantity <>
-    ", total: " <> show ti.total <> " }"
+    "TransactionItem { sku: " <> show ti.menuItemSku
+      <> ", quantity: "
+      <> show ti.quantity
+      <> ", total: "
+      <> show ti.total
+      <> " }"
 
 instance showPaymentTransaction :: Show PaymentTransaction where
   show (PaymentTransaction pt) =
-    "Payment { method: " <> show pt.method <>
-    ", amount: " <> show pt.amount <> " }"
+    "Payment { method: " <> show pt.method
+      <> ", amount: "
+      <> show pt.amount
+      <> " }"
 
 instance showLedgerEntry :: Show LedgerEntry where
   show (LedgerEntry le) =
-    "LedgerEntry { entryType: " <> show le.entryType <>
-    ", amount: " <> show le.amount <>
-    ", isDebit: " <> show le.isDebit <> " }"
+    "LedgerEntry { entryType: " <> show le.entryType
+      <> ", amount: "
+      <> show le.amount
+      <> ", isDebit: "
+      <> show le.isDebit
+      <> " }"
 
 instance showAccount :: Show Account where
   show (Account a) =
-    "Account { name: " <> a.name <>
-    ", type: " <> show a.accountType <> " }"
-
-take :: Int -> String -> String
-take = String.take
-
-drop :: Int -> String -> String
-drop = String.drop
+    "Account { name: " <> a.name
+      <> ", type: "
+      <> show a.accountType
+      <> " }"

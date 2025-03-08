@@ -155,12 +155,11 @@ fetchInventory config = case _ of
     liftEffect $ Console.log "Using HTTP mode (backend API)"
     fetchInventoryFromHttp config
 
-
 -- recordTransaction :: Transaction -> Aff (Either String String)
 -- recordTransaction transaction = do
 --   let tx = unwrap transaction
 --   liftEffect $ log $ "Recording transaction: " <> uuidToString tx.id
-  
+
 --   -- In a real implementation, this would send the transaction to the backend
 --   -- For now, we'll simulate a successful response
 --   pure $ Right $ "Transaction recorded successfully: " <> uuidToString tx.id

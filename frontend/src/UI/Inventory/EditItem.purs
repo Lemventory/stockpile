@@ -26,7 +26,6 @@ import Types.Inventory (InventoryResponse(..), MenuItem(..), StrainLineage(..))
 import Utils.Formatting (ensureInt, ensureNumber)
 import Utils.Validation (validateMenuItem)
 
-
 editItem :: MenuItem -> Nut
 editItem (MenuItem item) = Deku.do
   let (StrainLineage lineage) = item.strain_lineage
@@ -177,10 +176,12 @@ editItem (MenuItem item) = Deku.do
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
         [ text_ "Edit Menu Item" ]
-    , makeTextField (nameConfig item.name) setName setValidName validNameEvent false
+    , makeTextField (nameConfig item.name) setName setValidName validNameEvent
+        false
     , makeTextField (skuConfig (show item.sku)) setSku setValidSku validSkuEvent
         false
-    , makeTextField (brandConfig item.brand) setBrand setValidBrand validBrandEvent
+    , makeTextField (brandConfig item.brand) setBrand setValidBrand
+        validBrandEvent
         false
     , makeTextField (priceConfig (show item.price)) setPrice setValidPrice
         validPriceEvent
@@ -218,8 +219,10 @@ editItem (MenuItem item) = Deku.do
         setValidEffects
         validEffectsEvent
         false
-    , makeTextField (thcConfig lineage.thc) setThc setValidThc validThcEvent false
-    , makeTextField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent false
+    , makeTextField (thcConfig lineage.thc) setThc setValidThc validThcEvent
+        false
+    , makeTextField (cbgConfig lineage.cbg) setCbg setValidCbg validCbgEvent
+        false
     , makeTextField (strainConfig lineage.strain) setStrain setValidStrain
         validStrainEvent
         false
@@ -233,7 +236,8 @@ editItem (MenuItem item) = Deku.do
         setValidDominantTerpene
         validDominantTerpeneEvent
         false
-    , makeTextField (terpenesConfig (joinWith ", " lineage.terpenes)) setTerpenes
+    , makeTextField (terpenesConfig (joinWith ", " lineage.terpenes))
+        setTerpenes
         setValidTerpenes
         validTerpenesEvent
         false
@@ -245,7 +249,8 @@ editItem (MenuItem item) = Deku.do
         setValidLeaflyUrl
         validLeaflyUrlEvent
         false
-    , makeTextField (imgConfig lineage.img) setImg setValidImg validImgEvent false
+    , makeTextField (imgConfig lineage.img) setImg setValidImg validImgEvent
+        false
 
     , D.button
         [ DA.klass_ $ buttonClass "green"

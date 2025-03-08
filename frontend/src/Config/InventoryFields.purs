@@ -114,7 +114,7 @@ descriptionConfig defaultValue =
   { label: "Description"
   , placeholder: "Enter description"
   , defaultValue: defaultValue
-  , validation: ValidationRule \_ -> true 
+  , validation: ValidationRule \_ -> true
   , errorMessage: "Description is required"
   , formatInput: identity
   }

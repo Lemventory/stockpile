@@ -18,7 +18,6 @@ import Effect.Class.Console as Console
 import UI.Common.Form (buttonClass)
 import Types.Inventory (InventoryResponse(..))
 
-
 deleteItem :: String -> String -> Nut
 deleteItem itemId itemName = Deku.do
   setStatusMessage /\ statusMessageEvent <- useState ""

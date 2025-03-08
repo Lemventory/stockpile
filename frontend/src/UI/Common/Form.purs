@@ -45,7 +45,6 @@ formFieldValidation
 formFieldValidation = map \rule ->
   attributeAtYourOwnRisk "data-validation" (show rule)
 
-
 makePasswordField
   :: FieldConfig
   -> (String -> Effect Unit)
