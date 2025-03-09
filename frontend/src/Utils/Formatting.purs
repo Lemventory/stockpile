@@ -26,7 +26,6 @@ import Data.Int as Int
 import Data.Maybe (Maybe, fromMaybe)
 import Data.String (trim)
 
-
 uuidToString :: UUID -> String
 uuidToString (UUID uuid) = uuid
 
@@ -151,7 +150,6 @@ summarizeLongText desc =
       else condensedSpaces
   in
     truncated
-
 
 -- stringToDiscrete :: String -> Maybe Discrete
 -- stringToDiscrete str = do

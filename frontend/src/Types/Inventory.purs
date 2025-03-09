@@ -49,6 +49,8 @@ type MenuItemRecord =
 newtype MenuItem = MenuItem MenuItemRecord
 
 derive instance Newtype MenuItem _
+derive instance eqMenuItem :: Eq MenuItem
+derive instance ordMenuItem :: Ord MenuItem
 
 data ItemCategory
   = Flower
@@ -78,6 +80,8 @@ data StrainLineage = StrainLineage
   }
 
 derive instance genericStrainLineage :: Generic StrainLineage _
+derive instance eqStrainLineage :: Eq StrainLineage
+derive instance ordStrainLineage :: Ord StrainLineage
 
 data Species
   = Indica
@@ -223,7 +227,7 @@ instance writeForeignMenuItem :: WriteForeign MenuItem where
     , sku: item.sku
     , brand: item.brand
     , name: item.name
-    , price: (Int.toNumber (unwrap item.price)) / 100.0 
+    , price: (Int.toNumber (unwrap item.price)) / 100.0
     , measure_unit: item.measure_unit
     , per_package: item.per_package
     , quantity: item.quantity

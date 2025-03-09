@@ -79,7 +79,6 @@ transactionHistory = Deku.do
 
         liftEffect $ setIsLoading false
 
-
   D.div
     [ DA.klass_ "transaction-history-container container mx-auto p-4"
     , DL.load_ \_ -> do
@@ -89,7 +88,6 @@ transactionHistory = Deku.do
     [ D.h2
         [ DA.klass_ "text-2xl font-bold mb-6" ]
         [ text_ "Transaction History" ]
-
 
     , D.div
         [ DA.klass_ "controls mb-6 p-4 border rounded" ]
@@ -122,7 +120,6 @@ transactionHistory = Deku.do
                 ]
             ]
         ]
-
 
     , D.div
         [ DA.klass_ "transactions-list mb-8" ]
@@ -198,20 +195,21 @@ transactionHistory = Deku.do
                                           [ text_ (formatMoney tx.total) ]
                                       , D.td [ DA.klass_ "p-2 text-center" ]
                                           [ D.button
-                                            [ DA.klass_ "text-blue-600 hover:text-blue-800 mr-2"
-                                            , DL.click_ \evt -> do
-                                                -- Convert PointerEvent to Event using MouseEvent.toEvent
-                                                Event.stopPropagation (PointerEvent.toEvent evt)
-                                                loadTransactionDetails tx.id
-                                            ]
-                                            [ text_ "View" ]
+                                              [ DA.klass_
+                                                  "text-blue-600 hover:text-blue-800 mr-2"
+                                              , DL.click_ \evt -> do
+                                                  -- Convert PointerEvent to Event using MouseEvent.toEvent
+                                                  Event.stopPropagation
+                                                    (PointerEvent.toEvent evt)
+                                                  loadTransactionDetails tx.id
+                                              ]
+                                              [ text_ "View" ]
                                           ]
                                       ]
                                 )
                             ]
                 ]
         ]
-
 
     , selectedTransactionValue <#~> \maybeTransaction ->
         case maybeTransaction of
@@ -251,7 +249,6 @@ transactionHistory = Deku.do
                   , D.div_ [ text_ (show tx.register) ]
                   ]
 
-
               , D.h4
                   [ DA.klass_ "font-semibold text-md mb-2" ]
                   [ text_ "Items" ]
@@ -275,9 +272,10 @@ transactionHistory = Deku.do
                   , D.tbody_
                       ( tx.items <#> \(TransactionItem item) ->
                           let
-                            taxTotal = foldl (\acc tax -> acc + toDiscrete tax.amount)
-                                (Discrete 0)
-                                item.taxes
+                            taxTotal = foldl
+                              (\acc tax -> acc + toDiscrete tax.amount)
+                              (Discrete 0)
+                              item.taxes
                           in
                             D.tr [ DA.klass_ "border-t" ]
                               [ D.td [ DA.klass_ "p-2" ]
@@ -289,13 +287,13 @@ transactionHistory = Deku.do
                               , D.td [ DA.klass_ "p-2 text-right" ]
                                   [ text_ (formatMoney item.subtotal) ]
                               , D.td [ DA.klass_ "p-2 text-right" ]
-                                  [ text_ (formatMoney (fromDiscrete' taxTotal)) ] -- now the error propagates down to here instead
+                                  [ text_ (formatMoney (fromDiscrete' taxTotal))
+                                  ]
                               , D.td [ DA.klass_ "p-2 text-right" ]
                                   [ text_ (formatMoney item.total) ]
                               ]
                       )
                   ]
-
 
               , D.h4
                   [ DA.klass_ "font-semibold text-md mb-2" ]
@@ -329,7 +327,6 @@ transactionHistory = Deku.do
                       )
                   ]
 
-
               , D.div
                   [ DA.klass_ "transaction-summary p-4 border rounded" ]
                   [ D.div
@@ -353,7 +350,6 @@ transactionHistory = Deku.do
                       ]
                   ]
               ]
-
 
     , D.div
         [ DA.klass_ "status-message mt-4 p-2 text-center" ]

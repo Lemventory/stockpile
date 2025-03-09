@@ -1,38 +1,27 @@
 module Services.CashRegister where
 
 import Prelude
-import Types.Inventory
-import Types.Transaction
-import Types.Transaction
-import Utils.Money
 
-import Control.Extend (duplicate)
 import Data.Array (foldl, null, filter, (:))
 import Data.Array as Array
-import Data.Bounded (bottom)
 import Data.DateTime (DateTime)
-import Data.DateTime.Instant (Instant, toDateTime)
-import Data.DateTime.Instant (toDateTime)
 import Data.Either (Either(..))
 import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..), formatDiscrete)
-import Data.Finance.Money.Extended (DiscreteMoney, fromDiscrete', toDiscrete)
+import Data.Finance.Money.Extended (fromDiscrete', toDiscrete)
 import Data.Finance.Money.Format (numeric, numericC)
 import Data.Int as Int
-import Data.JSDate (fromInstant)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Maybe (Maybe)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Deku.DOM.SVG.Attributes (d)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
 import Effect.Now (now, nowDateTime)
+import Types.Inventory (ItemCategory(..), MenuItem(..))
+import Types.Transaction (DiscountRecord, DiscountType(..), PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), TaxRecord, Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
 import Types.UUID (UUID(..))
 import Utils.Formatting (uuidToString)
 import Utils.UUIDGen (genUUID)
-import Web.Event.Event (timeStamp)
 
 data RegisterError
   = InvalidTransaction
@@ -117,9 +106,9 @@ addItemToTransaction
   -> Number
   -> Aff (Either RegisterError TransactionBuilder)
 addItemToTransaction builder menuItem quantity = do
-  -- First, unwrap the MenuItem to get access to its fields
+
   let MenuItem menuItemRecord = menuItem
-  
+
   liftEffect $ log $ "Adding item to transaction: " <> menuItemRecord.name
 
   if menuItemRecord.quantity <= 0 then do
@@ -132,13 +121,18 @@ addItemToTransaction builder menuItem quantity = do
     itemId <- liftEffect genUUID
 
     let
-      itemPrice = Discrete (menuItemRecord.price * 100.0)
+      -- Use the price directly since it's already a Discrete USD
+      itemPrice = menuItemRecord.price
+      -- Convert quantity to Discrete for multiplication
       itemSubtotal = itemPrice * (Discrete (Int.floor quantity))
 
       taxes = calculateTaxes itemSubtotal menuItem
-      itemTaxTotal = foldl (\acc tax -> acc + (toDiscrete tax.amount)) (Discrete 0) taxes
+      itemTaxTotal = foldl (\acc tax -> acc + (toDiscrete tax.amount))
+        (Discrete 0)
+        taxes
 
-      newItem =
+      -- Create a new TransactionItem by wrapping the record with the constructor
+      newItem = TransactionItem
         { id: itemId
         , transactionId: dummyTransactionId
         , menuItemSku: menuItemRecord.sku
@@ -162,7 +156,7 @@ addItemToTransaction builder menuItem quantity = do
         , status = InProgress
         }
 
-    liftEffect $ log $ "Item added: " <> menuItem.name
+    liftEffect $ log $ "Item added: " <> menuItemRecord.name
       <> ", Quantity: "
       <> show quantity
       <> ", Price: "
@@ -250,14 +244,16 @@ addPayment builder method amount tendered reference = do
 
     let
       -- Fix 1: Properly unwrap PaymentTransaction in the fold
-      currentPaymentTotal = foldl 
-        (\acc p -> 
-          let PaymentTransaction payment = p
-          in acc + (toDiscrete payment.amount)
-        ) 
+      currentPaymentTotal = foldl
+        ( \acc p ->
+            let
+              PaymentTransaction payment = p
+            in
+              acc + (toDiscrete payment.amount)
+        )
         (Discrete 0)
         builder.payments
-        
+
       remainingBalance = builder.total - currentPaymentTotal
 
       actualPaymentAmount =
@@ -275,7 +271,8 @@ addPayment builder method amount tendered reference = do
         , transactionId: dummyTransactionId
         , method
         , amount: fromDiscrete' actualPaymentAmount
-        , tendered: fromDiscrete' (if method == Cash then tendered else actualPaymentAmount)
+        , tendered: fromDiscrete'
+            (if method == Cash then tendered else actualPaymentAmount)
         , change: fromDiscrete' change
         , reference
         , approved: true
@@ -456,7 +453,8 @@ formatTransactionItem (TransactionItem item) =
 
     taxLines = foldl
       ( \acc tax ->
-          acc <> "  " <> tax.description <> " (" <> show (tax.rate * 100.0) <> "%): "
+          acc <> "  " <> tax.description <> " (" <> show (tax.rate * 100.0)
+            <> "%): "
             <> formatDiscrete numeric (toDiscrete tax.amount)
             <> "\n"
       )
@@ -502,8 +500,7 @@ openRegister registerId employeeId startingCash = do
     , currentDrawerAmount: startingCash
     , currentTransaction: Nothing
     , openedAt: Just timestamp
-    ,
-      openedBy: Just employeeId
+    , openedBy: Just employeeId
     , lastTransactionTime: Nothing
     , expectedDrawerAmount: startingCash
     }
@@ -550,9 +547,8 @@ closeRegister state employeeId countedCash = do
 calculateTaxes :: Discrete USD -> MenuItem -> Array TaxRecord
 calculateTaxes amount menuItem =
   let
-    -- Unwrap the MenuItem to access its properties correctly
     MenuItem menuItemRecord = menuItem
-    
+
     salesTaxRate = 0.08
     cannabisTaxRate = 0.15
 
@@ -567,14 +563,15 @@ calculateTaxes amount menuItem =
       Tinctures -> true
       _ -> false
 
-    -- Convert the Discrete USD to an Int value we can work with
-    amountInCents = Int.toNumber (unwrap amount)
-    
-    -- Calculate tax amounts using integer arithmetic
-    salesTaxAmount = Discrete (Int.floor (amountInCents * salesTaxRate))
+    -- Convert Discrete to Int for calculations
+    amountInCents = unwrap amount
+
+    -- Calculate tax amounts as Discrete values
+    salesTaxAmount = Discrete
+      (Int.floor (Int.toNumber amountInCents * salesTaxRate))
     cannabisTaxAmount =
-      if isCannabisProduct then 
-        Discrete (Int.floor (amountInCents * cannabisTaxRate))
+      if isCannabisProduct then
+        Discrete (Int.floor (Int.toNumber amountInCents * cannabisTaxRate))
       else Discrete 0
 
     salesTax =
@@ -594,40 +591,48 @@ calculateTaxes amount menuItem =
     if cannabisTaxAmount > Discrete 0 then [ salesTax, cannabisTax ]
     else [ salesTax ]
 
-processRefund :: forall t. { id :: UUID | t } -> Array UUID -> String -> UUID -> Aff (Either RegisterError Transaction)
+processRefund
+  :: forall t
+   . { id :: UUID | t }
+  -> Array UUID
+  -> String
+  -> UUID
+  -> Aff (Either RegisterError Transaction)
 processRefund originalTransaction itemIdsToRefund reason employeeId = do
   liftEffect $ log $ "Processing refund for transaction " <> uuidToString
     originalTransaction.id
 
-  -- Get current timestamp for use in the transaction
   timestamp <- liftEffect nowDateTime
 
   let txId = originalTransaction.id
   -- We need to create a minimally viable Transaction that has all required fields
   -- Creating a placeholder transaction with all required fields
-  let txData = unwrap (Transaction 
-        { id: txId
-        , status: Completed
-        , created: timestamp
-        , completed: Just timestamp
-        , customer: Nothing 
-        , employee: employeeId
-        , register: dummyTransactionId
-        , location: dummyTransactionId
-        , items: []
-        , payments: []
-        , subtotal: fromDiscrete' (Discrete 0)
-        , discountTotal: fromDiscrete' (Discrete 0)
-        , taxTotal: fromDiscrete' (Discrete 0)
-        , total: fromDiscrete' (Discrete 0)
-        , transactionType: Sale
-        , isVoided: false
-        , voidReason: Nothing
-        , isRefunded: false
-        , refundReason: Nothing
-        , referenceTransactionId: Nothing
-        , notes: Nothing
-        })
+  let
+    txData = unwrap
+      ( Transaction
+          { id: txId
+          , status: Completed
+          , created: timestamp
+          , completed: Just timestamp
+          , customer: Nothing
+          , employee: employeeId
+          , register: dummyTransactionId
+          , location: dummyTransactionId
+          , items: []
+          , payments: []
+          , subtotal: fromDiscrete' (Discrete 0)
+          , discountTotal: fromDiscrete' (Discrete 0)
+          , taxTotal: fromDiscrete' (Discrete 0)
+          , total: fromDiscrete' (Discrete 0)
+          , transactionType: Sale
+          , isVoided: false
+          , voidReason: Nothing
+          , isRefunded: false
+          , refundReason: Nothing
+          , referenceTransactionId: Nothing
+          , notes: Nothing
+          }
+      )
 
   if txData.isRefunded then do
     liftEffect $ log "Transaction has already been refunded"
@@ -646,11 +651,14 @@ processRefund originalTransaction itemIdsToRefund reason employeeId = do
         else filter (\item -> contains itemIdsToRefund (unwrap item).id)
           txData.items
 
-      refundSubtotal = foldl (\acc item -> acc + (toDiscrete (unwrap item).subtotal)) (Discrete 0)
+      refundSubtotal = foldl
+        (\acc item -> acc + (toDiscrete (unwrap item).subtotal))
+        (Discrete 0)
         itemsToRefund
       refundTaxTotal = foldl
         ( \acc item ->
-            foldl (\acc2 tax -> acc2 + (toDiscrete tax.amount)) acc (unwrap item).taxes
+            foldl (\acc2 tax -> acc2 + (toDiscrete tax.amount)) acc
+              (unwrap item).taxes
         )
         (Discrete 0)
         itemsToRefund
@@ -714,7 +722,11 @@ processRefund originalTransaction itemIdsToRefund reason employeeId = do
       { transactionId = dummyTransactionId
       , subtotal = fromDiscrete' (negate (toDiscrete item.subtotal))
       , total = fromDiscrete' (negate (toDiscrete item.total))
-      , taxes = map (\tax -> tax { amount = fromDiscrete' (negate (toDiscrete tax.amount)) }) item.taxes
+      , taxes = map
+          ( \tax -> tax
+              { amount = fromDiscrete' (negate (toDiscrete tax.amount)) }
+          )
+          item.taxes
       }
 
 dummyAccountId :: UUID

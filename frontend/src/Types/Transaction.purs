@@ -131,7 +131,7 @@ instance readForeignPaymentMethod :: ReadForeign PaymentMethod where
 --   | Custom String String
 
 data DiscountType
-  = PercentOff Number        -- Keep as Number (0.0-1.0 or 0-100)
+  = PercentOff Number -- Keep as Number (0.0-1.0 or 0-100)
   | AmountOff (Discrete USD) -- Use actual money type
   | BuyOneGetOne
   | Custom String (Discrete USD)
@@ -142,14 +142,21 @@ derive instance ordDiscountType :: Ord DiscountType
 instance writeForeignDiscountType :: WriteForeign DiscountType where
   writeImpl (PercentOff pct) = writeImpl
     { type: "PERCENT_OFF", percent: pct, amount: 0.0 }
-  writeImpl (AmountOff amount) = writeImpl 
+  writeImpl (AmountOff amount) = writeImpl
     -- First convert to Number, then divide, then show
-    { type: "AMOUNT_OFF", percent: 0.0, amount: show ((Int.toNumber (unwrap amount)) / 100.0) }
+    { type: "AMOUNT_OFF"
+    , percent: 0.0
+    , amount: show ((Int.toNumber (unwrap amount)) / 100.0)
+    }
   writeImpl BuyOneGetOne = writeImpl
     { type: "BUY_ONE_GET_ONE", percent: 0.0, amount: 0.0 }
   writeImpl (Custom name amount) = writeImpl
     -- Same for Custom
-    { type: "CUSTOM", name, percent: 0.0, amount: show ((Int.toNumber (unwrap amount)) / 100.0) }
+    { type: "CUSTOM"
+    , name
+    , percent: 0.0
+    , amount: show ((Int.toNumber (unwrap amount)) / 100.0)
+    }
 
 instance readForeignDiscountType :: ReadForeign DiscountType where
   readImpl f = do

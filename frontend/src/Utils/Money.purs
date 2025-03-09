@@ -11,23 +11,37 @@ import Data.Maybe (Maybe)
 import Data.Number as Number
 import Data.String (trim)
 
--- Format money values with currency code (e.g., "USD 123.45")
+-- | Convert a dollar amount (as a Number) to cents (as a Discrete USD)
+-- | Example: fromDollars 12.34 = Discrete 1234
+fromDollars :: Number -> Discrete USD
+fromDollars dollars = Discrete (Int.floor (dollars * 100.0))
+
+-- | Convert cents (as a Discrete USD) to a dollar amount (as a Number)
+-- | Example: toDollars (Discrete 1234) = 12.34
+toDollars :: Discrete USD -> Number
+toDollars (Discrete cents) = Int.toNumber cents / 100.0
+
+-- | Format a DiscreteMoney USD value as a string with currency symbol
+-- | Example: "$12.34"
 formatMoney :: DiscreteMoney USD -> String
 formatMoney money = formatDiscrete numericC (toDiscrete money)
 
--- Format money values without currency code (e.g., "123.45")
+-- | Format a DiscreteMoney USD value as a string without currency symbol
+-- | Example: "12.34"
 formatMoney' :: DiscreteMoney USD -> String
 formatMoney' money = formatDiscrete numeric (toDiscrete money)
 
--- Format Discrete USD directly
+-- | Format a Discrete USD value as a string with currency symbol
+-- | Example: "$12.34"
 formatDiscreteUSD :: Discrete USD -> String
 formatDiscreteUSD = formatDiscrete numericC
 
--- Format Discrete USD directly without currency code
+-- | Format a Discrete USD value as a string without currency symbol
+-- | Example: "12.34"
 formatDiscreteUSD' :: Discrete USD -> String
 formatDiscreteUSD' = formatDiscrete numeric
 
--- Format money for Dense USD
+-- | Format a Dense USD value as a string
 formatDenseMoney :: Dense USD -> String
 formatDenseMoney dense =
   let
@@ -35,12 +49,46 @@ formatDenseMoney dense =
   in
     formatDiscrete numeric discrete
 
--- Convert between types
+-- | Convert a Discrete USD to a DiscreteMoney USD
 fromDiscrete :: Discrete USD -> DiscreteMoney USD
 fromDiscrete = fromDiscrete'
 
--- Utility function for parsing string to Discrete USD
+-- | Parse a money string (like "12.34") into a Discrete USD value
 parseMoneyString :: String -> Maybe (Discrete USD)
 parseMoneyString str = do
   num <- Number.fromString (trim str)
-  pure (Discrete (Int.floor (num * 100.0)))
+  pure (fromDollars num)
+
+-- -- Format money values with currency code (e.g., "USD 123.45")
+-- formatMoney :: DiscreteMoney USD -> String
+-- formatMoney money = formatDiscrete numericC (toDiscrete money)
+
+-- -- Format money values without currency code (e.g., "123.45")
+-- formatMoney' :: DiscreteMoney USD -> String
+-- formatMoney' money = formatDiscrete numeric (toDiscrete money)
+
+-- -- Format Discrete USD directly
+-- formatDiscreteUSD :: Discrete USD -> String
+-- formatDiscreteUSD = formatDiscrete numericC
+
+-- -- Format Discrete USD directly without currency code
+-- formatDiscreteUSD' :: Discrete USD -> String
+-- formatDiscreteUSD' = formatDiscrete numeric
+
+-- -- Format money for Dense USD
+-- formatDenseMoney :: Dense USD -> String
+-- formatDenseMoney dense =
+--   let
+--     discrete = fromDense Nearest dense
+--   in
+--     formatDiscrete numeric discrete
+
+-- -- Convert between types
+-- fromDiscrete :: Discrete USD -> DiscreteMoney USD
+-- fromDiscrete = fromDiscrete'
+
+-- -- Utility function for parsing string to Discrete USD
+-- parseMoneyString :: String -> Maybe (Discrete USD)
+-- parseMoneyString str = do
+--   num <- Number.fromString (trim str)
+--   pure (Discrete (Int.floor (num * 100.0)))

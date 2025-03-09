@@ -13,10 +13,11 @@ import Data.String.Regex (Regex, regex, test)
 import Data.String.Regex.Flags (RegexFlags, noFlags)
 import Data.Validation.Semigroup (V, invalid, toEither, andThen)
 import Partial.Unsafe (unsafeCrashWith)
-import Types.Inventory (ItemCategory(..), MenuItem(..), MenuItemFormInput, Species(..), StrainLineage(..), StrainLineageFormInput)
 import Types.Common (ValidationRule(..))
+import Types.Inventory (ItemCategory(..), MenuItem(..), MenuItemFormInput, Species(..), StrainLineage(..), StrainLineageFormInput)
 import Types.UUID (UUID, parseUUID)
 import Utils.Formatting (parseCommaList)
+import Utils.Money (fromDollars)
 
 mkValidationRule :: (String -> Boolean) -> ValidationRule
 mkValidationRule = ValidationRule
@@ -312,7 +313,7 @@ validateMenuItem input =
                                         , sku
                                         , brand
                                         , name
-                                        , price
+                                        , price: fromDollars price
                                         , measure_unit
                                         , per_package
                                         , quantity
