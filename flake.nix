@@ -61,124 +61,16 @@
         inherit system overlays;
       };
 
-      # Shell apps
-      postgresModule = import ./nix/postgres-utils.nix {
-        inherit pkgs name;
-      };
-
-      code-workspace = pkgs.writeShellApplication {
-        name = "code-workspace";
-        runtimeInputs = with pkgs; [ vscodium ];
-        text = ''
-          codium cheeblr.code-workspace
-        '';
-      };
-
-      backup-project = pkgs.writeShellApplication {
-        name = "backup-project";
-        runtimeInputs = with pkgs; [ rsync ];
-        text = ''
-          rsync -va --delete --exclude-from='.gitignore' --exclude='.git/' ~/workdir/cheeblr/ ~/plutus/workspace/scdWs/cheeblr/
-          rsync -va ~/.local/share/cheeblr/backups/ ~/plutus/cheeblrDB/
-        '';
-      };
-
-      frontendModule = import ./nix/frontend.nix {
-        inherit pkgs name;
-      };
-
-      deployModule = import ./nix/deploy.nix {
-        inherit pkgs name;
+      # Import the shell module
+      shellModule = import ./nix/devShell.nix {
+        inherit pkgs name system;
       };
 
     in {
       legacyPackages = pkgs;
 
-      devShell = pkgs.mkShell {
-        inherit name;
-        
-        nativeBuildInputs = with pkgs; [
-          pkg-config
-          postgresql
-          postgresql.lib
-          zlib
-          openssl.dev
-          libiconv
-          openssl
-          lsof
-          tmux  # Added for testbed
-        ];
-
-        buildInputs = with pkgs; [
-          # Front End tools
-          esbuild
-          nodejs_20
-          nixpkgs-fmt
-          purs
-          purs-tidy
-          purs-backend-es
-          purescript-language-server
-          spago-unstable
-      
-          # Back End tools
-          cabal-install
-          ghc
-          haskellPackages.fourmolu
-          haskell-language-server
-          hlint
-          zlib
-          pgcli
-          pkg-config
-          openssl.dev
-          libiconv
-          openssl
-          
-          postgresModule.pg-start
-          postgresModule.pg-connect
-          postgresModule.pg-stop
-          postgresModule.pg-cleanup
-          postgresModule.pg-backup    
-          postgresModule.pg-restore    
-          postgresModule.pg-rotate-credentials  
-          postgresModule.pg-create-schema      
-          postgresModule.pg-stats              
-          
-
-          # pgadmin4-desktopmode
-          # dbeaver-bin
-          # pgmanage
-          pgadmin4
-
-          # DevShell tools
-          rsync
-          tmux
-          backup-project
-
-          frontendModule.vite
-          frontendModule.vite-cleanup
-          frontendModule.spago-watch
-          frontendModule.concurrent
-          frontendModule.dev
-
-          code-workspace
-          deployModule.deploy
-          deployModule.withdraw
-
-        ] ++ (pkgs.lib.optionals (system == "aarch64-darwin")
-          (with pkgs.darwin.apple_sdk.frameworks; [
-            Cocoa
-            CoreServices
-          ]));
-          shellHook = ''
-            export PGDATA="$HOME/.local/share/${name}/postgres"
-            export PGPORT="5432"
-            export PGUSER="$(whoami)"
-            export PGPASSWORD="postgres"
-            export PGDATABASE="${name}"
-            export PKG_CONFIG_PATH="${pkgs.postgresql.lib}/lib/pkgconfig:$PKG_CONFIG_PATH"
-            # code-workspace
-          '';
-      };
+      # Use the devShell from the shell module
+      devShell = shellModule.devShell;
     });
 
   nixConfig = {

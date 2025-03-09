@@ -47,7 +47,7 @@ createTransaction = Deku.do
 
   setItems /\ itemsValue <- useState []
   setPayments /\ paymentsValue <- useState []
-  setCustomerId /\ customerIdValue <- useState Nothing
+  -- setCustomerId /\ customerIdValue <- useState Nothing
   setEmployee /\ employeeValue <- useState ""
   setRegisterId /\ registerIdValue <- useState ""
   setLocationId /\ locationIdValue <- useState ""
@@ -55,8 +55,8 @@ createTransaction = Deku.do
   setDiscountTotal /\ discountTotalValue <- useState (Discrete 0)
   setTaxTotal /\ taxTotalValue <- useState (Discrete 0)
   setTotal /\ totalValue <- useState (Discrete 0)
-  setStatus /\ statusValue <- useState Created
-  setTransactionType /\ transactionTypeValue <- useState Sale
+  -- setStatus /\ statusValue <- useState Created
+  -- setTransactionType /\ transactionTypeValue <- useState Sale
 
   setInventory /\ inventoryValue <- useState []
   setSearchText /\ searchTextValue <- useState ""
@@ -651,7 +651,7 @@ createTransaction = Deku.do
                         case
                           Tuple (Tuple employeeUUID registerUUID) locationUUID
                           of
-                          Tuple (Tuple (Just empId) (Just regId)) (Just locId) ->
+                          Tuple (Tuple (Just empId') (Just regId')) (Just locId') ->
                             do
                               let
                                 transaction = Transaction
@@ -660,9 +660,9 @@ createTransaction = Deku.do
                                   , created: toDateTime currentTime
                                   , completed: Just curTime
                                   , customer: Nothing             
-                                  , employee: empId              
-                                  , register: regId               
-                                  , location: locId               
+                                  , employee: empId'              
+                                  , register: regId'               
+                                  , location: locId'               
                                   , items: updatedItems
                                   , payments: updatedPayments
                                   , subtotal: fromDiscrete'
