@@ -287,7 +287,8 @@ createTransaction = Deku.do
                 , D.tbody_
                     ( items <#> \(TransactionItem item) ->
                         let
-                          taxTotal = foldl (\acc tax -> acc + toDiscrete tax.amount)
+                          taxTotal = foldl
+                            (\acc tax -> acc + toDiscrete tax.amount)
                             (Discrete 0)
                             item.taxes
                           taxTotalMoney = fromDiscrete' taxTotal
@@ -318,23 +319,39 @@ createTransaction = Deku.do
                                 [ text_ (formatMoney' item.total) ]
                             , D.td [ DA.klass_ "p-2 text-center" ]
                                 [ D.button
-                                  [ DA.klass_ "text-red-600 hover:text-red-800"
-                                  , runOn DL.click $ 
-                                      (\currItems currSubtotal currTaxTotal currTotal ->
-                                        do
-                                          let
-                                            updatedItems = filter
-                                              ( \(TransactionItem i) -> i.id /= item.id )
-                                              currItems
+                                    [ DA.klass_
+                                        "text-red-600 hover:text-red-800"
+                                    , runOn DL.click $
+                                        ( \currItems
+                                           currSubtotal
+                                           currTaxTotal
+                                           currTotal ->
+                                            do
+                                              let
+                                                updatedItems = filter
+                                                  ( \(TransactionItem i) -> i.id
+                                                      /= item.id
+                                                  )
+                                                  currItems
 
-                                          setSubtotal (currSubtotal - toDiscrete item.subtotal)
-                                          setTaxTotal (currTaxTotal - taxTotal)
-                                          setTotal (currTotal - toDiscrete item.total)
-                                          setItems updatedItems
-                                          setStatusMessage "Item removed from transaction"
-                                      ) <$> itemsValue <*> subtotalValue <*> taxTotalValue <*> totalValue
-                                  ]
-                                  [ text_ "Remove" ]
+                                              setSubtotal
+                                                ( currSubtotal - toDiscrete
+                                                    item.subtotal
+                                                )
+                                              setTaxTotal
+                                                (currTaxTotal - taxTotal)
+                                              setTotal
+                                                ( currTotal - toDiscrete
+                                                    item.total
+                                                )
+                                              setItems updatedItems
+                                              setStatusMessage
+                                                "Item removed from transaction"
+                                        ) <$> itemsValue <*> subtotalValue
+                                          <*> taxTotalValue
+                                          <*> totalValue
+                                    ]
+                                    [ text_ "Remove" ]
                                 ]
                             ]
                     )
@@ -409,61 +426,61 @@ createTransaction = Deku.do
             else
               D.div_ []
         , D.button
-          [ DA.klass_ (F.buttonClass "blue" <> " mt-4")
-          , runOn DL.click $ 
-              (\payAmt tenderedAmt method currPayments ->
-                do
-                  case (readFloat payAmt) of
-                    Nothing -> do
-                      setStatusMessage "Invalid payment amount"
-                    Just amount -> do
-                      let
-                        tenderedAmount = case readFloat tenderedAmt of
-                          Just t -> t
-                          Nothing -> amount
+            [ DA.klass_ (F.buttonClass "blue" <> " mt-4")
+            , runOn DL.click $
+                ( \payAmt tenderedAmt method currPayments ->
+                    do
+                      case (readFloat payAmt) of
+                        Nothing -> do
+                          setStatusMessage "Invalid payment amount"
+                        Just amount -> do
+                          let
+                            tenderedAmount = case readFloat tenderedAmt of
+                              Just t -> t
+                              Nothing -> amount
 
-                        paymentAmount = fromDiscrete'
-                          (Discrete (Int.floor (amount * 100.0)))
-                        paymentTendered = fromDiscrete'
-                          (Discrete (Int.floor (tenderedAmount * 100.0)))
-                        change =
-                          if
-                            toDiscrete paymentTendered > toDiscrete
-                              paymentAmount then
-                            fromDiscrete'
-                              ( toDiscrete paymentTendered - toDiscrete
-                                  paymentAmount
-                              )
-                          else fromDiscrete' (Discrete 0)
+                            paymentAmount = fromDiscrete'
+                              (Discrete (Int.floor (amount * 100.0)))
+                            paymentTendered = fromDiscrete'
+                              (Discrete (Int.floor (tenderedAmount * 100.0)))
+                            change =
+                              if
+                                toDiscrete paymentTendered > toDiscrete
+                                  paymentAmount then
+                                fromDiscrete'
+                                  ( toDiscrete paymentTendered - toDiscrete
+                                      paymentAmount
+                                  )
+                              else fromDiscrete' (Discrete 0)
 
-                      void $ launchAff do
-                        paymentId <- liftEffect genUUID
-                        transactionId <- liftEffect genUUID
+                          void $ launchAff do
+                            paymentId <- liftEffect genUUID
+                            transactionId <- liftEffect genUUID
 
-                        let
-                          newPayment = PaymentTransaction
-                            { id: paymentId
-                            , transactionId: transactionId
-                            , method: method
-                            , amount: paymentAmount
-                            , tendered: paymentTendered
-                            , change: change
-                            , reference: Nothing
-                            , approved: true
-                            , authorizationCode: Nothing
-                            }
+                            let
+                              newPayment = PaymentTransaction
+                                { id: paymentId
+                                , transactionId: transactionId
+                                , method: method
+                                , amount: paymentAmount
+                                , tendered: paymentTendered
+                                , change: change
+                                , reference: Nothing
+                                , approved: true
+                                , authorizationCode: Nothing
+                                }
 
-                        liftEffect do
-                          setPayments (newPayment : currPayments)
-                          setPaymentAmount ""
-                          setTenderedAmount ""
-                          setStatusMessage "Payment added"
-              ) <$> paymentAmountValue
-                <*> tenderedAmountValue
-                <*> paymentMethodValue
-                <*> paymentsValue
-          ]
-          [ text_ "Add Payment" ]
+                            liftEffect do
+                              setPayments (newPayment : currPayments)
+                              setPaymentAmount ""
+                              setTenderedAmount ""
+                              setStatusMessage "Payment added"
+                ) <$> paymentAmountValue
+                  <*> tenderedAmountValue
+                  <*> paymentMethodValue
+                  <*> paymentsValue
+            ]
+            [ text_ "Add Payment" ]
         ]
 
     , D.div
@@ -501,18 +518,20 @@ createTransaction = Deku.do
                               [ text_ (formatMoney' payment.change) ]
                           , D.td [ DA.klass_ "p-2 text-center" ]
                               [ D.button
-                                [ DA.klass_ "text-red-600 hover:text-red-800"
-                                , runOn DL.click $ 
-                                    (\currPayments -> do
-                                      let
-                                        updatedPayments = filter
-                                          (\(PaymentTransaction p) -> p.id /= payment.id)
-                                          currPayments
-                                      setPayments updatedPayments
-                                      setStatusMessage "Payment removed"
-                                    ) <$> paymentsValue
-                                ]
-                                [ text_ "Remove" ]
+                                  [ DA.klass_ "text-red-600 hover:text-red-800"
+                                  , runOn DL.click $
+                                      ( \currPayments -> do
+                                          let
+                                            updatedPayments = filter
+                                              ( \(PaymentTransaction p) -> p.id
+                                                  /= payment.id
+                                              )
+                                              currPayments
+                                          setPayments updatedPayments
+                                          setStatusMessage "Payment removed"
+                                      ) <$> paymentsValue
+                                  ]
+                                  [ text_ "Remove" ]
                               ]
                           ]
                     )
@@ -603,112 +622,130 @@ createTransaction = Deku.do
             [ text_ "Clear Transaction" ]
 
         , D.button
-          [ DA.klass_ (F.buttonClass "green")
-          , DA.disabled $
-              isProcessingValue <#> \isProcessing ->
-                if isProcessing then "true" else ""
-          , runOn DL.click $ 
-              (\currItems currPayments currTotal empId regId locId discTotal taxTotal -> 
-                do
-                  if null currItems then do
-                    setStatusMessage "Cannot complete: No items in transaction"
-                  else do
-                    let
-                      paymentTotal = foldl
-                        ( \acc (PaymentTransaction p) -> acc + toDiscrete p.amount )
-                        (Discrete 0)
-                        currPayments
-                    if paymentTotal < currTotal then do
-                      setStatusMessage "Cannot complete: Payment amount is insufficient"
-                    else do
-                      setIsProcessing true
-                      setStatusMessage "Processing transaction..."
-
-                      void $ launchAff do
-                        transactionId <- liftEffect genUUID
-                        currentTime <- liftEffect now
-
+            [ DA.klass_ (F.buttonClass "green")
+            , DA.disabled $
+                isProcessingValue <#> \isProcessing ->
+                  if isProcessing then "true" else ""
+            , runOn DL.click $
+                ( \currItems
+                   currPayments
+                   currTotal
+                   empId
+                   regId
+                   locId
+                   discTotal
+                   taxTotal ->
+                    do
+                      if null currItems then do
+                        setStatusMessage
+                          "Cannot complete: No items in transaction"
+                      else do
                         let
-                          curTime = toDateTime currentTime
-                          updatedItems = map
-                            ( \(TransactionItem item) ->
-                                TransactionItem
-                                  (item { transactionId = transactionId })
+                          paymentTotal = foldl
+                            ( \acc (PaymentTransaction p) -> acc + toDiscrete
+                                p.amount
                             )
-                            currItems
-
-                          updatedPayments = map
-                            ( \(PaymentTransaction payment) ->
-                                PaymentTransaction
-                                  (payment { transactionId = transactionId })
-                            )
+                            (Discrete 0)
                             currPayments
+                        if paymentTotal < currTotal then do
+                          setStatusMessage
+                            "Cannot complete: Payment amount is insufficient"
+                        else do
+                          setIsProcessing true
+                          setStatusMessage "Processing transaction..."
 
-                          employeeUUID = parseUUID empId
-                          registerUUID = parseUUID regId
-                          locationUUID = parseUUID locId
+                          void $ launchAff do
+                            transactionId <- liftEffect genUUID
+                            currentTime <- liftEffect now
 
-                        case
-                          Tuple (Tuple employeeUUID registerUUID) locationUUID
-                          of
-                          Tuple (Tuple (Just empId') (Just regId')) (Just locId') ->
-                            do
-                              let
-                                transaction = Transaction
-                                  { id: transactionId
-                                  , status: Completed
-                                  , created: toDateTime currentTime
-                                  , completed: Just curTime
-                                  , customer: Nothing             
-                                  , employee: empId'              
-                                  , register: regId'               
-                                  , location: locId'               
-                                  , items: updatedItems
-                                  , payments: updatedPayments
-                                  , subtotal: fromDiscrete'
-                                      (currTotal - taxTotal + discTotal)
-                                  , discountTotal: fromDiscrete' discTotal
-                                  , taxTotal: fromDiscrete' taxTotal
-                                  , total: fromDiscrete' currTotal
-                                  , transactionType: Sale
-                                  , isVoided: false
-                                  , voidReason: Nothing
-                                  , isRefunded: false
-                                  , refundReason: Nothing
-                                  , referenceTransactionId: Nothing
-                                  , notes: Nothing
-                                  }
+                            let
+                              curTime = toDateTime currentTime
+                              updatedItems = map
+                                ( \(TransactionItem item) ->
+                                    TransactionItem
+                                      (item { transactionId = transactionId })
+                                )
+                                currItems
 
-                              result <- API.createTransaction transaction
+                              updatedPayments = map
+                                ( \(PaymentTransaction payment) ->
+                                    PaymentTransaction
+                                      ( payment
+                                          { transactionId = transactionId }
+                                      )
+                                )
+                                currPayments
 
-                              liftEffect case result of
-                                Right completedTx -> do
-                                  setItems []
-                                  setPayments []
-                                  setSubtotal (Discrete 0)
-                                  setDiscountTotal (Discrete 0)
-                                  setTaxTotal (Discrete 0)
-                                  setTotal (Discrete 0)
-                                  setStatusMessage "Transaction completed successfully"
-                                Left err -> do
-                                  setStatusMessage $ "Error completing transaction: " <> err
+                              employeeUUID = parseUUID empId
+                              registerUUID = parseUUID regId
+                              locationUUID = parseUUID locId
 
-                          _ -> liftEffect $ setStatusMessage "Invalid employee, register or location ID"
+                            case
+                              Tuple (Tuple employeeUUID registerUUID)
+                                locationUUID
+                              of
+                              Tuple (Tuple (Just empId') (Just regId'))
+                                (Just locId') ->
+                                do
+                                  let
+                                    transaction = Transaction
+                                      { id: transactionId
+                                      , status: Completed
+                                      , created: toDateTime currentTime
+                                      , completed: Just curTime
+                                      , customer: Nothing
+                                      , employee: empId'
+                                      , register: regId'
+                                      , location: locId'
+                                      , items: updatedItems
+                                      , payments: updatedPayments
+                                      , subtotal: fromDiscrete'
+                                          (currTotal - taxTotal + discTotal)
+                                      , discountTotal: fromDiscrete' discTotal
+                                      , taxTotal: fromDiscrete' taxTotal
+                                      , total: fromDiscrete' currTotal
+                                      , transactionType: Sale
+                                      , isVoided: false
+                                      , voidReason: Nothing
+                                      , isRefunded: false
+                                      , refundReason: Nothing
+                                      , referenceTransactionId: Nothing
+                                      , notes: Nothing
+                                      }
 
-                        liftEffect $ setIsProcessing false
-              ) <$> itemsValue
-                <*> paymentsValue
-                <*> totalValue
-                <*> employeeValue
-                <*> registerIdValue
-                <*> locationIdValue
-                <*> discountTotalValue
-                <*> taxTotalValue
-          ]
-          [ isProcessingValue <#~> \isProcessing ->
-              if isProcessing then text_ "Processing..."
-              else text_ "Complete Transaction"
-          ]
+                                  result <- API.createTransaction transaction
+
+                                  liftEffect case result of
+                                    Right completedTx -> do
+                                      setItems []
+                                      setPayments []
+                                      setSubtotal (Discrete 0)
+                                      setDiscountTotal (Discrete 0)
+                                      setTaxTotal (Discrete 0)
+                                      setTotal (Discrete 0)
+                                      setStatusMessage
+                                        "Transaction completed successfully"
+                                    Left err -> do
+                                      setStatusMessage $
+                                        "Error completing transaction: " <> err
+
+                              _ -> liftEffect $ setStatusMessage
+                                "Invalid employee, register or location ID"
+
+                            liftEffect $ setIsProcessing false
+                ) <$> itemsValue
+                  <*> paymentsValue
+                  <*> totalValue
+                  <*> employeeValue
+                  <*> registerIdValue
+                  <*> locationIdValue
+                  <*> discountTotalValue
+                  <*> taxTotalValue
+            ]
+            [ isProcessingValue <#~> \isProcessing ->
+                if isProcessing then text_ "Processing..."
+                else text_ "Complete Transaction"
+            ]
         ]
 
     , D.div

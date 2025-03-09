@@ -215,86 +215,106 @@ checkPurchaseLimits
   -> -- Previous transactions (for daily limits)
   Aff (Either ComplianceError Boolean)
 checkPurchaseLimits customerId items previousTransactions = do
-  liftEffect $ log $ "Checking purchase limits for customer " <> uuidToString customerId
+  liftEffect $ log $ "Checking purchase limits for customer " <> uuidToString
+    customerId
 
   -- In a complete implementation, we would:
   -- 1. Calculate total amounts by category from current transaction
   -- 2. Calculate total amounts by category from previous transactions (within time window)
   -- 3. Compare against limits
-  
+
   -- Step 1: Calculate amounts in current transaction by category
-  let 
+  let
     -- This would normally look up the menu item and get the category
     -- For this example, we'll assume all items are Flower with 1g per item
-    currentAmounts = 
-      { flower: foldl (\acc (TransactionItem item) -> acc + item.quantity) 0.0 items
+    currentAmounts =
+      { flower: foldl (\acc (TransactionItem item) -> acc + item.quantity) 0.0
+          items
       , concentrates: 0.0
       , edibles: 0.0
       }
-  
+
   -- Step 2: Calculate amounts from previous transactions (within 24 hours)
   -- In a complete implementation, we would filter by date first
   let
-    previousAmounts = 
-      foldl 
-        (\acc (Transaction tx) -> 
-          -- Calculate amounts from transaction items
-          let 
-            txFlower = foldl (\itemAcc (TransactionItem item) -> 
-                             itemAcc + item.quantity) 0.0 tx.items
-          in
-            { flower: acc.flower + txFlower
-            , concentrates: acc.concentrates
-            , edibles: acc.edibles
-            }
+    previousAmounts =
+      foldl
+        ( \acc (Transaction tx) ->
+            -- Calculate amounts from transaction items
+            let
+              txFlower = foldl
+                ( \itemAcc (TransactionItem item) ->
+                    itemAcc + item.quantity
+                )
+                0.0
+                tx.items
+            in
+              { flower: acc.flower + txFlower
+              , concentrates: acc.concentrates
+              , edibles: acc.edibles
+              }
         )
         { flower: 0.0, concentrates: 0.0, edibles: 0.0 }
         previousTransactions
-  
+
   -- Step 3: Compare against limits from regulations
   let
     -- Get the purchase limits
     limits = defaultPurchaseLimits
-    
+
     -- Calculate totals (current + previous)
     totalFlower = currentAmounts.flower + previousAmounts.flower
-    totalConcentrates = currentAmounts.concentrates + previousAmounts.concentrates
+    totalConcentrates = currentAmounts.concentrates +
+      previousAmounts.concentrates
     totalEdibles = currentAmounts.edibles + previousAmounts.edibles
-    
+
     -- Check if any limit is exceeded
     flowerLimit = case find (\limit -> limit.category == Flower) limits of
-                   Just limit -> limit.dailyLimit
-                   Nothing -> 28.0  -- Default if not found
-                   
-    concentrateLimit = case find (\limit -> limit.category == Concentrates) limits of
-                        Just limit -> limit.dailyLimit
-                        Nothing -> 8.0  -- Default if not found
-                        
+      Just limit -> limit.dailyLimit
+      Nothing -> 28.0 -- Default if not found
+
+    concentrateLimit =
+      case find (\limit -> limit.category == Concentrates) limits of
+        Just limit -> limit.dailyLimit
+        Nothing -> 8.0 -- Default if not found
+
     edibleLimit = case find (\limit -> limit.category == Edibles) limits of
-                   Just limit -> limit.dailyLimit
-                   Nothing -> 800.0  -- Default if not found
-    
+      Just limit -> limit.dailyLimit
+      Nothing -> 800.0 -- Default if not found
+
     -- Check if any limit is exceeded
     isFlowerExceeded = totalFlower > flowerLimit
     isConcentrateExceeded = totalConcentrates > concentrateLimit
     isEdibleExceeded = totalEdibles > edibleLimit
-    
+
     -- Determine overall status
-    isAnyLimitExceeded = isFlowerExceeded || isConcentrateExceeded || isEdibleExceeded
+    isAnyLimitExceeded = isFlowerExceeded || isConcentrateExceeded ||
+      isEdibleExceeded
     isBelowLimits = not isAnyLimitExceeded
 
   -- Log the details for monitoring
-  liftEffect $ log $ "Current transaction amounts - Flower: " <> show currentAmounts.flower
-    <> "g, Concentrates: " <> show currentAmounts.concentrates
-    <> "g, Edibles: " <> show currentAmounts.edibles <> "mg"
-    
-  liftEffect $ log $ "Previous purchases today - Flower: " <> show previousAmounts.flower
-    <> "g, Concentrates: " <> show previousAmounts.concentrates
-    <> "g, Edibles: " <> show previousAmounts.edibles <> "mg"
-    
+  liftEffect $ log $ "Current transaction amounts - Flower: "
+    <> show currentAmounts.flower
+    <> "g, Concentrates: "
+    <> show currentAmounts.concentrates
+    <> "g, Edibles: "
+    <> show currentAmounts.edibles
+    <> "mg"
+
+  liftEffect $ log $ "Previous purchases today - Flower: "
+    <> show previousAmounts.flower
+    <> "g, Concentrates: "
+    <> show previousAmounts.concentrates
+    <> "g, Edibles: "
+    <> show previousAmounts.edibles
+    <> "mg"
+
   liftEffect $ log $ "Purchase limits - Flower: " <> show flowerLimit
-    <> "g, Concentrates: " <> show concentrateLimit
-    <> "g, Edibles: " <> show edibleLimit <> "mg"
+    <> "g, Concentrates: "
+    <> show concentrateLimit
+    <> "g, Edibles: "
+    <> show edibleLimit
+    <> "mg"
 
   if isBelowLimits then do
     liftEffect $ log "Purchase is within legal limits"
@@ -354,7 +374,7 @@ submitToStateTracking
 submitToStateTracking transaction record = do
   -- Use pattern matching instead of unwrap
   let Transaction txData = transaction
-  
+
   -- Get current timestamp properly
   currentTime <- liftEffect now
   let timestamp = toDateTime currentTime
@@ -367,7 +387,7 @@ submitToStateTracking transaction record = do
 
     updatedRecord = record
       { reportingStatus = Submitted
-      , reportedAt = Just timestamp  -- Use the proper timestamp
+      , reportedAt = Just timestamp -- Use the proper timestamp
       , referenceId = Just referenceId
       }
 
@@ -452,44 +472,44 @@ containsCannabisProducts :: Array TransactionItem -> Boolean
 containsCannabisProducts items =
   any isCannabisProduct items
   where
-    isCannabisProduct :: TransactionItem -> Boolean
-    isCannabisProduct (TransactionItem item) = 
-      -- We need to look up the menu item in the inventory to check its category
-      -- Since we don't have direct access to the inventory here, we'll
-      -- infer from other information in the transaction item
-      -- In a complete implementation, this would likely involve a lookup
-      -- or having the category information included in the transaction item
-      case findItemCategory item.menuItemSku of
-        Just category -> isCannabisCategory category
-        Nothing -> false
+  isCannabisProduct :: TransactionItem -> Boolean
+  isCannabisProduct (TransactionItem item) =
+    -- We need to look up the menu item in the inventory to check its category
+    -- Since we don't have direct access to the inventory here, we'll
+    -- infer from other information in the transaction item
+    -- In a complete implementation, this would likely involve a lookup
+    -- or having the category information included in the transaction item
+    case findItemCategory item.menuItemSku of
+      Just category -> isCannabisCategory category
+      Nothing -> false
 
-    -- This is a helper function that would normally fetch the category
-    -- from a database or in-memory cache.
-    findItemCategory :: UUID -> Maybe ItemCategory
-    findItemCategory _ = Just Flower -- Replace with actual lookup in complete code
+  -- This is a helper function that would normally fetch the category
+  -- from a database or in-memory cache.
+  findItemCategory :: UUID -> Maybe ItemCategory
+  findItemCategory _ = Just Flower -- Replace with actual lookup in complete code
 
-    -- Determine which categories are considered cannabis products
-    isCannabisCategory :: ItemCategory -> Boolean
-    isCannabisCategory Flower = true
-    isCannabisCategory PreRolls = true
-    isCannabisCategory Vaporizers = true
-    isCannabisCategory Edibles = true
-    isCannabisCategory Drinks = true
-    isCannabisCategory Concentrates = true
-    isCannabisCategory Topicals = true
-    isCannabisCategory Tinctures = true
-    isCannabisCategory Accessories = false
+  -- Determine which categories are considered cannabis products
+  isCannabisCategory :: ItemCategory -> Boolean
+  isCannabisCategory Flower = true
+  isCannabisCategory PreRolls = true
+  isCannabisCategory Vaporizers = true
+  isCannabisCategory Edibles = true
+  isCannabisCategory Drinks = true
+  isCannabisCategory Concentrates = true
+  isCannabisCategory Topicals = true
+  isCannabisCategory Tinctures = true
+  isCannabisCategory Accessories = false
 
 -- | Create label data for a product
 generateProductLabel
   :: MenuItem
   -> String
-  ->
-  Aff String
+  -> Aff String
 generateProductLabel menuItem batchId = do
-  let MenuItem item = menuItem
-      StrainLineage lineage = item.strain_lineage
-  
+  let
+    MenuItem item = menuItem
+    StrainLineage lineage = item.strain_lineage
+
   liftEffect $ log $ "Generating compliant label for product: " <> item.name
 
   let

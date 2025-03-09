@@ -32,430 +32,434 @@ let
         rsync -va ~/.local/share/${name}/backups/ ~/plutus/cheeblrDB/
       '';
     };
-    # Renamed from cwm to compile-with-manifest to avoid collision with window manager
-  compile-with-archive = pkgs.writeShellScriptBin "compile-with-archive" ''
-    #!/usr/bin/env bash
+  
+    # compile the project and concatenate all files into one large file with errors and the problem files at the top. 
+    compile-archive = pkgs.writeShellScriptBin "compile-archive" ''
+        #!/usr/bin/env bash
 
-    # Get current working directory as the project root
-    project_root="$(pwd)"
-    
-    # Create script directory under the project
-    script_dir="$project_root/script"
-
-    # Create base directory for all outputs and auxiliary files
-    base_dir="$script_dir/concat_archive"
-    hash_dir="$base_dir/.hashes"
-    output_dir="$base_dir/output"
-    archive_dir="$base_dir/archive"
-    mkdir -p "$output_dir" "$archive_dir" "$hash_dir"
-
-    # Get current timestamp
-    timestamp=$(date '+%Y%m%d_%H%M%S')
-
-    # Function to calculate hash for a list of files
-    calculate_hash() {
-        local file_list="$1"
-        echo "$file_list" | xargs sha256sum | sha256sum | cut -d' ' -f1
-    }
-
-    # Function to get previous hash
-    get_previous_hash() {
-        local file_type=$1
-        local hash_file="$hash_dir/''${file_type}_last_hash"
-        if [ -f "$hash_file" ]; then
-            cat "$hash_file"
-        else
-            echo ""
-        fi
-    }
-
-    # Function to save current hash
-    save_current_hash() {
-        local file_type=$1
-        local current_hash=$2
-        echo "$current_hash" > "$hash_dir/''${file_type}_last_hash"
-    }
-
-    # Function to compile Haskell project
-    compile_haskell() {
-        local project_dir=$1
-        local temp_file=$(mktemp)
+        # Get current working directory as the project root
+        project_root="$(pwd)"
         
-        # Navigate to backend directory and attempt to build
-        (cd "$project_dir/backend" && cabal build) > "$temp_file" 2>&1
-        local build_status=$?
-        
-        # Format the compilation status and output
-        echo "{-"
-        if [ -s "$temp_file" ]; then  # Check if file has content
+        # Create script directory under the project
+        script_dir="$project_root/script"
+
+        # Create base directory for all outputs and auxiliary files
+        base_dir="$script_dir/concat_archive"
+        hash_dir="$base_dir/.hashes"
+        output_dir="$base_dir/output"
+        archive_dir="$base_dir/archive"
+        mkdir -p "$output_dir" "$archive_dir" "$hash_dir"
+
+        # Get current timestamp
+        timestamp=$(date '+%Y%m%d_%H%M%S')
+
+        # Function to calculate hash for a list of files
+        calculate_hash() {
+            local file_list="$1"
+            echo "$file_list" | xargs sha256sum | sha256sum | cut -d' ' -f1
+        }
+
+        # Function to get previous hash
+        get_previous_hash() {
+            local file_type=$1
+            local hash_file="$hash_dir/''${file_type}_last_hash"
+            if [ -f "$hash_file" ]; then
+                cat "$hash_file"
+            else
+                echo ""
+            fi
+        }
+
+        # Function to save current hash
+        save_current_hash() {
+            local file_type=$1
+            local current_hash=$2
+            echo "$current_hash" > "$hash_dir/''${file_type}_last_hash"
+        }
+
+        # Function to compile Haskell project
+        compile_haskell() {
+            local project_dir=$1
+            local temp_file=$(mktemp)
+            
+            # Navigate to backend directory and attempt to build
+            (cd "$project_dir/backend" && cabal build) > "$temp_file" 2>&1
+            local build_status=$?
+            
+            # Format the compilation status and output
+            echo "{-"
+            if [ -s "$temp_file" ]; then  # Check if file has content
+                if [ $build_status -eq 0 ]; then
+                    {
+                        echo "COMPILE_STATUS: true"
+                        echo "BUILD_OUTPUT:"
+                        cat "$temp_file"
+                    }
+                else
+                    {
+                        echo "COMPILE_STATUS: false"
+                        echo "BUILD_OUTPUT:"
+                        cat "$temp_file"
+                    }
+                fi
+            else
+                echo "COMPILE_STATUS: error"
+                echo "BUILD_OUTPUT:"
+                echo "No build output captured"
+            fi
+            echo "-}"
+            rm "$temp_file"
+        }
+
+        # Function to compile PureScript project
+        compile_purescript() {
+            local project_dir=$1
+            local temp_file=$(mktemp)
+            
+            # Navigate to frontend directory and attempt to build with timeout
+            if timeout 60 bash -c "cd '$project_dir/frontend' && spago build" > "$temp_file" 2>&1; then
+                build_status=0
+            else
+                build_status=$?
+                # Check if it was a timeout
+                if [ $build_status -eq 124 ]; then
+                    echo "COMPILE_STATUS: error" > "$temp_file"
+                    echo "BUILD_OUTPUT:" >> "$temp_file"
+                    echo "Build process timed out after 60 seconds" >> "$temp_file"
+                fi
+            fi
+            
+            # Format the compilation status and output
+            echo "{-"
             if [ $build_status -eq 0 ]; then
-                {
-                    echo "COMPILE_STATUS: true"
-                    echo "BUILD_OUTPUT:"
-                    cat "$temp_file"
-                }
+                echo "COMPILE_STATUS: true"
             else
                 {
                     echo "COMPILE_STATUS: false"
-                    echo "BUILD_OUTPUT:"
+                    echo "COMPILE_ERROR:"
                     cat "$temp_file"
                 }
             fi
-        else
-            echo "COMPILE_STATUS: error"
-            echo "BUILD_OUTPUT:"
-            echo "No build output captured"
-        fi
-        echo "-}"
-        rm "$temp_file"
-    }
+            echo "-}"
+            rm "$temp_file"
+        }
 
-    # Function to compile PureScript project
-    compile_purescript() {
-        local project_dir=$1
-        local temp_file=$(mktemp)
-        
-        # Navigate to frontend directory and attempt to build with timeout
-        if timeout 60 bash -c "cd '$project_dir/frontend' && spago build" > "$temp_file" 2>&1; then
-            build_status=0
-        else
-            build_status=$?
-            # Check if it was a timeout
-            if [ $build_status -eq 124 ]; then
-                echo "COMPILE_STATUS: error" > "$temp_file"
-                echo "BUILD_OUTPUT:" >> "$temp_file"
-                echo "Build process timed out after 60 seconds" >> "$temp_file"
-            fi
-        fi
-        
-        # Format the compilation status and output
-        echo "{-"
-        if [ $build_status -eq 0 ]; then
-            echo "COMPILE_STATUS: true"
-        else
-            {
-                echo "COMPILE_STATUS: false"
-                echo "COMPILE_ERROR:"
-                cat "$temp_file"
-            }
-        fi
-        echo "-}"
-        rm "$temp_file"
-    }
+        # Function to clean Haskell/PureScript content
+        clean_haskell_purescript() {
+            # Remove single-line comments while preserving indentation
+            sed 's/\([ ]*\)--.*$/\1/' | \
+            # Remove multi-line comments while preserving line structure
+            perl -0777 -pe 's/{-.*?-}//gs' | \
+            # Remove consecutive blank lines but keep one
+            cat -s | \
+            # Remove trailing whitespace while preserving indentation
+            sed 's/[[:space:]]*$//'
+        }
 
-    # Function to clean Haskell/PureScript content
-    clean_haskell_purescript() {
-        # Remove single-line comments while preserving indentation
-        sed 's/\([ ]*\)--.*$/\1/' | \
-        # Remove multi-line comments while preserving line structure
-        perl -0777 -pe 's/{-.*?-}//gs' | \
-        # Remove consecutive blank lines but keep one
-        cat -s | \
-        # Remove trailing whitespace while preserving indentation
-        sed 's/[[:space:]]*$//'
-    }
+        # Function to clean Nix content with preserved formatting
+        clean_nix() {
+            # Remove single-line comments while preserving indentation
+            sed 's/\([ ]*\)#.*$/\1/' | \
+            # Remove multi-line comments while preserving line structure
+            perl -0777 -pe 's!/\*[^*]*\*+(?:[^/*][^*]*\*+)*/!!gs' | \
+            # Remove consecutive blank lines but keep one
+            cat -s | \
+            # Remove trailing whitespace while preserving indentation
+            sed 's/[[:space:]]*$//' | \
+            # Clean up empty attribute sets while preserving indentation
+            sed 's/\([ ]*\){[[:space:]]*}/\1{ }/'
+        }
 
-    # Function to clean Nix content with preserved formatting
-    clean_nix() {
-        # Remove single-line comments while preserving indentation
-        sed 's/\([ ]*\)#.*$/\1/' | \
-        # Remove multi-line comments while preserving line structure
-        perl -0777 -pe 's!/\*[^*]*\*+(?:[^/*][^*]*\*+)*/!!gs' | \
-        # Remove consecutive blank lines but keep one
-        cat -s | \
-        # Remove trailing whitespace while preserving indentation
-        sed 's/[[:space:]]*$//' | \
-        # Clean up empty attribute sets while preserving indentation
-        sed 's/\([ ]*\){[[:space:]]*}/\1{ }/'
-    }
+        # Function to get relative path
+        get_relative_path() {
+            local full_path=$1
+            echo "''${full_path#$project_root/}"
+        }
 
-    # Function to get relative path
-    get_relative_path() {
-        local full_path=$1
-        echo "''${full_path#$project_root/}"
-    }
-
-    # Function to get Haskell source directories from cabal file
-    get_haskell_dirs() {
-        local project_dir=$1
-        local cabal_file="$project_dir/backend/cheeblr-backend.cabal"
-        local source_dirs=""
-        
-        if [ -f "$cabal_file" ]; then
-            # Get all hs-source-dirs lines, extract the directory names
-            source_dirs=$(grep -i "hs-source-dirs:" "$cabal_file" | sed 's/.*hs-source-dirs://' | tr -d ' ' | tr ',' ' ')
+        # Function to get Haskell source directories from cabal file
+        get_haskell_dirs() {
+            local project_dir=$1
+            local cabal_file="$project_dir/backend/cheeblr-backend.cabal"
+            local source_dirs=""
             
-            # Build the full paths
-            local full_paths=""
-            for dir in $source_dirs; do
-                full_paths="$full_paths $project_dir/backend/$dir"
-            done
-            echo "$full_paths"
-        else
-            echo "Error: Cannot find cabal file at $cabal_file" >&2
-            exit 1
-        fi
-    }
-
-    # Function to build exclude patterns from gitignore
-    build_exclude_patterns() {
-        local gitignore="$project_root/.gitignore"
-        local patterns=""
-        
-        # Add explicit exclusion for frontend/.spago directory
-        patterns="-not -path '*/frontend/.spago/*'"
-        
-        if [ -f "$gitignore" ]; then
-            while IFS= read -r line; do
-                # Skip empty lines and comments
-                [[ -z "$line" || "$line" =~ ^# ]] && continue
-                # Convert gitignore pattern to find pattern
-                if [[ "$line" = /* ]]; then
-                    # Remove leading slash for absolute paths
-                    line="''${line#/}"
-                fi
-                patterns="$patterns -not -path '*/$line/*' -not -path '*/$line'"
-            done < "$gitignore"
-        fi
-        echo "$patterns"
-    }
-
-    # Function to get compilation status for filename
-    get_status_for_filename() {
-        local file_content="$1"
-        if grep -q "COMPILE_STATUS: true" <<< "$file_content"; then
-            echo "[OK]"
-        elif grep -q "COMPILE_STATUS: false" <<< "$file_content"; then
-            echo "[FAIL]"
-        elif grep -q "COMPILE_STATUS: error" <<< "$file_content"; then
-            echo "[ERROR]"
-        else
-            echo "[NOCOMPILE]"
-        fi
-    }
-
-    # Function to extract error files from compilation output
-    extract_error_files() {
-        local compile_output="$1"
-        local file_type="$2"
-        local error_files=""
-        local temp_file=$(mktemp)
-        
-        # Write compile output to temp file for easier processing
-        echo "$compile_output" > "$temp_file"
-        
-        if [ "$file_type" = "purs" ]; then
-            # First pass: Look for explicit error messages
-            while IFS= read -r line; do
-                if [[ $line =~ \[ERROR[[:space:]].*\][[:space:]]([^:]+): ]]; then
-                    local file="''${BASH_REMATCH[1]}"
-                    if [[ $file == src/* ]]; then
-                        file="$project_root/frontend/$file"
-                    fi
-                    if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
-                        error_files="$error_files $file"
-                    fi
-                fi
-            done < "$temp_file"
-            
-            # Second pass: Look for type errors and other patterns
-            if [ -z "$error_files" ]; then
-                while IFS= read -r line; do
-                    if [[ $line =~ "Could not match type" ]]; then
-                        # Look ahead for file context
-                        local context=$(grep -B 5 -A 5 "Could not match type" "$temp_file" | grep -o "src/[^[:space:]]*\.purs:[0-9]*")
-                        if [[ $context =~ (src/[^:]+) ]]; then
-                            local file="''${BASH_REMATCH[1]}"
-                            if [[ $file == src/* ]]; then
-                                file="$project_root/frontend/$file"
-                            fi
-                            if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
-                                error_files="$error_files $file"
-                            fi
-                        fi
-                    fi
-                done < "$temp_file"
-            fi
-        elif [ "$file_type" = "hs" ]; then
-            # First pass: Look for explicit error locations
-            while IFS= read -r line; do
-                if [[ $line =~ ^([^:]+\.hs):[0-9]+:[0-9]+: ]]; then
-                    local file="''${BASH_REMATCH[1]}"
-                    if [[ $file == src/* ]]; then
-                        file="$project_root/backend/$file"
-                    elif [[ $file != /* ]]; then
-                        file="$project_root/backend/$file"
-                    fi
-                    if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
-                        error_files="$error_files $file"
-                    fi
-                fi
-            done < "$temp_file"
-            
-            # Second pass: Look for other error patterns
-            if [ -z "$error_files" ]; then
-                while IFS= read -r line; do
-                    if [[ $line =~ "Failed to build" ]]; then
-                        local context=$(grep -B 5 "Failed to build" "$temp_file" | grep -o "src/[^[:space:]]*\.hs")
-                        if [[ -n "$context" ]]; then
-                            local file="$project_root/backend/$context"
-                            if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
-                                error_files="$error_files $file"
-                            fi
-                        fi
-                    fi
-                done < "$temp_file"
-            fi
-        fi
-        
-        rm "$temp_file"
-        echo "$error_files"
-    }
-
-    # concatenate files of a specific type
-    concatenate_files() {
-        local file_type=$1
-        local output_base=$2
-        local clean_function=$3
-        local comment_char=$4
-        local compile_function=$5
-
-        # Get exclude patterns from gitignore
-        local exclude_patterns=$(build_exclude_patterns)
-
-        # Create temporary list of files
-        local file_list=""
-        local error_files=""
-        local compile_output=""
-        
-        case "$file_type" in
-            "hs")
-                local hs_dirs=$(get_haskell_dirs "$project_root")
-                file_list=$(find $hs_dirs -type f -name "*.$file_type" 2>/dev/null | sort)
-                ;;
-            "purs")
-                file_list=$(find "$project_root/frontend/src" -type f -name "*.$file_type" 2>/dev/null | sort)
-                ;;
-            "nix")
-                file_list=$(find "$project_root" "$project_root/frontend" "$project_root/backend" -maxdepth 1 -type f -name "*.$file_type" 2>/dev/null | sort)
-                ;;
-        esac
-
-        # Calculate current hash
-        local current_hash=$(calculate_hash "$file_list")
-        local previous_hash=$(get_previous_hash "$file_type")
-
-        # Check if we need to create a new file
-        if [ -n "$previous_hash" ] && [ "$current_hash" = "$previous_hash" ]; then
-            echo "No changes detected in $file_type files, reusing previous content..."
-            local latest_file=$(ls -t "$output_dir"/*."$file_type" 2>/dev/null | head -n1)
-            if [ -n "$latest_file" ]; then
-                local content=$(cat "$latest_file")
-                local status=$(get_status_for_filename "$content")
-                local output_file="$output_base$status.$file_type"
-                echo "$content" > "$output_file"
-                echo "Copied existing $file_type file with status $status"
-                return
-            fi
-        fi
-
-        # Capture compilation output if compile function is provided
-        local temp_compile_output=$(mktemp)
-        if [ -n "$compile_function" ]; then
-            eval "$compile_function \"$project_root\"" > "$temp_compile_output"
-            compile_output=$(cat "$temp_compile_output")
-            error_files=$(extract_error_files "$compile_output" "$file_type")
-            rm "$temp_compile_output"
-        fi
-
-        # Create final file list with error files first
-        local final_file_list=""
-        if [ -n "$error_files" ]; then
-            # Add error files first
-            for error_file in $error_files; do
-                if [ -f "$error_file" ]; then
-                    final_file_list="$final_file_list $error_file"
-                fi
-            done
-        fi
-        
-        # Add remaining files
-        for file in $file_list; do
-            if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
-                final_file_list="$final_file_list $file"
-            fi
-        done
-
-        # Generate output file
-        local temp_file=$(mktemp)
-        {
-            if [ "$comment_char" = "--" ]; then
-                echo "{-"
-                echo "Generated: $(date '+%Y-%m-%d %H:%M:%S')"
-                echo "Hash: $current_hash"
-                echo "-}"
+            if [ -f "$cabal_file" ]; then
+                # Get all hs-source-dirs lines, extract the directory names
+                source_dirs=$(grep -i "hs-source-dirs:" "$cabal_file" | sed 's/.*hs-source-dirs://' | tr -d ' ' | tr ',' ' ')
+                
+                # Build the full paths
+                local full_paths=""
+                for dir in $source_dirs; do
+                    full_paths="$full_paths $project_dir/backend/$dir"
+                done
+                echo "$full_paths"
             else
-                echo "/*"
-                echo "Generated: $(date '+%Y-%m-%d %H:%M:%S')"
-                echo "Hash: $current_hash"
-                echo "*/"
+                echo "Error: Cannot find cabal file at $cabal_file" >&2
+                exit 1
             fi
-            echo ""
+        }
+
+        # Function to build exclude patterns from gitignore
+        build_exclude_patterns() {
+            local gitignore="$project_root/.gitignore"
+            local patterns=""
             
-            # Add compilation output if present
-            if [ -n "$compile_output" ]; then
-                echo "$compile_output"
-                echo ""
+            # Add explicit exclusion for frontend/.spago directory
+            patterns="-not -path '*/frontend/.spago/*'"
+            
+            if [ -f "$gitignore" ]; then
+                while IFS= read -r line; do
+                    # Skip empty lines and comments
+                    [[ -z "$line" || "$line" =~ ^# ]] && continue
+                    # Convert gitignore pattern to find pattern
+                    if [[ "$line" = /* ]]; then
+                        # Remove leading slash for absolute paths
+                        line="''${line#/}"
+                    fi
+                    patterns="$patterns -not -path '*/$line/*' -not -path '*/$line'"
+                done < "$gitignore"
+            fi
+            echo "$patterns"
+        }
+
+        # Function to get compilation status for filename
+        get_status_for_filename() {
+            local file_content="$1"
+            if grep -q "COMPILE_STATUS: true" <<< "$file_content"; then
+                echo "[OK]"
+            elif grep -q "COMPILE_STATUS: false" <<< "$file_content"; then
+                echo "[FAIL]"
+            elif grep -q "COMPILE_STATUS: error" <<< "$file_content"; then
+                echo "[ERROR]"
+            else
+                echo "[NOCOMPILE]"
+            fi
+        }
+
+        # Function to extract error files from compilation output
+        extract_error_files() {
+            local compile_output="$1"
+            local file_type="$2"
+            local error_files=""
+            local temp_file=$(mktemp)
+            
+            # Write compile output to temp file for easier processing
+            echo "$compile_output" > "$temp_file"
+            
+            if [ "$file_type" = "purs" ]; then
+                # First pass: Look for explicit error messages
+                while IFS= read -r line; do
+                    if [[ $line =~ \[ERROR[[:space:]].*\][[:space:]]([^:]+): ]]; then
+                        local file="''${BASH_REMATCH[1]}"
+                        if [[ $file == src/* ]]; then
+                            file="$project_root/frontend/$file"
+                        fi
+                        if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
+                            error_files="$error_files $file"
+                        fi
+                    fi
+                done < "$temp_file"
+                
+                # Second pass: Look for type errors and other patterns
+                if [ -z "$error_files" ]; then
+                    while IFS= read -r line; do
+                        if [[ $line =~ "Could not match type" ]]; then
+                            # Look ahead for file context
+                            local context=$(grep -B 5 -A 5 "Could not match type" "$temp_file" | grep -o "src/[^[:space:]]*\.purs:[0-9]*")
+                            if [[ $context =~ (src/[^:]+) ]]; then
+                                local file="''${BASH_REMATCH[1]}"
+                                if [[ $file == src/* ]]; then
+                                    file="$project_root/frontend/$file"
+                                fi
+                                if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
+                                    error_files="$error_files $file"
+                                fi
+                            fi
+                        fi
+                    done < "$temp_file"
+                fi
+            elif [ "$file_type" = "hs" ]; then
+                # First pass: Look for explicit error locations
+                while IFS= read -r line; do
+                    if [[ $line =~ ^([^:]+\.hs):[0-9]+:[0-9]+: ]]; then
+                        local file="''${BASH_REMATCH[1]}"
+                        if [[ $file == src/* ]]; then
+                            file="$project_root/backend/$file"
+                        elif [[ $file != /* ]]; then
+                            file="$project_root/backend/$file"
+                        fi
+                        if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
+                            error_files="$error_files $file"
+                        fi
+                    fi
+                done < "$temp_file"
+                
+                # Second pass: Look for other error patterns
+                if [ -z "$error_files" ]; then
+                    while IFS= read -r line; do
+                        if [[ $line =~ "Failed to build" ]]; then
+                            local context=$(grep -B 5 "Failed to build" "$temp_file" | grep -o "src/[^[:space:]]*\.hs")
+                            if [[ -n "$context" ]]; then
+                                local file="$project_root/backend/$context"
+                                if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
+                                    error_files="$error_files $file"
+                                fi
+                            fi
+                        fi
+                    done < "$temp_file"
+                fi
+            fi
+            
+            rm "$temp_file"
+            echo "$error_files"
+        }
+
+        # concatenate files of a specific type
+        concatenate_files() {
+            local file_type=$1
+            local output_base=$2
+            local clean_function=$3
+            local comment_char=$4
+            local compile_function=$5
+
+            # Get exclude patterns from gitignore
+            local exclude_patterns=$(build_exclude_patterns)
+
+            # Create temporary list of files
+            local file_list=""
+            local error_files=""
+            local compile_output=""
+            
+            case "$file_type" in
+                "hs")
+                    local hs_dirs=$(get_haskell_dirs "$project_root")
+                    file_list=$(find $hs_dirs -type f -name "*.$file_type" 2>/dev/null | sort)
+                    ;;
+                "purs")
+                    file_list=$(find "$project_root/frontend/src" -type f -name "*.$file_type" 2>/dev/null | sort)
+                    ;;
+                "nix")
+                    file_list=$(find "$project_root" "$project_root/frontend" "$project_root/backend" -maxdepth 1 -type f -name "*.$file_type" 2>/dev/null | sort)
+                    ;;
+            esac
+
+            # Calculate current hash
+            local current_hash=$(calculate_hash "$file_list")
+            local previous_hash=$(get_previous_hash "$file_type")
+
+            # Check if we need to create a new file
+            if [ -n "$previous_hash" ] && [ "$current_hash" = "$previous_hash" ]; then
+                echo "No changes detected in $file_type files, reusing previous content..."
+                local latest_file=$(ls -t "$output_dir"/*."$file_type" 2>/dev/null | head -n1)
+                if [ -n "$latest_file" ]; then
+                    local content=$(cat "$latest_file")
+                    local status=$(get_status_for_filename "$content")
+                    local output_file="$output_base$status.$file_type"
+                    echo "$content" > "$output_file"
+                    echo "Copied existing $file_type file with status $status"
+                    return
+                fi
             fi
 
-            for file in $final_file_list; do
-                echo "$comment_char FILE: $(get_relative_path "$file")"
-                cat "$file" | eval "$clean_function"
-                echo "$comment_char END OF: $(get_relative_path "$file")"
-                echo ""
+            # Capture compilation output if compile function is provided
+            local temp_compile_output=$(mktemp)
+            if [ -n "$compile_function" ]; then
+                eval "$compile_function \"$project_root\"" > "$temp_compile_output"
+                compile_output=$(cat "$temp_compile_output")
+                error_files=$(extract_error_files "$compile_output" "$file_type")
+                rm "$temp_compile_output"
+            fi
+
+            # Create final file list with error files first
+            local final_file_list=""
+            if [ -n "$error_files" ]; then
+                # Add error files first
+                for error_file in $error_files; do
+                    if [ -f "$error_file" ]; then
+                        final_file_list="$final_file_list $error_file"
+                    fi
+                done
+            fi
+            
+            # Add remaining files
+            for file in $file_list; do
+                if [[ ! $error_files =~ (^|[[:space:]])$file($|[[:space:]]) ]]; then
+                    final_file_list="$final_file_list $file"
+                fi
             done
-        } > "$temp_file"
 
-        # Get the status and create the final filename
-        local status=$(get_status_for_filename "$(cat "$temp_file")")
-        local output_file="$output_base$status.$file_type"
-        mv "$temp_file" "$output_file"
+            # Generate output file
+            local temp_file=$(mktemp)
+            {
+                if [ "$comment_char" = "--" ]; then
+                    echo "{-"
+                    echo "Generated: $(date '+%Y-%m-%d %H:%M:%S')"
+                    echo "Hash: $current_hash"
+                    echo "-}"
+                else
+                    echo "/*"
+                    echo "Generated: $(date '+%Y-%m-%d %H:%M:%S')"
+                    echo "Hash: $current_hash"
+                    echo "*/"
+                fi
+                echo ""
+                
+                # Add compilation output if present
+                if [ -n "$compile_output" ]; then
+                    echo "$compile_output"
+                    echo ""
+                fi
 
-        # Save the current hash
-        save_current_hash "$file_type" "$current_hash"
-        echo "Generated new $file_type file with status $status"
-    }
+                for file in $final_file_list; do
+                    echo "$comment_char FILE: $(get_relative_path "$file")"
+                    cat "$file" | eval "$clean_function"
+                    echo "$comment_char END OF: $(get_relative_path "$file")"
+                    echo ""
+                done
+            } > "$temp_file"
 
-    # Function to safely move files to archive
-    safe_archive() {
-        local ext=$1
-        local files=("$output_dir"/*."$ext")
-        # Check if files exist using standard pattern matching
-        if [ -e "''${files[0]}" ]; then
-            mv "$output_dir"/*."$ext" "$archive_dir/" 2>/dev/null || true
-        fi
-    }
+            # Get the status and create the final filename
+            local status=$(get_status_for_filename "$(cat "$temp_file")")
+            local output_file="$output_base$status.$file_type"
+            mv "$temp_file" "$output_file"
 
-    # Archive old files
-    safe_archive "purs"
-    safe_archive "hs"
-    safe_archive "nix"
+            # Save the current hash
+            save_current_hash "$file_type" "$current_hash"
+            echo "Generated new $file_type file with status $status"
+        }
 
-    # Define base filenames (without status)
-    purs_base="$output_dir/PureScript_$timestamp"
-    hs_base="$output_dir/Haskell_$timestamp"
-    nix_base="$output_dir/Nix_$timestamp"
+        # Function to safely move files to archive
+        safe_archive() {
+            local ext=$1
+            local files=("$output_dir"/*."$ext")
+            # Check if files exist using standard pattern matching
+            if [ -e "''${files[0]}" ]; then
+                mv "$output_dir"/*."$ext" "$archive_dir/" 2>/dev/null || true
+            fi
+        }
 
-    # Concatenate files for each type with appropriate comment characters and compilation
-    concatenate_files "purs" "$purs_base" "clean_haskell_purescript" "--" "compile_purescript"
-    concatenate_files "hs" "$hs_base" "clean_haskell_purescript" "--" "compile_haskell"
-    concatenate_files "nix" "$nix_base" "clean_nix" "#" ""
+        # Archive old files
+        safe_archive "purs"
+        safe_archive "hs"
+        safe_archive "nix"
 
-    echo "Concatenation complete. Output files are in $output_dir"
-    echo "Previous files have been moved to $archive_dir"  
-  '';
-    # Renamed from cwm to compile-with-manifest to avoid collision with window manager
-    compile-with-manifest = pkgs.writeShellScriptBin "compile-with-manifest" ''
+        # Define base filenames (without status)
+        purs_base="$output_dir/PureScript_$timestamp"
+        hs_base="$output_dir/Haskell_$timestamp"
+        nix_base="$output_dir/Nix_$timestamp"
+
+        # Concatenate files for each type with appropriate comment characters and compilation
+        concatenate_files "purs" "$purs_base" "clean_haskell_purescript" "--" "compile_purescript"
+        concatenate_files "hs" "$hs_base" "clean_haskell_purescript" "--" "compile_haskell"
+        concatenate_files "nix" "$nix_base" "clean_nix" "#" ""
+
+        echo "Concatenation complete. Output files are in $output_dir"
+        echo "Previous files have been moved to $archive_dir"  
+    '';
+
+    # create a manifest of all files in the project then compile the project and concatenate all files 
+    # into one large file with errors and the problem files at the top.
+    # If a manifest is detected, it will distate which files get concatenated and which are excluded (unless they have errors) 
+    compile-manifest = pkgs.writeShellScriptBin "compile-manifest" ''
       #!/usr/bin/env bash
       
       # Get current working directory as the project root
@@ -1107,11 +1111,6 @@ let
         echo "Previous files have been moved to $archive_dir"
       '';
     
-    # Create a simple alias to maintain backward compatibility
-    cwm-alias = pkgs.writeShellScriptBin "cwm" ''
-      echo "Running compilation script..."
-      compile-with-manifest "$@"
-    '';
   };
 
   # Common buildInputs used in development shell
@@ -1158,10 +1157,8 @@ let
     rsync
     tmux
     workspaceModule.backup-project
-    workspaceModule.compile-with-manifest
-    # Include the legacy alias for backward compatibility
-    workspaceModule.cwm-alias
-    workspaceModule.compile-with-archive
+    workspaceModule.compile-manifest
+    workspaceModule.compile-archive
 
 
     # Frontend tools
