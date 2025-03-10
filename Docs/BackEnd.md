@@ -75,7 +75,17 @@ run = do
   createTables pool
   createTransactionTables pool
   
-  -- Server configuration and start
+  putStrLn $ "Starting server on all interfaces, port " ++ show (serverPort config)
+  putStrLn "=================================="
+  putStrLn $ "Server running on port " ++ show (serverPort config)
+  putStrLn "You can access this application from other devices on your network using:"
+  putStrLn $ "http://YOUR_MACHINE_IP:" ++ show (serverPort config)
+  putStrLn "=================================="
+
+  -- Configure CORS and start server
+  let corsPolicy = CorsResourcePolicy {...}
+  let app = cors (const $ Just corsPolicy) $ serve api (combinedServer pool)
+  
   Warp.run (serverPort config) app
 ```
 
@@ -102,7 +112,28 @@ type TransactionAPI =
   "transaction" :> Get '[JSON] [Transaction]
     :<|> "transaction" :> Capture "id" UUID :> Get '[JSON] Transaction
     :<|> "transaction" :> ReqBody '[JSON] Transaction :> Post '[JSON] Transaction
-    :<|> Multiple other transaction-related endpoints...
+    :<|> "transaction" :> Capture "id" UUID :> ReqBody '[JSON] Transaction :> Put '[JSON] Transaction
+    :<|> "transaction" :> "void" :> Capture "id" UUID :> ReqBody '[JSON] Text :> Post '[JSON] Transaction
+    :<|> "transaction" :> "refund" :> Capture "id" UUID :> ReqBody '[JSON] Text :> Post '[JSON] Transaction
+    :<|> "transaction" :> "item" :> ReqBody '[JSON] TransactionItem :> Post '[JSON] TransactionItem
+    :<|> "transaction" :> "item" :> Capture "id" UUID :> Delete '[JSON] NoContent
+    :<|> "transaction" :> "payment" :> ReqBody '[JSON] PaymentTransaction :> Post '[JSON] PaymentTransaction
+    :<|> "transaction" :> "payment" :> Capture "id" UUID :> Delete '[JSON] NoContent
+    :<|> "transaction" :> "finalize" :> Capture "id" UUID :> Post '[JSON] Transaction
+```
+
+#### Register API
+
+Handles operations related to cash registers:
+
+```haskell
+type RegisterAPI =
+  "register" :> Get '[JSON] [Register]
+    :<|> "register" :> Capture "id" UUID :> Get '[JSON] Register
+    :<|> "register" :> ReqBody '[JSON] Register :> Post '[JSON] Register
+    :<|> "register" :> Capture "id" UUID :> ReqBody '[JSON] Register :> Put '[JSON] Register
+    :<|> "register" :> "open" :> Capture "id" UUID :> ReqBody '[JSON] OpenRegisterRequest :> Post '[JSON] Register
+    :<|> "register" :> "close" :> Capture "id" UUID :> ReqBody '[JSON] CloseRegisterRequest :> Post '[JSON] CloseRegisterResult
 ```
 
 ### Database Layer (`DB/Database.hs` and `DB/Transaction.hs`)
@@ -113,6 +144,18 @@ Manages database connections and operations:
 - Retry logic with exponential backoff for connection failures
 - Prepared statements for query execution
 - Transaction safety
+
+Key database functions include:
+
+```haskell
+initializeDB :: DBConfig -> IO (Pool.Pool Connection)
+createTables :: Pool.Pool Connection -> IO ()
+createTransactionTables :: ConnectionPool -> IO ()
+getAllMenuItems :: Pool.Pool Connection -> IO Inventory
+insertMenuItem :: Pool.Pool Connection -> MenuItem -> IO ()
+updateExistingMenuItem :: Pool.Pool Connection -> MenuItem -> IO ()
+deleteMenuItem :: Pool.Pool Connection -> UUID -> Handler InventoryResponse
+```
 
 ## API Reference
 
@@ -160,7 +203,7 @@ Manages database connections and operations:
 | GET | `/ledger/account` | Get all accounts |
 | POST | `/ledger/report/daily` | Generate daily report |
 | POST | `/compliance/verification` | Verify customer compliance |
-| GET | `/compliance/record/:id` | Get compliance record |
+| GET | `/compliance/record/:transaction_id` | Get compliance record |
 | POST | `/compliance/report` | Generate compliance report |
 
 ## Data Models
@@ -179,7 +222,7 @@ data MenuItem = MenuItem
   , sku :: UUID
   , brand :: Text
   , name :: Text
-  , price :: Scientific
+  , price :: Int  -- Stored as cents
   , measure_unit :: Text
   , per_package :: Text
   , quantity :: Int
@@ -190,6 +233,22 @@ data MenuItem = MenuItem
   , effects :: V.Vector Text
   , strain_lineage :: StrainLineage
   }
+```
+
+#### ItemCategory
+
+```haskell
+data ItemCategory
+  = Flower
+  | PreRolls
+  | Vaporizers
+  | Edibles
+  | Drinks
+  | Concentrates
+  | Topicals
+  | Tinctures
+  | Accessories
+  deriving (Show, Eq, Ord, Generic, FromJSON, ToJSON, Read)
 ```
 
 #### StrainLineage
@@ -211,6 +270,18 @@ data StrainLineage = StrainLineage
   }
 ```
 
+#### Species
+
+```haskell
+data Species
+  = Indica
+  | IndicaDominantHybrid
+  | Hybrid
+  | SativaDominantHybrid
+  | Sativa
+  deriving (Show, Eq, Ord, Generic, FromJSON, ToJSON, Read)
+```
+
 ### Transaction Models
 
 #### Transaction
@@ -219,43 +290,68 @@ The core transaction model:
 
 ```haskell
 data Transaction = Transaction
-  { id :: UUID
-  , status :: TransactionStatus
-  , created :: DateTime
-  , completed :: Maybe DateTime
-  , customerId :: Maybe UUID
-  , employeeId :: UUID
-  , registerId :: UUID
-  , locationId :: UUID
-  , items :: [TransactionItem]
-  , payments :: [PaymentTransaction]
-  , subtotal :: Scientific
-  , discountTotal :: Scientific
-  , taxTotal :: Scientific
-  , total :: Scientific
+  { transactionId :: UUID
+  , transactionStatus :: TransactionStatus
+  , transactionCreated :: UTCTime
+  , transactionCompleted :: Maybe UTCTime
+  , transactionCustomerId :: Maybe UUID
+  , transactionEmployeeId :: UUID
+  , transactionRegisterId :: UUID
+  , transactionLocationId :: UUID
+  , transactionItems :: [TransactionItem]
+  , transactionPayments :: [PaymentTransaction]
+  , transactionSubtotal :: Int
+  , transactionDiscountTotal :: Int
+  , transactionTaxTotal :: Int
+  , transactionTotal :: Int
   , transactionType :: TransactionType
-  , isVoided :: Boolean
-  , voidReason :: Maybe Text
-  , isRefunded :: Boolean
-  , refundReason :: Maybe Text
-  , referenceTransactionId :: Maybe UUID
-  , notes :: Maybe Text
+  , transactionIsVoided :: Bool
+  , transactionVoidReason :: Maybe Text
+  , transactionIsRefunded :: Bool
+  , transactionRefundReason :: Maybe Text
+  , transactionReferenceTransactionId :: Maybe UUID
+  , transactionNotes :: Maybe Text
   }
+```
+
+#### TransactionStatus
+
+```haskell
+data TransactionStatus
+  = Created
+  | InProgress
+  | Completed
+  | Voided
+  | Refunded
+  deriving (Show, Eq, Ord, Generic, Read)
+```
+
+#### TransactionType
+
+```haskell
+data TransactionType
+  = Sale
+  | Return
+  | Exchange
+  | InventoryAdjustment
+  | ManagerComp
+  | Administrative
+  deriving (Show, Eq, Ord, Generic, Read)
 ```
 
 #### TransactionItem
 
 ```haskell
 data TransactionItem = TransactionItem
-  { id :: UUID
-  , transactionId :: UUID
-  , menuItemSku :: UUID
-  , quantity :: Scientific
-  , pricePerUnit :: Scientific
-  , discounts :: [DiscountRecord]
-  , taxes :: [TaxRecord]
-  , subtotal :: Scientific
-  , total :: Scientific
+  { transactionItemId :: UUID
+  , transactionItemTransactionId :: UUID
+  , transactionItemMenuItemSku :: UUID
+  , transactionItemQuantity :: Int
+  , transactionItemPricePerUnit :: Int
+  , transactionItemDiscounts :: [DiscountRecord]
+  , transactionItemTaxes :: [TaxRecord]
+  , transactionItemSubtotal :: Int
+  , transactionItemTotal :: Int
   }
 ```
 
@@ -263,15 +359,15 @@ data TransactionItem = TransactionItem
 
 ```haskell
 data PaymentTransaction = PaymentTransaction
-  { id :: UUID
-  , transactionId :: UUID
-  , method :: PaymentMethod
-  , amount :: Scientific
-  , tendered :: Scientific
-  , change :: Scientific
-  , reference :: Maybe Text
-  , approved :: Boolean
-  , authorizationCode :: Maybe Text
+  { paymentId :: UUID
+  , paymentTransactionId :: UUID
+  , paymentMethod :: PaymentMethod
+  , paymentAmount :: Int
+  , paymentTendered :: Int
+  , paymentChange :: Int
+  , paymentReference :: Maybe Text
+  , paymentApproved :: Bool
+  , paymentAuthorizationCode :: Maybe Text
   }
 ```
 
@@ -285,7 +381,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     sku UUID PRIMARY KEY,
     brand TEXT NOT NULL,
     name TEXT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
+    price INTEGER NOT NULL,
     measure_unit TEXT NOT NULL,
     per_package TEXT NOT NULL,
     quantity INT NOT NULL,
@@ -327,10 +423,10 @@ CREATE TABLE IF NOT EXISTS transaction (
   employee_id UUID NOT NULL,
   register_id UUID NOT NULL,
   location_id UUID NOT NULL,
-  subtotal DECIMAL(10,2) NOT NULL,
-  discount_total DECIMAL(10,2) NOT NULL,
-  tax_total DECIMAL(10,2) NOT NULL,
-  total DECIMAL(10,2) NOT NULL,
+  subtotal INTEGER NOT NULL,
+  discount_total INTEGER NOT NULL,
+  tax_total INTEGER NOT NULL,
+  total INTEGER NOT NULL,
   transaction_type TEXT NOT NULL,
   is_voided BOOLEAN NOT NULL DEFAULT FALSE,
   void_reason TEXT,
@@ -341,11 +437,11 @@ CREATE TABLE IF NOT EXISTS transaction (
 )
 ```
 
-Additional transaction-related tables include:
+Additional transaction-related tables:
 - `transaction_item`: Stores line items within transactions
-- `payment_transaction`: Stores payment details
 - `discount`: Stores applied discounts
 - `transaction_tax`: Stores tax applications
+- `payment_transaction`: Stores payment details
 - `register`: Stores cash register information
 
 ## Transaction Processing
@@ -358,25 +454,39 @@ Additional transaction-related tables include:
 4. **Payment Addition**: One or more payments are added
 5. **Finalization**: Transaction is finalized, changing status to `Completed`
 
+### Transaction Operations
+
+The system includes comprehensive transaction processing capabilities:
+
+```haskell
+createTransaction :: ConnectionPool -> Transaction -> IO Transaction
+getTransaction :: ConnectionPool -> UUID -> IO (Maybe Transaction)
+updateTransaction :: ConnectionPool -> UUID -> Transaction -> IO Transaction
+addTransactionItem :: ConnectionPool -> TransactionItem -> IO TransactionItem
+deleteTransactionItem :: ConnectionPool -> UUID -> IO ()
+addPaymentTransaction :: ConnectionPool -> PaymentTransaction -> IO PaymentTransaction
+deletePaymentTransaction :: ConnectionPool -> UUID -> IO ()
+finalizeTransaction :: ConnectionPool -> UUID -> IO Transaction
+```
+
 ### Refund and Void Operations
 
 The system supports two key transaction reversal operations:
 
-#### Void Process
-
 ```haskell
 voidTransaction :: ConnectionPool -> UUID -> Text -> IO Transaction
 voidTransaction pool transactionId reason = do
-  -- Update transaction status to voided
+  -- Update transaction status to VOIDED
+  -- Mark transaction as voided with reason
   -- Return updated transaction
 ```
-
-#### Refund Process
 
 ```haskell
 refundTransaction :: ConnectionPool -> UUID -> Text -> IO Transaction
 refundTransaction pool transactionId reason = do
-  -- Create new inverse transaction referencing original
+  -- Get original transaction
+  -- Create new inverse transaction with negative amounts
+  -- Mark as Return type and reference original transaction
   -- Mark original as refunded
   -- Return new refund transaction
 ```
@@ -448,19 +558,18 @@ The codebase employs several Haskell patterns:
 3. **Type Safety**: Leverages Haskell's type system for API definitions
 4. **Functional Composition**: Pipeline-style data transformations
 
-### Security Considerations
+### Error Handling
 
-For production deployment, consider:
-1. Using environment variables for sensitive configuration
-2. Restricting CORS to specific origins
-3. Implementing authentication and authorization
-4. Adding user roles and permissions
-5. Sanitizing error messages sent to clients
+The backend implements robust error handling:
+- Try/catch blocks around database operations
+- Descriptive error messages for client feedback
+- Logging of errors to stderr for server monitoring
+- Status message formatting for client consumption
 
 ### Database Optimization
 
 The backend uses several database optimization techniques:
 1. Connection pooling for efficient resource utilization
-2. Prepared statements to prevent SQL injection
-3. Transaction safety for data consistency
-4. Retrying failed connections with exponential backoff
+2. Prepared statements for safe query execution
+3. Connection retry logic with exponential backoff
+4. Resource cleanup via withConnection pattern
