@@ -1,13 +1,13 @@
 module EditItem where
 
 import Prelude
-import UI.Common.Form (buttonClass, makeDescriptionField, makeDropdown, makeTextField)
 
 import API.Inventory (updateInventory)
 import Config.InventoryFields (brandConfig, categoryConfig, cbgConfig, creatorConfig, dominantTerpeneConfig, effectsConfig, imgConfig, leaflyUrlConfig, lineageConfig, measureUnitConfig, nameConfig, perPackageConfig, priceConfig, quantityConfig, skuConfig, sortConfig, speciesConfig, strainConfig, subcategoryConfig, tagsConfig, terpenesConfig, thcConfig)
 import Data.Array (all)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Newtype (unwrap)
 import Data.String (joinWith)
 import Data.String.CodeUnits (length)
 import Data.Tuple.Nested ((/\))
@@ -23,7 +23,8 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Types.Inventory (InventoryResponse(..), MenuItem(..), StrainLineage(..))
-import Utils.Formatting (ensureInt, ensureNumber)
+import UI.Common.Form (buttonClass, makeDescriptionField, makeDropdown, makeTextField)
+import Utils.Formatting (ensureInt, ensureNumber, formatCentsToDecimal)
 import Utils.Validation (validateMenuItem)
 
 editItem :: MenuItem -> Nut
@@ -45,9 +46,8 @@ editItem (MenuItem item) = Deku.do
   setBrand /\ brandEvent <- useState item.brand
   setValidBrand /\ validBrandEvent <- useState (Just true)
 
-  setPrice /\ priceEvent <- useState (show item.price)
+  setPrice /\ priceEvent <- useState (formatCentsToDecimal (unwrap item.price))
   setValidPrice /\ validPriceEvent <- useState (Just true)
-
   setQuantity /\ quantityEvent <- useState (show item.quantity)
   setValidQuantity /\ validQuantityEvent <- useState (Just true)
 

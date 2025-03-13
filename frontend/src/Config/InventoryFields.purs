@@ -6,7 +6,7 @@ import Data.Maybe (Maybe(..))
 import Data.String (trim)
 import Types.Common (DropdownConfig, ValidationRule(..), FieldConfig)
 import Types.Inventory (ItemCategory, Species)
-import Utils.Formatting (getAllEnumValues)
+import Utils.Formatting (formatCentsToDisplayDollars, getAllEnumValues)
 import Utils.Validation (allOf, alphanumeric, anyOf, commaList, dollarAmount, extendedAlphanumeric, fraction, maxLength, nonEmpty, nonNegativeInteger, percentage, validMeasurementUnit, validUrl)
 
 nameConfig :: String -> FieldConfig
@@ -52,10 +52,10 @@ brandConfig defaultValue =
 priceConfig :: String -> FieldConfig
 priceConfig defaultValue =
   { label: "Price"
-  , placeholder: "Enter price"
-  , defaultValue
+  , placeholder: "Enter price in dollars (e.g. 12.99)"
+  , defaultValue: formatCentsToDisplayDollars defaultValue
   , validation: dollarAmount
-  , errorMessage: "Price must be a valid number"
+  , errorMessage: "Price must be a valid dollar amount"
   , formatInput: trim
   }
 

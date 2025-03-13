@@ -11,8 +11,7 @@ import Servant
 import Server (combinedServer)
 import System.Posix.User (getLoginName)
 
--- Define AppConfig data type
-data AppConfig = AppConfig 
+data AppConfig = AppConfig
   { dbConfig :: DBConfig
   , serverPort :: Int
   }

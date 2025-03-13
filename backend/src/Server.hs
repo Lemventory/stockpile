@@ -14,17 +14,14 @@ import Types.Inventory
 import API.Transaction (PosAPI)
 import Data.Text (pack)
 import qualified Data.Pool as Pool
+import Server.Transaction (posServerImpl)
 
--- Temporary implementation until we create Server.Transaction module
-posServer :: Pool Connection -> Server PosAPI
-posServer _ = error "Transaction API not implemented yet"
-
-server :: Pool.Pool Connection -> Server InventoryAPI
-server pool =
+inventoryServer :: Pool.Pool Connection -> Server InventoryAPI
+inventoryServer pool =
   getInventory
     :<|> addMenuItem
     :<|> updateMenuItem
-    :<|> deleteMenuItem pool  -- Call the imported function directly
+    :<|> deleteMenuItem pool
   where
     getInventory :: Handler InventoryResponse
     getInventory = do
@@ -45,8 +42,9 @@ server pool =
       case result of
         Right msg -> return msg
         Left (e :: SomeException) -> do
-          let errMsg = "Error inserting item: " <> show e
-          let response = Message (pack errMsg)
+          let errMsg = pack $ "Error inserting item: " <> show e
+          liftIO $ putStrLn $ "Error: " ++ show e
+          let response = Message errMsg
           liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
 
@@ -62,12 +60,12 @@ server pool =
       case result of
         Right msg -> return msg
         Left (e :: SomeException) -> do
-          let errMsg = "Error updating item: " <> show e
-          let response = Message (pack errMsg)
+          let errMsg = pack $ "Error updating item: " <> show e
+          let response = Message errMsg
           liftIO $ putStrLn $ "Sending error response: " ++ show (encode response)
           return response
 
 combinedServer :: Pool Connection -> Server API
 combinedServer pool =
-  server pool
-    :<|> posServer pool
+  inventoryServer pool
+    :<|> posServerImpl pool

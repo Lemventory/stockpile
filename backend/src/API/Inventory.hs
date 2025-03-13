@@ -8,7 +8,6 @@ import Servant
 import Types.Inventory
 import API.Transaction (PosAPI)
 
--- Original inventory API
 type InventoryAPI =
   "inventory" :> Get '[JSON] InventoryResponse
     :<|> "inventory" :> ReqBody '[JSON] MenuItem :> Post '[JSON] InventoryResponse
@@ -18,7 +17,6 @@ type InventoryAPI =
 inventoryAPI :: Proxy InventoryAPI
 inventoryAPI = Proxy
 
--- Combined API
 type API =
   InventoryAPI
     :<|> PosAPI
