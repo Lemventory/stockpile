@@ -27,6 +27,8 @@ import Routing.Hash (matchesWith)
 import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
 import Config.LiveView (defaultViewConfig)
 import Utils.UUIDGen (genUUID)
+import UI.Transaction.CreateTransaction (createTransaction)
+import UI.Transaction.TransactionHistory (transactionHistory)
 
 testItemUUID :: String
 testItemUUID = "4e58b3e6-3fd4-425c-b6a3-4f033a76859c"
@@ -170,6 +172,14 @@ main = do
                   (renderError $ "Failed to fetch inventory: " <> err)
 
             liftEffect $ loadingState.push false
+
+        CreateTransaction -> do
+          Console.log "Navigating to Create Transaction page"
+          currentRoute.push $ Tuple r createTransaction
+
+        TransactionHistory -> do
+          Console.log "Navigating to Transaction History page"
+          currentRoute.push $ Tuple r transactionHistory
 
   void $ matchesWith (parse route) matcher
 

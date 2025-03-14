@@ -13,7 +13,13 @@ import Routing.Duplex (RouteDuplex', root, segment, string)
 import Routing.Duplex.Generic as G
 import Routing.Duplex.Generic.Syntax ((/))
 
-data Route = LiveView | Create | Edit String | Delete String
+data Route 
+  = LiveView 
+  | Create 
+  | Edit String 
+  | Delete String 
+  | CreateTransaction
+  | TransactionHistory
 
 derive instance Eq Route
 derive instance Ord Route
@@ -28,6 +34,8 @@ route = root $ G.sum
   , "Create": "create" / G.noArgs
   , "Edit": "edit" / (string segment)
   , "Delete": "delete" / (string segment)
+  , "CreateTransaction": "transaction" / "create" / G.noArgs
+  , "TransactionHistory": "transaction" / "history" / G.noArgs
   }
 
 nav :: Poll Route -> Nut
@@ -38,6 +46,9 @@ nav currentRoute = D.nav [ DA.klass_ "navbar navbar-light" ]
           [ navItem LiveView "/#/" "LiveView" currentRoute
           , navItem Create "/#/create" "Create Item" currentRoute
           , navItem (Edit "test") "/#/edit/test" "Edit Test Item" currentRoute
+          , D.div [ DA.klass_ "border-l mx-2 h-6" ] []  -- Divider
+          , navItem CreateTransaction "/#/transaction/create" "New Transaction" currentRoute
+          , navItem TransactionHistory "/#/transaction/history" "Transaction History" currentRoute
           ]
       ]
   ]
