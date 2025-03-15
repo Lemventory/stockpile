@@ -88,7 +88,7 @@ body {
   color: var(--fg-light);
 }
 
-/* Inventory Grid */
+/* LiveView Inventory Grid */
 .inventory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -151,7 +151,7 @@ body {
   text-transform: uppercase;
 }
 
-.item-name {
+.inventory-item-card .item-name {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0.25rem 0 0.75rem;
@@ -182,7 +182,7 @@ body {
   color: var(--fg-dark);
 }
 
-.item-price {
+.inventory-item-card .item-price {
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0.5rem 0;
@@ -202,7 +202,7 @@ body {
   flex: 0 0 auto; /* Don't allow this to grow too much */
 }
 
-.item-quantity {
+.inventory-item-card .item-quantity {
   display: inline-block;
   padding: 0.25rem 0.5rem;
   background-color: var(--green-dark);
@@ -212,7 +212,7 @@ body {
   margin: 0.5rem 0;
 }
 
-.item-actions {
+.inventory-item-card .item-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
@@ -498,7 +498,7 @@ body {
   color: var(--fg-dark);
 }
 
-/* Responsive Adjustments */
+/* Responsive Adjustments for LiveView */
 @media (max-width: 1200px) {
   .inventory-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -534,3 +534,482 @@ body {
     text-align: center;
   }
 }
+
+/* ======================================= */
+/* TRANSACTION COMPONENT SPECIFIC STYLES   */
+/* ======================================= */
+
+.tx-main-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: calc(100vh - 50px);
+  background-color: var(--bg-dark);
+}
+
+/* Content area with cart and inventory */
+.tx-content-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Fixed-height bottom area for numpad and payment */
+.tx-bottom-area {
+  display: flex;
+  height: 220px;
+  border-top: 1px solid var(--bg-light);
+  background-color: var(--bg-medium);
+}
+
+/* Left side for cart */
+.tx-cart-container {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--bg-light);
+  background-color: var(--bg-medium);
+  padding: 1rem;
+}
+
+/* Right side for inventory */
+.tx-inventory-container {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-medium);
+  padding: 1rem;
+}
+
+/* Cart header with column titles */
+.tx-cart-header {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--bg-light);
+  font-weight: bold;
+  color: var(--fg-light);
+}
+
+/* Scrollable cart items area */
+.tx-cart-items {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+}
+
+.tx-cart-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--bg-light);
+  color: var(--fg-dark);
+}
+
+.tx-cart-item .tx-item-details {
+  display: flex;
+  flex: 3;
+}
+
+.tx-cart-item .tx-item-quantity {
+  width: 40px;
+  text-align: center;
+  margin-right: 0.5rem;
+}
+
+.tx-cart-item .tx-item-name {
+  flex: 1;
+  color: var(--fg-light);
+}
+
+.tx-cart-item .tx-item-price, 
+.tx-cart-item .tx-item-total {
+  width: 70px;
+  text-align: right;
+  color: var(--green-light);
+}
+
+.tx-cart-item .tx-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  width: 70px;
+}
+
+/* Cart totals area (always visible) */
+.tx-cart-totals {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--bg-light);
+  color: var(--fg-dark);
+}
+
+.tx-total-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.tx-grand-total {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--bg-light);
+  display: flex;
+  justify-content: space-between;
+  color: var(--fg-light);
+}
+
+/* Inventory header area in transaction component */
+.tx-inventory-container .tx-inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--bg-light);
+}
+
+.tx-inventory-container .tx-inventory-header h3 {
+  color: var(--fg-light);
+}
+
+.tx-inventory-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tx-search-input {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  width: 250px;
+  background-color: var(--bg-dark);
+  color: var(--fg-dark);
+}
+
+/* Inventory category tabs */
+.tx-inventory-tabs {
+  display: flex;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.tx-inventory-tab {
+  padding: 0.35rem 0.75rem;
+  background-color: var(--bg-light);
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  margin-right: 0.25rem;
+  color: var(--fg-dark);
+}
+
+.tx-inventory-tab.active {
+  background-color: var(--green-dark);
+  color: var(--fg-light);
+  border-color: var(--green-dark);
+}
+
+/* Transaction Inventory grid (different from the LiveView one) */
+.tx-inventory-container .inventory-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.tx-inventory-item {
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: var(--bg-dark);
+}
+
+.tx-inventory-item:hover {
+  border-color: var(--green-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tx-inventory-item .tx-item-image {
+  width: 40px;
+  height: 40px;
+  background-color: var(--bg-light);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--fg-dark);
+  font-size: 0.8rem;
+}
+
+.tx-inventory-item .tx-item-name {
+  color: var(--fg-light);
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.tx-inventory-item .tx-item-stock {
+  font-size: 0.8rem;
+  color: var(--fg-dark);
+}
+
+.tx-inventory-item .tx-item-price {
+  color: var(--green-light);
+  font-weight: bold;
+}
+
+.tx-low-stock {
+  color: var(--red);
+}
+
+/* Numpad panel */
+.tx-numpad-panel {
+  width: 30%;
+  background-color: var(--bg-medium);
+  border-right: 1px solid var(--bg-light);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-numpad-display {
+  font-size: 1.25rem;
+  font-weight: bold;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--bg-light);
+  padding: 0.5rem;
+  text-align: right;
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  color: var(--fg-light);
+}
+
+.tx-numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.tx-numpad-btn {
+  background-color: var(--bg-dark);
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 2rem;
+  color: var(--fg-dark);
+}
+
+.tx-numpad-btn:hover {
+  background-color: var(--bg-light);
+}
+
+.tx-numpad-btn.delete {
+  background-color: var(--red);
+  color: var(--fg-light);
+}
+
+.tx-numpad-btn.delete:hover {
+  background-color: var(--red-light);
+}
+
+.tx-numpad-btn.enter {
+  background-color: var(--green-dark);
+  color: var(--fg-light);
+  grid-column: span 3;
+}
+
+.tx-numpad-btn.enter:hover {
+  background-color: var(--green-medium);
+}
+
+/* Payment panel */
+.tx-payment-panel {
+  width: 70%;
+  background-color: var(--bg-medium);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-payment-header {
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: var(--fg-light);
+}
+
+.tx-payment-methods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tx-payment-method {
+  background-color: var(--bg-dark);
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--fg-dark);
+}
+
+.tx-payment-method:hover, .tx-payment-method.active {
+  border-color: var(--green-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tx-payment-method.active {
+  background-color: var(--green-dark);
+  color: var(--fg-light);
+}
+
+.tx-payment-actions {
+  display: flex;
+  margin-top: auto;
+  gap: 0.75rem;
+}
+
+.tx-action-btn {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tx-cancel-btn {
+  background-color: var(--red);
+  color: var(--fg-light);
+  flex: 1;
+}
+
+.tx-cancel-btn:hover {
+  background-color: var(--red-light);
+}
+
+.tx-checkout-btn {
+  background-color: var(--green-dark);
+  color: var(--fg-light);
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tx-checkout-btn:hover {
+  background-color: var(--green-medium);
+}
+
+/* Button and control sizes */
+button.tx-delete-btn {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+  background-color: var(--bg-dark);
+  cursor: pointer;
+  color: var(--red);
+}
+
+button.tx-delete-btn:hover {
+  background-color: var(--red);
+  color: var(--fg-light);
+}
+
+/* Status message */
+.tx-status-message {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: var(--fg-light);
+  z-index: 1000;
+  transition: opacity 0.3s;
+}
+
+/* Payment inputs styling */
+.tx-payment-inputs {
+  color: var(--fg-dark);
+}
+
+.tx-payment-inputs input {
+  background-color: var(--bg-dark);
+  color: var(--fg-dark);
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+}
+
+.payment-inputs label {
+  color: var(--fg-dark);
+}
+
+.existing-payments {
+  color: var(--fg-dark);
+}
+
+/* Text colors for transaction component */
+.tx-text-gray-500 {
+  color: var(--gray);
+}
+
+.tx-text-green-600 {
+  color: var(--green-light);
+}
+
+.tx-text-red-600 {
+  color: var(--red);
+}
+
+/* Form inputs in transaction component */
+.tx-col-span-1 {
+  color: var(--fg-dark);
+}
+
+.tx-form-input {
+  background-color: var(--bg-dark);
+  color: var(--fg-dark);
+  border: 1px solid var(--bg-light);
+  border-radius: var(--border-radius);
+}
+
+.tx-text-center { text-align: center; }
+.tx-p-4 { padding: 1rem; }
+.tx-p-2 { padding: 0.5rem; }
+.tx-p-1 { padding: 0.25rem; }
+.tx-text-gray-500 { color: var(--gray); }
+.tx-mb-2 { margin-bottom: 0.5rem; }
+.tx-mt-2 { margin-top: 0.5rem; }
+.tx-w-16 { width: 4rem; }
+.tx-text-right { text-align: right; }
+.tx-text-xl { font-size: 1.25rem; }
+.tx-mt-4 { margin-top: 1rem; }
+.tx-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tx-gap-2 { gap: 0.5rem; }
+.tx-pt-2 { padding-top: 0.5rem; }
+.tx-mb-1 { margin-bottom: 0.25rem; }
+.tx-mb-4 { margin-bottom: 1rem; }
+.tx-w-full { width: 100%; }
