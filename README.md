@@ -1,6 +1,6 @@
-# stockpile: Cannabis Dispensary Management System
+# stockpile: Inventory Management System
 
-A comprehensive full-stack web application for cannabis dispensary inventory, point-of-sale, and transaction management, utilizing PureScript for frontend development with Haskell backend services, all underpinned by a PostgreSQL database infrastructure.
+A comprehensive full-stack web application for Inventory inventory, point-of-sale, and transaction management, utilizing PureScript for frontend development with Haskell backend services, all underpinned by a PostgreSQL database infrastructure.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -18,7 +18,7 @@ Detailed documentation for each component of the system:
 ## 🌟 Features
 
 ### Inventory Management
-- **Comprehensive Product Tracking**: Maintain detailed cannabis product information including strain data, THC/CBD content, terpenes, and lineage
+- **Comprehensive Product Tracking**: Maintain detailed  product information including strain data, THC/CBD content, terpenes, and lineage
 - **Visual Categorization**: Products are visually distinguished by category and species
 - **Flexible Sorting & Filtering**: Organize inventory by various criteria including name, category, quantity, and strain type
 - **Complete CRUD Operations**: Support for creating, reading, updating, and deleting inventory items
@@ -26,7 +26,7 @@ Detailed documentation for each component of the system:
 ### Point-of-Sale System
 - **Transaction Processing**: Complete POS workflow for creating and finalizing sales transactions
 - **Multiple Payment Methods**: Support for cash, credit, debit, ACH, and gift card payments
-- **Tax Management**: Automatic calculation of sales and cannabis-specific taxes
+- **Tax Management**: Automatic calculation of sales and -specific taxes
 - **Discount Application**: Apply percentage-based, fixed amount, or BOGO discounts
 - **Receipt Generation**: Create formatted transaction receipts
 
@@ -134,7 +134,7 @@ The application follows a layered architecture:
 The system manages several core data types:
 
 - **MenuItem**: Product information with category, price, and quantity
-- **StrainLineage**: Cannabis strain details including cannabinoid content and terpenes
+- **StrainLineage**:  strain details including cannabinoid content and terpenes
 - **Transaction**: Complete transaction record with items, payments, and status
 - **Register**: Cash register state including drawer amounts and status
 
