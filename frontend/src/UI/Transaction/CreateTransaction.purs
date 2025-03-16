@@ -3,10 +3,8 @@ module UI.Transaction.CreateTransaction where
 import Prelude
 
 import API.Inventory (readInventory)
-import API.Transaction (createTransaction) as API
-import Data.Array (filter, find, foldl, length, null, sort, (:))
-import Data.Array (nub) as Array
-import Data.DateTime.Instant (toDateTime)
+-- import Control.Monad.List.Trans (filter)
+import Data.Array (find, foldl, length, null, (:))
 import Data.Either (Either(..))
 import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..))
@@ -14,13 +12,10 @@ import Data.Finance.Money.Extended (fromDiscrete', toDiscrete)
 import Data.Foldable (for_)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
 import Data.Number as Number
 import Data.String (Pattern(..), contains, trim)
-import Data.String as String
-import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Deku.Control (text, text_)
+import Deku.Control (text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
 import Deku.DOM.Attributes as DA
@@ -32,15 +27,20 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Effect.Now (now)
 import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
-import Types.Transaction (PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
-import Types.UUID (parseUUID)
-import UI.Common.Form as F
+import Types.Transaction (PaymentMethod(..), TaxCategory(..), TransactionItem(..))
+import UI.Inventory.LiveInventoryView (liveInventoryView)
 import Utils.Money (formatMoney', fromDollars, toDollars)
 import Utils.UUIDGen (genUUID)
 import Web.Event.Event (target)
-import Web.Event.Event as Event
+import API.Transaction (createTransaction) as API
+import Data.Array (filter, find, foldl, length, null, (:))
+import Data.DateTime.Instant (toDateTime)
+import Data.Tuple (Tuple(..))
+import Deku.Control (text_)
+import Effect.Now (now)
+import Types.Transaction (PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
+import Types.UUID (parseUUID)
 import Web.HTML.HTMLInputElement as Input
 
 -- Helper functions
@@ -164,7 +164,6 @@ formatCentsToDollars cents =
 
 createTransaction :: Nut
 createTransaction = Deku.do
-
   -- State for cart and transaction
   setItems /\ itemsValue <- useState []
   setPayments /\ paymentsValue <- useState []
@@ -179,9 +178,7 @@ createTransaction = Deku.do
   setTotal /\ totalValue <- useState (Discrete 0)
 
   -- Inventory and search
-  setInventory /\ inventoryValue <- useState []
-  setFilteredInventory /\ filteredInventoryValue <- useState []
-  setSearchText /\ searchTextValue <- useState ""
+  setInventory /\ inventoryValue <- useState (Inventory [])
   
   -- Selected item and quantity
   setSelectedItem /\ selectedItemValue <- useState Nothing
@@ -198,14 +195,27 @@ createTransaction = Deku.do
   setActiveCategory /\ activeCategoryValue <- useState "All Items"
   setNumpadValue /\ numpadValueValue <- useState ""
 
-  -- Get unique categories from inventory
+  -- Function to update items from inventory selector
   let 
-    getCategories = inventoryValue <#> \items -> 
-      ["All Items"] <> (sort $ Array.nub $ map (\(MenuItem i) -> show i.category) items)
+    handleUpdateItems :: Array TransactionItem -> Effect Unit
+    handleUpdateItems newItems = do
+      -- Calculate totals from new items
+      let 
+        calcTotals = foldl (\acc (TransactionItem item) -> 
+          { subtotal: acc.subtotal + (toDiscrete item.subtotal)
+          , tax: acc.tax + (foldl (\taxAcc tax -> taxAcc + (toDiscrete tax.amount)) (Discrete 0) item.taxes)
+          , total: acc.total + (toDiscrete item.total)
+          }) { subtotal: Discrete 0, tax: Discrete 0, total: Discrete 0 } newItems
+      
+      -- Update transaction state
+      setItems newItems
+      setSubtotal calcTotals.subtotal
+      setTaxTotal calcTotals.tax
+      setTotal calcTotals.total
+      setStatusMessage "Transaction items updated"
 
   D.div
     [ DA.klass_ "tx-main-container"
-    -- , DA.style_ styles -- This line is important
     , DL.load_ \_ -> do
         liftEffect $ Console.log "Transaction component loading"
 
@@ -222,10 +232,10 @@ createTransaction = Deku.do
         void $ launchAff do
           result <- readInventory
           liftEffect case result of
-            Right (InventoryData (Inventory items)) -> do
+            Right (InventoryData inventory@(Inventory items)) -> do
               Console.log $ "Loaded " <> show (length items) <> " inventory items"
-              setInventory items
-              setFilteredInventory items
+              setInventory inventory
+              setStatusMessage ""
             Right (Message msg) -> do
               Console.error $ "API Message: " <> msg
               setStatusMessage $ "Error: " <> msg
@@ -262,11 +272,11 @@ createTransaction = Deku.do
                 [ DA.klass_ "tx-cart-items" ]
                 [ itemsValue <#~> \items ->
                     if null items then
-                      D.div [ DA.klass_ "tx-text-gray-500 text-center p-4" ] [ text_ "No items added yet" ]
+                      D.div [ DA.klass_ "tx-empty-cart" ] [ text_ "No items added yet" ]
                     else
                       D.div_ (items <#> \(TransactionItem item) ->
                         let
-                          taxTotal = foldl (\acc tax -> acc + toDiscrete tax.amount) (Discrete 0) item.taxes
+                          taxTotal = foldl (\acc tax -> acc + (toDiscrete tax.amount)) (Discrete 0) item.taxes
                           taxTotalMoney = fromDiscrete' taxTotal
                         in
                           D.div
@@ -277,7 +287,7 @@ createTransaction = Deku.do
                                 [
                                   D.div [ DA.klass_ "tx-item-quantity" ] [ text_ (show item.quantity) ],
                                   D.div [ DA.klass_ "tx-item-name" ] 
-                                    [ inventoryValue <#~> \invItems ->
+                                    [ inventoryValue <#~> \(Inventory invItems) ->
                                         let
                                           itemInfo = find (\(MenuItem i) -> i.sku == item.menuItemSku) invItems
                                         in
@@ -307,6 +317,7 @@ createTransaction = Deku.do
                                 ]
                             ]
                       )
+                  
                 ],
               
               -- Cart totals area
@@ -334,239 +345,16 @@ createTransaction = Deku.do
                 ]
             ],
           
-          -- Inventory container
+          -- Inventory container - now using LiveInventoryView component 
           D.div
             [ DA.klass_ "tx-inventory-container" ]
-            [
-              -- Inventory header
-              D.div
-                [ DA.klass_ "tx-inventory-header" ]
-                [
-                  D.h3_ [ text_ "Inventory" ],
-                  D.div
-                    [ DA.klass_ "tx-inventory-controls" ]
-                    [
-                      D.input
-                      [ DA.klass_ "tx-search-input p-2 border rounded"
-                      , DA.placeholder_ "Search inventory..."
-                      , DA.value_ ""
-                      , DL.input_ \evt -> do
-                        for_ (Event.target evt >>= Input.fromEventTarget) \el -> do
-                          value <- Input.value el
-                          setSearchText value
-                      ]
-                      []
-                    ]
-                ],
-              
-              -- Inventory category tabs
-              D.div
-                [ DA.klass_ "tx-inventory-tabs" ]
-                [ getCategories <#~> \categories ->
-                    D.div_ (categories <#> \cat ->
-                      D.div 
-                      [ DA.klass $ activeCategoryValue <#> \active ->
-                          "inventory-tab" <> if active == cat then " active" else ""
-                      ]
-                      [ text_ cat ]
-                    )
-                ],
-              
-              -- Inventory grid with scrollable content
-              D.div
-                [ DA.klass_ "tx-inventory-grid" ]
-                [ 
-                  (Tuple <$> (Tuple <$> searchTextValue <*> activeCategoryValue) <*> inventoryValue) <#~> \((searchText /\ activeCategory) /\ items) ->
-                    let 
-                      -- First filter by category
-                      categoryFiltered = 
-                        if activeCategory == "All Items" 
-                        then items 
-                        else filter (\(MenuItem i) -> show i.category == activeCategory) items
-                        
-                      -- Then filter by search text
-                      searchFiltered =
-                        if searchText == ""
-                        then categoryFiltered
-                        else filter
-                              (\(MenuItem item) ->
-                                contains (Pattern (String.toLower searchText))
-                                        (String.toLower item.name))
-                              categoryFiltered
-                    in
-                      if null searchFiltered then
-                        D.div [ DA.klass_ "tx-text-gray-500 text-center p-4" ] [ text_ "No items found" ]
-                      else
-                        D.div_ (searchFiltered <#> \item@(MenuItem i) ->
-                          -- Keep your existing item rendering code here
-                          D.div
-                            [ DA.klass_ "tx-inventory-item"
-                            , DL.click_ \_ -> do
-                                setSelectedItem (Just item)
-                                setItemQuantity "1"
-                                setNumpadValue ""
-                            ]
-                            [
-                              D.div [ DA.klass_ "tx-item-image" ] [ text_ "IMG" ],
-                              D.div [ DA.klass_ "tx-item-name" ] [ text_ i.name ],
-                              D.div
-                                [ DA.klass_ $
-                                    "item-stock" <> if i.quantity <= 5 then " low-stock" else ""
-                                ]
-                                [ text_ ("Stock: " <> show i.quantity) ],
-                              D.div [ DA.klass_ "tx-item-price" ] [ text_ ("$" <> formatCentsToDollars (unwrap i.price)) ]
-                            ]
-                        )
-                ]
-            ]
+            [ liveInventoryView handleUpdateItems inventoryValue ]
         ],
       
-      -- Bottom area with numpad and payment options
+      -- Bottom area with payment options
       D.div
         [ DA.klass_ "tx-bottom-area" ]
         [
-          -- Numpad panel
-          D.div
-            [ DA.klass_ "tx-numpad-panel" ]
-            [
-              -- Display selected item and quantity
-              selectedItemValue <#~> \maybeItem ->
-                case maybeItem of
-                  Nothing -> 
-                    D.div [ DA.klass_ "tx-p-2 text-gray-500" ] 
-                      [ text_ "Select an item from inventory" ]
-                  Just (MenuItem item) ->
-                    D.div
-                      [ DA.klass_ "tx-selected-item p-2 mb-2 border-b" ]
-                      [
-                        D.div [ DA.klass_ "tx-font-semibold" ] [ text_ item.name ],
-                        D.div [ DA.klass_ "tx-flex items-center mt-2" ]
-                          [
-                            D.label [ DA.klass_ "tx-mr-2" ] [ text_ "Qty:" ],
-                            D.input
-                              [ DA.klass_ "tx-form-input w-16 p-1 border rounded"
-                              , DA.value itemQuantityValue -- Use value instead of value_
-                              , DA.xtype_ "text"
-                              , DA.readonly_ "readonly"
-                              ]
-                              []
-                          ]
-                      ],
-              
-              -- Numpad value display
-              D.div
-                [ DA.klass_ "tx-numpad-display mb-2 p-2 border rounded bg-white text-right text-xl" ]
-                [ text numpadValueValue ],
-                
-              -- Numpad grid
-              D.div
-                [ DA.klass_ "tx-numpad-grid" ]
-                [
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "7" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "7" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "8" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "8" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "9" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "9" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "4" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "4" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "5" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "5" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "6" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "6" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "1" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "1" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "2" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "2" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "3" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "3" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "0" setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "0" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn"
-                    , DL.click_ \_ -> updateNumpad "." setNumpadValue setItemQuantity
-                    ]
-                    [ text_ "." ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn delete"
-                    , DL.click_ \_ -> do
-                        setNumpadValue ""
-                        setItemQuantity "1"
-                    ]
-                    [ text_ "←" ],
-                  D.button
-                    [ DA.klass_ "tx-numpad-btn enter"
-                    , runOn DL.click $
-                        map
-                          (\args@{ qty, maybeSelectedItem, currSubtotal, currTaxTotal, currTotal, currItems } ->
-                            if (maybeSelectedItem == Nothing) then
-                              setStatusMessage "No item selected"
-                            else case readFloat qty of
-                              Nothing ->
-                                setStatusMessage "Invalid quantity"
-                              Just qtyNum ->
-                                case maybeSelectedItem of
-                                  Just menuItem ->
-                                    processValidItem qtyNum
-                                      menuItem
-                                      currSubtotal
-                                      currTaxTotal
-                                      currTotal
-                                      currItems
-                                      setSubtotal
-                                      setTaxTotal
-                                      setTotal
-                                      setItems
-                                      setSelectedItem
-                                      setStatusMessage
-                                      setNumpadValue
-                                      setItemQuantity
-                                  Nothing ->
-                                    setStatusMessage "No item selected"
-                          )
-                          ({ qty: _, maybeSelectedItem: _, currSubtotal: _, currTaxTotal: _, currTotal: _, currItems: _ }
-                            <$> itemQuantityValue
-                            <*> selectedItemValue
-                            <*> subtotalValue
-                            <*> taxTotalValue
-                            <*> totalValue
-                            <*> itemsValue
-                          )
-                    ]
-                    [ text_ "Add to Cart" ]
-                ]
-            ],
-          
           -- Payment panel
           D.div
             [ DA.klass_ "tx-payment-panel" ]
@@ -634,13 +422,13 @@ createTransaction = Deku.do
                 [ DA.klass_ "tx-payment-inputs mt-4" ]
                 [
                   D.div
-                    [ DA.klass_ "tx-grid grid-cols-2 gap-2 mb-2" ]
+                    [ DA.klass_ "tx-payment-input-row" ]
                     [
-                      D.label [ DA.klass_ "tx-col-span-1" ] [ text_ "Amount:" ],
+                      D.label [ DA.klass_ "tx-payment-label" ] [ text_ "Amount:" ],
                       D.input
-                        [ DA.klass_ "tx-col-span-1 form-input p-1 border rounded"
+                        [ DA.klass_ "tx-payment-field"
                         , DA.xtype_ "text"
-                        , DA.value paymentAmountValue -- Use value instead of value_
+                        , DA.value paymentAmountValue
                         , DL.input_ \evt -> do
                             for_ (target evt >>= Input.fromEventTarget) \el -> do
                               value <- Input.value el
@@ -653,13 +441,13 @@ createTransaction = Deku.do
                   paymentMethodValue <#~> \method ->
                     if method == Cash then
                       D.div
-                        [ DA.klass_ "tx-grid grid-cols-2 gap-2" ]
+                        [ DA.klass_ "tx-payment-input-row" ]
                         [
-                          D.label [ DA.klass_ "tx-col-span-1" ] [ text_ "Tendered:" ],
+                          D.label [ DA.klass_ "tx-payment-label" ] [ text_ "Tendered:" ],
                           D.input
-                            [ DA.klass_ "tx-col-span-1 form-input p-1 border rounded"
+                            [ DA.klass_ "tx-payment-field"
                             , DA.xtype_ "text"
-                            , DA.value tenderedAmountValue -- Use value instead of value_
+                            , DA.value tenderedAmountValue
                             , DL.input_ \evt -> do
                                 for_ (target evt >>= Input.fromEventTarget) \el -> do
                                   value <- Input.value el
@@ -673,22 +461,22 @@ createTransaction = Deku.do
               
               -- Display existing payments
               D.div
-                [ DA.klass_ "tx-existing-payments mt-2" ]
+                [ DA.klass_ "tx-existing-payments" ]
                 [ paymentsValue <#~> \payments ->
                     if null payments 
                     then D.div_ []
                     else D.div
-                      [ DA.klass_ "tx-border-t pt-2 mb-2" ]
+                      [ DA.klass_ "tx-payments-container" ]
                       [ 
-                        D.div [ DA.klass_ "tx-font-semibold mb-1" ] [ text_ "Current Payments:" ],
+                        D.div [ DA.klass_ "tx-payments-header" ] [ text_ "Current Payments:" ],
                         D.div_ (payments <#> \(PaymentTransaction p) ->
                           D.div
-                            [ DA.klass_ "tx-flex justify-between py-1" ]
+                            [ DA.klass_ "tx-payment-item" ]
                             [
-                              D.div_ [ text_ (show p.method) ],
-                              D.div_ [ text_ (formatMoney' p.amount) ],
+                              D.div [ DA.klass_ "tx-payment-method" ] [ text_ (show p.method) ],
+                              D.div [ DA.klass_ "tx-payment-amount" ] [ text_ (formatMoney' p.amount) ],
                               D.button
-                                [ DA.klass_ "tx-text-red-600 text-sm"
+                                [ DA.klass_ "tx-payment-remove"
                                 , runOn DL.click $ (\currPayments -> do
                                     let updatedPayments = filter (\(PaymentTransaction pay) -> 
                                                             pay.id /= p.id) currPayments
@@ -703,27 +491,28 @@ createTransaction = Deku.do
               
               -- Payment totals
               D.div
-                [ DA.klass_ "tx-payment-summary mb-4 pt-2" ]
+                [ DA.klass_ "tx-payment-summary" ]
                 [
                   (Tuple <$> totalValue <*> paymentsValue) <#~> \(Tuple total payments) ->
                     let
                       paymentTotal = foldl (\acc (PaymentTransaction p) -> 
-                                      acc + toDiscrete p.amount) (Discrete 0) payments
+                                          acc + toDiscrete p.amount) (Discrete 0) payments
                       remaining = total - paymentTotal
+                      paidClass = if remaining <= Discrete 0 then "tx-paid" else "tx-unpaid"
                     in
                       D.div
-                        [ DA.klass_ "tx-flex justify-between font-semibold" ]
+                        [ DA.klass_ "tx-payment-remaining" ]
                         [
-                          D.div_ [ text_ "Remaining:" ],
+                          D.div [ DA.klass_ "tx-remaining-label" ] [ text_ "Remaining:" ],
                           D.div
-                            [ DA.klass_ if remaining <= Discrete 0 then "text-green-600" else "text-red-600" ]
+                            [ DA.klass_ ("tx-remaining-amount " <> paidClass) ]
                             [ text_ (formatMoney' (fromDiscrete' (max (Discrete 0) remaining))) ]
                         ]
                 ],
               
               -- Add payment button
               D.button
-                [ DA.klass_ (F.buttonClass "blue" <> " mb-4 w-full")
+                [ DA.klass_ "tx-add-payment-btn"
                 , runOn DL.click $
                     (\payAmt tenderedAmt method currPayments ->
                       do
@@ -773,7 +562,7 @@ createTransaction = Deku.do
                 [ DA.klass_ "tx-payment-actions" ]
                 [
                   D.button
-                    [ DA.klass_ "tx-action-btn cancel-btn"
+                    [ DA.klass_ "tx-cancel-btn"
                     , DL.click_ \_ -> do
                         setItems []
                         setPayments []
@@ -785,7 +574,7 @@ createTransaction = Deku.do
                     ]
                     [ text_ "Cancel Sale" ],
                   D.button
-                    [ DA.klass_ "tx-action-btn checkout-btn"
+                    [ DA.klass_ "tx-checkout-btn"
                     , DA.disabled $ isProcessingValue <#> \isProcessing ->
                         if isProcessing then "true" else ""
                     , runOn DL.click $
@@ -872,7 +661,8 @@ createTransaction = Deku.do
                     ]
                 ]
             ]
-        ],
+        ]
+      ,
       
       -- Status message (placed outside any other container as a floating element)
       statusMessageValue <#~> \msg ->
@@ -882,5 +672,338 @@ createTransaction = Deku.do
           [ text_ msg ]
     ]
 
-getInventoryItems :: forall a. a -> Effect (Array MenuItem)
-getInventoryItems _ = pure []
+-- -- CSS styles for the transaction component
+-- styles :: String
+-- styles = """
+-- .tx-main-container {
+--   display: flex;
+--   flex-direction: column;
+--   height: 100vh;
+--   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+-- }
+
+-- .tx-content-area {
+--   display: flex;
+--   flex: 1;
+--   overflow: hidden;
+-- }
+
+-- .tx-cart-container {
+--   flex: 2;
+--   display: flex;
+--   flex-direction: column;
+--   border-right: 1px solid #ddd;
+--   overflow: hidden;
+-- }
+
+-- .tx-cart-header {
+--   display: flex;
+--   padding: 0.75rem;
+--   font-weight: bold;
+--   font-size: 1.1rem;
+--   margin-top: 0.5rem;
+--   padding-top: 0.5rem;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- /* Inventory Section */
+-- .tx-inventory-container {
+--   flex: 3;
+--   display: flex;
+--   flex-direction: column;
+--   overflow: hidden;
+-- }
+
+-- /* Payment Section */
+-- .tx-bottom-area {
+--   display: flex;
+--   border-top: 1px solid #ddd;
+--   min-height: 250px; /* Ensure enough space for payment panel */
+-- }
+
+-- .tx-payment-panel {
+--   flex: 1;
+--   padding: 1rem;
+--   background-color: #f9f9f9;
+-- }
+
+-- .tx-payment-header {
+--   font-weight: bold;
+--   margin-bottom: 1rem;
+--   font-size: 1.1rem;
+-- }
+
+-- .tx-payment-methods {
+--   display: flex;
+--   flex-wrap: wrap;
+--   gap: 0.5rem;
+--   margin-bottom: 1rem;
+-- }
+
+-- .payment-method {
+--   padding: 0.5rem 0.75rem;
+--   background-color: #eee;
+--   border: 1px solid #ddd;
+--   border-radius: 4px;
+--   cursor: pointer;
+--   transition: all 0.2s ease;
+-- }
+
+-- .payment-method:hover {
+--   background-color: #e0e0e0;
+-- }
+
+-- .payment-method.active {
+--   background-color: #3498db;
+--   color: white;
+--   border-color: #2980b9;
+-- }
+
+-- .tx-payment-input-row {
+--   display: flex;
+--   align-items: center;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-payment-label {
+--   width: 80px;
+--   font-weight: 500;
+-- }
+
+-- .tx-payment-field {
+--   flex: 1;
+--   padding: 0.5rem;
+--   border: 1px solid #ddd;
+--   border-radius: 4px;
+--   font-size: 1rem;
+-- }
+
+-- .tx-existing-payments {
+--   margin-top: 1rem;
+-- }
+
+-- .tx-payments-container {
+--   border-top: 1px solid #ddd;
+--   padding-top: 0.5rem;
+-- }
+
+-- .tx-payments-header {
+--   font-weight: 600;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-payment-item {
+--   display: flex;
+--   align-items: center;
+--   padding: 0.25rem 0;
+-- }
+
+-- .tx-payment-method {
+--   flex: 1;
+-- }
+
+-- .tx-payment-amount {
+--   flex: 1;
+--   text-align: right;
+--   font-weight: 500;
+-- }
+
+-- .tx-payment-remove {
+--   margin-left: 0.5rem;
+--   color: #e74c3c;
+--   background: none;
+--   border: none;
+--   cursor: pointer;
+--   font-weight: bold;
+-- }
+
+-- .tx-payment-summary {
+--   margin: 1rem 0;
+--   padding-top: 0.5rem;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- .tx-payment-remaining {
+--   display: flex;
+--   justify-content: space-between;
+--   font-weight: bold;
+--   font-size: 1.1rem;
+-- }
+
+-- .tx-remaining-label {
+--   font-weight: 600;
+-- }
+
+-- .tx-remaining-amount.tx-paid {
+--   color: #2ecc71;
+-- }
+
+-- .tx-remaining-amount.tx-unpaid {
+--   color: #e74c3c;
+-- }
+
+-- .tx-add-payment-btn {
+--   width: 100%;
+--   padding: 0.75rem;
+--   background-color: #3498db;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   margin: 1rem 0;
+--   cursor: pointer;
+--   font-weight: 600;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-add-payment-btn:hover {
+--   background-color: #2980b9;
+-- }
+
+-- .tx-payment-actions {
+--   display: flex;
+--   gap: 0.5rem;
+-- }
+
+-- .tx-cancel-btn {
+--   flex: 1;
+--   padding: 0.75rem;
+--   background-color: #e74c3c;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   font-weight: bold;
+--   cursor: pointer;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-cancel-btn:hover {
+--   background-color: #c0392b;
+-- }
+
+-- .tx-checkout-btn {
+--   flex: 2;
+--   padding: 0.75rem;
+--   background-color: #2ecc71;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   font-weight: bold;
+--   cursor: pointer;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-checkout-btn:hover {
+--   background-color: #27ae60;
+-- }
+
+-- .tx-checkout-btn:disabled {
+--   background-color: #95a5a6;
+--   cursor: not-allowed;
+-- }
+
+-- /* Status Message */
+-- .tx-status-message {
+--   position: fixed;
+--   bottom: 1rem;
+--   right: 1rem;
+--   padding: 0.75rem 1.5rem;
+--   background-color: #2ecc71;
+--   color: white;
+--   border-radius: 4px;
+--   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+--   animation: fadeOut 3s forwards;
+--   animation-delay: 2s;
+--   z-index: 100;
+-- }
+
+-- @keyframes fadeOut {
+--   from { opacity: 1; }
+--   to { opacity: 0; visibility: hidden; }
+-- }
+--   background-color: #f5f5f5;
+--   border-bottom: 1px solid #ddd;
+-- }
+
+-- .tx-cart-items {
+--   flex: 1;
+--   overflow-y: auto;
+--   padding: 0 0.5rem;
+-- }
+
+-- .tx-empty-cart {
+--   padding: 2rem;
+--   text-align: center;
+--   color: #95a5a6;
+-- }
+
+-- .tx-cart-item {
+--   display: flex;
+--   padding: 0.5rem;
+--   border-bottom: 1px solid #eee;
+--   align-items: center;
+-- }
+
+-- .tx-item-details {
+--   flex: 3;
+--   display: flex;
+-- }
+
+-- .tx-item-quantity {
+--   min-width: 40px;
+--   text-align: center;
+--   font-weight: 500;
+-- }
+
+-- .tx-item-name {
+--   margin-left: 0.5rem;
+-- }
+
+-- .tx-item-price {
+--   flex: 1;
+--   text-align: right;
+-- }
+
+-- .tx-item-total {
+--   flex: 1;
+--   text-align: right;
+-- }
+
+-- .tx-item-actions {
+--   flex: 1;
+--   display: flex;
+--   justify-content: center;
+-- }
+
+-- .tx-delete-btn {
+--   background-color: #e74c3c;
+--   color: white;
+--   border: none;
+--   border-radius: 50%;
+--   width: 24px;
+--   height: 24px;
+--   display: flex;
+--   align-items: center;
+--   justify-content: center;
+--   cursor: pointer;
+-- }
+
+-- .tx-delete-btn:hover {
+--   background-color: #c0392b;
+-- }
+
+-- .tx-cart-totals {
+--   padding: 1rem;
+--   background-color: #f9f9f9;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- .tx-total-row {
+--   display: flex;
+--   justify-content: space-between;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-grand-total {
+--   display: flex;
+--   justify-content: space-between;
+--   font-weight: bold;

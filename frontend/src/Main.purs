@@ -29,6 +29,7 @@ import Config.LiveView (defaultViewConfig)
 import Utils.UUIDGen (genUUID)
 import UI.Transaction.CreateTransaction (createTransaction)
 import UI.Transaction.TransactionHistory (transactionHistory)
+import UI.Inventory.LiveInventoryView (liveInventoryView)
 
 testItemUUID :: String
 testItemUUID = "4e58b3e6-3fd4-425c-b6a3-4f033a76859c"
@@ -180,6 +181,38 @@ main = do
         TransactionHistory -> do
           Console.log "Navigating to Transaction History page"
           currentRoute.push $ Tuple r transactionHistory
+          
+        InventorySelector -> do
+          Console.log "Navigating to Inventory Selector page"
+          
+          loadingState.push true
+          errorState.push ""
+          
+          let dummyUpdateFunction items = do
+                Console.log $ "Selected " <> show (length items) <> " items"
+          
+          -- Create the component with the inventory poll
+          currentRoute.push $ Tuple r (liveInventoryView dummyUpdateFunction inventoryState.poll)
+          
+          -- Fetch inventory data
+          launchAff_ do
+            result <- fetchInventory defaultViewConfig.fetchConfig defaultViewConfig.mode
+            
+            liftEffect $ case result of
+              Left err -> do
+                Console.error $ "Error fetching inventory: " <> err
+                loadingState.push false
+                errorState.push $ "Error: " <> err
+              
+              Right (InventoryData inv@(Inventory items)) -> do
+                Console.log $ "Loaded inventory successfully"
+                inventoryState.push inv  -- This updates the Poll that's passed to the component
+                loadingState.push false
+              
+              Right (Message msg) -> do
+                Console.log $ "Received message: " <> msg
+                loadingState.push false
+                errorState.push msg
 
   void $ matchesWith (parse route) matcher
 
