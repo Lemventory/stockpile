@@ -8,7 +8,7 @@ let
 in {
 
   options.services.${pgConfig.database.name}.postgresql = {
-    enable = mkEnableOption "Cheeblr PostgreSQL Service";
+    enable = mkEnableOption "stockpile PostgreSQL Service";
     package = mkOption {
       type = types.package;
       default = pkgs.postgresql;

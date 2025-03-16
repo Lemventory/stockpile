@@ -1,12 +1,12 @@
 cabal-version: 3.6
-name: cheeblr-backend
+name: stockpile-backend
 version: 0.0.0.3
 category: web
 author: Harry Pray IV
 maintainer: harryprayiv@harryprayiv.com
 copyright: Harry Pray IV
-homepage: https://github.com/harryprayiv/cheelbr/cheeblr-backend
-bug-reports: https://github.com/harryprayiv/cheeblr/issues
+homepage: https://github.com/harryprayiv/cheelbr/stockpile-backend
+bug-reports: https://github.com/harryprayiv/stockpile/issues
 
 flag use-pkg-config
     description: Use pkg-config to find libpq
@@ -54,11 +54,11 @@ library
                 , string-conversions
     hs-source-dirs: src
 
-executable cheeblr-backend
+executable stockpile-backend
     import: shared-properties
     main-is: Main.hs
     hs-source-dirs: app
-    build-depends: cheeblr-backend
+    build-depends: stockpile-backend
     pkgconfig-depends: libpq
 
 -- executable domain-modeler

@@ -86,7 +86,7 @@ let
         cleanup_port "$VITE_PORT"
       fi
 
-      export CHEEBLR_BASE_PATH="${toString ../.}"
+      export stockpile_BASE_PATH="${toString ../.}"
       
       # Start Vite with specific port and host
       npx vite --port "$VITE_PORT" --host --open

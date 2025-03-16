@@ -26,7 +26,7 @@ run = do
               DBConfig
                 { dbHost = "localhost"
                 , dbPort = 5432
-                , dbName = "cheeblr"
+                , dbName = "stockpile"
                 , dbUser = currentUser
                 , dbPassword = "postgres"
                 , poolSize = 10

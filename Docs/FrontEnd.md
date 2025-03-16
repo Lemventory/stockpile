@@ -1,4 +1,4 @@
-# Cheeblr Frontend Documentation
+# stockpile Frontend Documentation
 
 ## Table of Contents
 - [Overview](#overview)
@@ -18,7 +18,7 @@
 
 ## Overview
 
-Cheeblr is a comprehensive dispensary management system built with PureScript. The frontend provides a user-friendly interface for inventory management, point-of-sale operations, transaction processing, and compliance tracking. The application connects to a backend API to perform CRUD operations and business logic processing.
+stockpile is a comprehensive dispensary management system built with PureScript. The frontend provides a user-friendly interface for inventory management, point-of-sale operations, transaction processing, and compliance tracking. The application connects to a backend API to perform CRUD operations and business logic processing.
 
 ## Technologies
 

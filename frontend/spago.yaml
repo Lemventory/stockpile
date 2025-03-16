@@ -1,5 +1,5 @@
 package:
-  name: cheeblr
+  name: stockpile
   dependencies:
     - aff: ">=7.1.0 <8.0.0"
     - aff-promise: ">=4.0.0 <5.0.0"

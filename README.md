@@ -1,4 +1,4 @@
-# Cheeblr: Cannabis Dispensary Management System
+# stockpile: Cannabis Dispensary Management System
 
 A comprehensive full-stack web application for cannabis dispensary inventory, point-of-sale, and transaction management, utilizing PureScript for frontend development with Haskell backend services, all underpinned by a PostgreSQL database infrastructure.
 
@@ -73,7 +73,7 @@ Detailed documentation for each component of the system:
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd cheeblr
+   cd stockpile
    nix develop
    deploy
    ```

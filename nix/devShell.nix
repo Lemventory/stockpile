@@ -29,7 +29,7 @@ let
       runtimeInputs = with pkgs; [ rsync ];
       text = ''
         rsync -va --delete --exclude-from='.gitignore' --exclude='.git/' ~/workdir/${name}/ ~/plutus/workspace/scdWs/${name}/
-        rsync -va ~/.local/share/${name}/backups/ ~/plutus/cheeblrDB/
+        rsync -va ~/.local/share/${name}/backups/ ~/plutus/stockpileDB/
       '';
     };
   
@@ -179,7 +179,7 @@ let
         # Function to get Haskell source directories from cabal file
         get_haskell_dirs() {
             local project_dir=$1
-            local cabal_file="$project_dir/backend/cheeblr-backend.cabal"
+            local cabal_file="$project_dir/backend/stockpile-backend.cabal"
             local source_dirs=""
             
             if [ -f "$cabal_file" ]; then

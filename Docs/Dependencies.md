@@ -1,6 +1,6 @@
-# Cheeblr Dependencies
+# stockpile Dependencies
 
-This document lists all dependencies used in the Cheeblr project, including both the PureScript frontend and Haskell backend.
+This document lists all dependencies used in the stockpile project, including both the PureScript frontend and Haskell backend.
 
 ## Frontend Dependencies (PureScript)
 
@@ -99,10 +99,10 @@ The backend uses PostgreSQL-specific libraries:
 
 ## Dependency Graph
 
-The Cheeblr application is built with the following high-level dependency structure:
+The stockpile application is built with the following high-level dependency structure:
 
 ```
-Cheeblr
+stockpile
 ├── Frontend (PureScript)
 │   ├── Deku (UI Framework)
 │   │   ├── deku-core

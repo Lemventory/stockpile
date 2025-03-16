@@ -1,4 +1,4 @@
-# Cheeblr Backend Documentation
+# stockpile Backend Documentation
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@
 
 ## Overview
 
-The Cheeblr backend is a Haskell-based API server built for inventory and transaction management in retail operations, with a focus on cannabis dispensary requirements. It provides comprehensive functionality for inventory tracking, point-of-sale operations, sales transactions, and compliance reporting.
+The stockpile backend is a Haskell-based API server built for inventory and transaction management in retail operations, with a focus on cannabis dispensary requirements. It provides comprehensive functionality for inventory tracking, point-of-sale operations, sales transactions, and compliance reporting.
 
 The system is designed with a layered architecture following functional programming principles and leverages PostgreSQL for data persistence. It supports real-time inventory management, transaction processing, cash register operations, and financial reporting.
 
@@ -63,7 +63,7 @@ run = do
               DBConfig
                 { dbHost = "localhost"
                 , dbPort = 5432
-                , dbName = "cheeblr"
+                , dbName = "stockpile"
                 , dbUser = currentUser
                 , dbPassword = "postgres"
                 , poolSize = 10
@@ -524,7 +524,7 @@ corsPolicy =
 
 Server defaults:
 - **Port**: 8080
-- **Database**: localhost:5432/cheeblr
+- **Database**: localhost:5432/stockpile
 - **Username**: Current system user (obtained via `getLoginName`)
 - **Password**: "postgres"
 - **Connection Pool Size**: 10

@@ -1,4 +1,4 @@
-# Cheeblr Schema Generator
+# stockpile Schema Generator
 
 This tool generates consistent type definitions, validation rules, and database schemas from a single Dhall configuration file. It ensures that your PureScript frontend and Haskell backend share a consistent data model.
 
@@ -124,8 +124,8 @@ This creates matching types in both Haskell and PureScript with appropriate vali
 ## Project Structure
 
 When running `schema-generator deploy`, the files will be copied to:
-- `/home/bismuth/workdir/cheeblr/backend/src/Types.hs`
-- `/home/bismuth/workdir/cheeblr/frontend/src/Types.purs`
+- `/home/bismuth/workdir/stockpile/backend/src/Types.hs`
+- `/home/bismuth/workdir/stockpile/frontend/src/Types.purs`
 
 The SQL schema will be available at:
-- `/home/bismuth/workdir/cheeblr/backend/codegen/generated/001_initial_schema.sql`
+- `/home/bismuth/workdir/stockpile/backend/codegen/generated/001_initial_schema.sql`

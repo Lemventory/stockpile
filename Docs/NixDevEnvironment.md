@@ -1,6 +1,6 @@
-# Cheeblr Development Environment
+# stockpile Development Environment
 
-This document describes the Nix-based development environment for the Cheeblr project.
+This document describes the Nix-based development environment for the stockpile project.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document describes the Nix-based development environment for the Cheeblr pr
 
 ## Overview
 
-Cheeblr is a project built with a Haskell backend and PureScript frontend. The development environment is managed through Nix flakes, providing a reproducible and consistent setup across different machines and operating systems.
+stockpile is a project built with a Haskell backend and PureScript frontend. The development environment is managed through Nix flakes, providing a reproducible and consistent setup across different machines and operating systems.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ Cheeblr is a project built with a Haskell backend and PureScript frontend. The d
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd cheeblr
+   cd stockpile
    ```
 
 2. Enter the development shell:
@@ -71,12 +71,12 @@ The project uses PostgreSQL for data storage. The following commands are availab
 | `pg-create-schema <name>` | Create database schema |
 | `pg-stats` | Show database statistics |
 
-The PostgreSQL data is stored in `$HOME/.local/share/cheeblr/postgres`. The default connection parameters are:
+The PostgreSQL data is stored in `$HOME/.local/share/stockpile/postgres`. The default connection parameters are:
 
 - Port: 5432
 - User: Your system username
 - Password: "postgres"
-- Database: "cheeblr"
+- Database: "stockpile"
 
 ### Frontend
 
@@ -154,8 +154,8 @@ backup-project  # Backup project files and database
 ```
 
 This will:
-- Copy project files to `~/plutus/workspace/scdWs/cheeblr/`
-- Copy database backups to `~/plutus/cheeblrDB/`
+- Copy project files to `~/plutus/workspace/scdWs/stockpile/`
+- Copy database backups to `~/plutus/stockpileDB/`
 
 ### Open in VSCodium
 
@@ -207,7 +207,7 @@ If tmux sessions from previous runs are still active:
 
 ```bash
 tmux list-sessions    # List active sessions
-tmux kill-session -t cheeblr  # Kill the cheeblr session
+tmux kill-session -t stockpile  # Kill the stockpile session
 ```
 
 ## Project Structure
@@ -236,7 +236,7 @@ This project includes NixOS modules that can be imported in your NixOS configura
 { pkgs, ... }:
 {
   imports = [ 
-    (builtins.getFlake "github:your-username/cheeblr").nixosModules.default
+    (builtins.getFlake "github:your-username/stockpile").nixosModules.default
   ];
 }
 ```

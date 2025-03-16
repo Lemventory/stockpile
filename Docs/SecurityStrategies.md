@@ -1,6 +1,6 @@
-# Cheeblr Security Documentation
+# stockpile Security Documentation
 
-This document outlines the security architecture, best practices, and implementation guidelines for the Cheeblr application when deployed on a public network.
+This document outlines the security architecture, best practices, and implementation guidelines for the stockpile application when deployed on a public network.
 
 ## Table of Contents
 
@@ -41,7 +41,7 @@ This document outlines the security architecture, best practices, and implementa
 
 ### Recommended Primary Authentication Method: Libsodium Public-Key Authentication
 
-Based on objective security assessment, a Libsodium-based challenge-response with public-key cryptography offers the highest security level while maintaining reasonable usability for a specialized application like Cheeblr.
+Based on objective security assessment, a Libsodium-based challenge-response with public-key cryptography offers the highest security level while maintaining reasonable usability for a specialized application like stockpile.
 
 #### Key advantages:
 
@@ -55,7 +55,7 @@ Based on objective security assessment, a Libsodium-based challenge-response wit
 
 ### TLS Configuration Guidelines
 
-All Cheeblr communications should use TLS 1.2+ with the following configuration:
+All stockpile communications should use TLS 1.2+ with the following configuration:
 
 | Setting | Recommendation | Security Level |
 |---------|---------------|----------------|
@@ -70,7 +70,7 @@ All Cheeblr communications should use TLS 1.2+ with the following configuration:
 ### Implementation in Haskell Backend
 
 ```haskell
--- TLS configuration for Warp in Haskell (already used in your Cheeblr backend)
+-- TLS configuration for Warp in Haskell (already used in your stockpile backend)
 import Network.Wai.Handler.Warp
 import Network.Wai.Handler.WarpTLS
 
@@ -92,10 +92,10 @@ In the PureScript frontend, ensure all endpoints use HTTPS and WSS protocols:
 
 ```purescript
 baseUrl :: String
-baseUrl = "https://api.cheeblr.com"
+baseUrl = "https://api.stockpile.com"
 
 wsUrl :: String
-wsUrl = "wss://api.cheeblr.com/ws"
+wsUrl = "wss://api.stockpile.com/ws"
 ```
 
 ## WebSocket Security
@@ -202,7 +202,7 @@ authenticateWebSocket url = do
 2. **Server Handles Authentication (Haskell Implementation)**
 
 ```haskell
--- Server-side WebSocket authentication in Haskell for Cheeblr
+-- Server-side WebSocket authentication in Haskell for stockpile
 import qualified Data.Aeson as A
 import qualified Crypto.Sign.Ed25519 as Ed25519
 import qualified Data.ByteString.Base64 as B64
@@ -304,7 +304,7 @@ handleWSAuth pool wsConn = do
 | IP Reputation | Block known malicious IP addresses | ★★★☆☆ |
 | Anomaly Detection | Monitor for unusual patterns of authentication | ★★★★☆ |
 
-### Rate Limiting Implementation for Cheeblr
+### Rate Limiting Implementation for stockpile
 
 ```haskell
 -- Rate limiting middleware for Haskell Servant backend
@@ -405,7 +405,7 @@ rateLimitMiddleware limiter app req respond = do
 
 ## Security Audit Guidelines
 
-Before deploying Cheeblr to a public network, conduct a security audit covering:
+Before deploying stockpile to a public network, conduct a security audit covering:
 
 1. **Authentication Implementation**
    - Verify the cryptographic implementation is correct
