@@ -3,9 +3,8 @@ module UI.Transaction.CreateTransaction where
 import Prelude
 
 import API.Inventory (readInventory)
-import API.Transaction (createTransaction) as API
-import Data.Array (filter, find, foldl, length, null, replicate, (:))
-import Data.DateTime.Instant (toDateTime)
+-- import Control.Monad.List.Trans (filter)
+import Data.Array (find, foldl, length, null, (:))
 import Data.Either (Either(..))
 import Data.Finance.Currency (USD)
 import Data.Finance.Money (Discrete(..))
@@ -14,9 +13,7 @@ import Data.Foldable (for_)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
-import Data.String (Pattern(..), joinWith, trim)
-import Data.String as String
-import Data.Tuple (Tuple(..))
+import Data.String (Pattern(..), contains, trim)
 import Data.Tuple.Nested ((/\))
 import Deku.Control (text_)
 import Deku.Core (Nut)
@@ -30,740 +27,48 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Effect.Now (now)
 import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
-import Types.Transaction (PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
-import Types.UUID (parseUUID)
-import UI.Common.Form as F
+import Types.Transaction (PaymentMethod(..), TaxCategory(..), TransactionItem(..))
+import UI.Inventory.LiveInventoryView (liveInventoryView)
 import Utils.Money (formatMoney', fromDollars, toDollars)
 import Utils.UUIDGen (genUUID)
 import Web.Event.Event (target)
-import Web.Event.Event as Event
+import API.Transaction (createTransaction) as API
+import Data.Array (filter, find, foldl, length, null, (:))
+import Data.DateTime.Instant (toDateTime)
+import Data.Tuple (Tuple(..))
+import Deku.Control (text_)
+import Effect.Now (now)
+import Types.Transaction (PaymentMethod(..), PaymentTransaction(..), TaxCategory(..), Transaction(..), TransactionItem(..), TransactionStatus(..), TransactionType(..))
+import Types.UUID (parseUUID)
 import Web.HTML.HTMLInputElement as Input
-import Web.HTML.HTMLSelectElement as Select
 
-createTransaction :: Nut
-createTransaction = Deku.do
+-- Helper functions
+updateNumpad :: String -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
+updateNumpad digit setNumpadValue setItemQuantity = do
+  -- Get the current value
+  numpadValue <- readNumpadValueST
+  
+  -- Only allow one decimal point
+  let newValue = 
+        if digit == "." && contains (Pattern ".") numpadValue
+        then numpadValue
+        else numpadValue <> digit
+  
+  -- Update both displays
+  setNumpadValue newValue
+  setItemQuantity newValue
 
-  setItems /\ itemsValue <- useState []
-  setPayments /\ paymentsValue <- useState []
-  -- setCustomerId /\ customerIdValue <- useState Nothing
-  setEmployee /\ employeeValue <- useState ""
-  setRegisterId /\ registerIdValue <- useState ""
-  setLocationId /\ locationIdValue <- useState ""
-  setSubtotal /\ subtotalValue <- useState (Discrete 0)
-  setDiscountTotal /\ discountTotalValue <- useState (Discrete 0)
-  setTaxTotal /\ taxTotalValue <- useState (Discrete 0)
-  setTotal /\ totalValue <- useState (Discrete 0)
-  -- setStatus /\ statusValue <- useState Created
-  -- setTransactionType /\ transactionTypeValue <- useState Sale
+-- We need this stub since we can't directly read from Poll in an Effect
+readNumpadValueST :: Effect String
+readNumpadValueST = pure ""
 
-  setInventory /\ inventoryValue <- useState []
-  setSearchText /\ searchTextValue <- useState ""
-  setSelectedItem /\ selectedItemValue <- useState Nothing
-  setItemQuantity /\ itemQuantityValue <- useState "1"
-  setPaymentMethod /\ paymentMethodValue <- useState Cash
-  setPaymentAmount /\ paymentAmountValue <- useState ""
-  setTenderedAmount /\ tenderedAmountValue <- useState ""
-  setStatusMessage /\ statusMessageValue <- useState ""
-  setIsProcessing /\ isProcessingValue <- useState false
+-- Helper to read float values
+readFloat :: String -> Maybe Number
+readFloat str = Number.fromString (trim str)
 
-  D.div
-    [ DA.klass_ "transaction-container container mx-auto p-4"
-    , DL.load_ \_ -> do
-        liftEffect $ Console.log "Transaction component loading"
-
-        void $ launchAff do
-          employeeId <- liftEffect genUUID
-          registerId <- liftEffect genUUID
-          locationId <- liftEffect genUUID
-
-          liftEffect do
-            setEmployee (show employeeId)
-            setRegisterId (show registerId)
-            setLocationId (show locationId)
-
-        void $ launchAff do
-          result <- readInventory
-          liftEffect case result of
-            Right (InventoryData (Inventory items)) -> do
-              Console.log $ "Loaded " <> show (length items) <>
-                " inventory items"
-              setInventory items
-            Right (Message msg) -> do
-              Console.error $ "API Message: " <> msg
-              setStatusMessage $ "Error: " <> msg
-            Left err -> do
-              Console.error $ "Failed to load inventory: " <> err
-              setStatusMessage $ "Error loading inventory: " <> err
-    ]
-    [ D.h2
-        [ DA.klass_ "text-2xl font-bold mb-6" ]
-        [ text_ "New Transaction" ]
-
-    , D.div
-        [ DA.klass_ "inventory-search mb-8 p-4 border rounded" ]
-        [ D.h3
-            [ DA.klass_ "text-lg font-semibold mb-2" ]
-            [ text_ "Add Items" ]
-        , D.div
-            [ DA.klass_ "flex mb-4" ]
-            [ D.input
-                [ DA.klass_ "form-input flex-grow mr-2"
-                , DA.placeholder_ "Search inventory..."
-                , DA.value_ ""
-                , DL.input_ \evt -> do
-                    for_ (Event.target evt >>= Input.fromEventTarget) \el -> do
-                      value <- Input.value el
-                      setSearchText value
-                ]
-                []
-            ]
-        , D.div
-            [ DA.klass_ "inventory-results" ]
-            [ inventoryValue <#~> \items ->
-                let
-                  filteredItems =
-                    searchTextValue <#~> \text ->
-                      if text == "" then D.div_ []
-                      else D.div_
-                        ( filter
-                            ( \(MenuItem i) ->
-                                contains (toLowerCase i.name) (toLowerCase text)
-                                  ||
-                                    contains (toLowerCase i.brand)
-                                      (toLowerCase text)
-                            )
-                            items
-                            <#> \item@(MenuItem i) ->
-                              D.div
-                                [ DA.klass_
-                                    "inventory-item p-2 border rounded cursor-pointer hover:bg-gray-100"
-                                , DL.click_ \_ -> do
-                                    setSelectedItem (Just item)
-                                    setItemQuantity "1"
-                                ]
-                                [ D.div [ DA.klass_ "font-semibold" ]
-                                    [ text_ i.name ]
-                                , D.div [ DA.klass_ "text-sm" ]
-                                    [ text_ ("$" <> show i.price) ]
-                                ]
-                        )
-                in
-                  if null items then D.div [ DA.klass_ "text-gray-500" ]
-                    [ text_ "No items found" ]
-                  else D.div [ DA.klass_ "grid grid-cols-3 gap-2" ]
-                    ( map
-                        ( \item@(MenuItem i) ->
-                            D.div
-                              [ DA.klass_
-                                  "inventory-item p-2 border rounded cursor-pointer hover:bg-gray-100"
-                              , DL.click_ \_ -> do
-                                  setSelectedItem (Just item)
-                                  setItemQuantity "1"
-                              ]
-                              [ D.div [ DA.klass_ "font-semibold" ]
-                                  [ text_ i.name ]
-                              , D.div [ DA.klass_ "text-sm" ]
-                                  [ text_ ("$" <> show i.price) ]
-                              ]
-                        )
-                        items
-                    )
-            ]
-        ]
-
-    , D.div
-        [ DA.klass_ "selected-item mb-8" ]
-        [ selectedItemValue <#~> \maybeItem ->
-            case maybeItem of
-              Nothing -> D.div_ []
-              Just (MenuItem item) ->
-                D.div
-                  [ DA.klass_ "p-4 border rounded" ]
-                  [ D.h3
-                      [ DA.klass_ "text-lg font-semibold mb-2" ]
-                      [ text_ "Selected Item" ]
-                  , D.div [ DA.klass_ "font-semibold" ] [ text_ item.name ]
-                  , D.div [ DA.klass_ "text-sm mb-4" ]
-                      [ text_ ("$" <> show item.price) ]
-                  , D.div
-                      [ DA.klass_ "flex items-center" ]
-                      [ D.label
-                          [ DA.klass_ "mr-2" ]
-                          [ text_ "Quantity:" ]
-                      , D.input
-                          [ DA.klass_ "form-input w-20 mr-4"
-                          , DA.xtype_ "number"
-                          , DA.min_ "1"
-                          , DA.value_ "1"
-                          , DL.input_ \evt -> do
-                              for_ (target evt >>= Input.fromEventTarget) \el ->
-                                do
-                                  value <- Input.value el
-                                  setItemQuantity value
-                          ]
-                          []
-                      , D.button
-                          [ DA.klass_ (F.buttonClass "green")
-                          , runOn DL.click $
-                              map
-                                ( \args@
-                                     { qty
-                                     , maybeSelectedItem
-                                     , currSubtotal
-                                     , currTaxTotal
-                                     , currTotal
-                                     , currItems
-                                     } ->
-                                    if (maybeSelectedItem == Nothing) then
-                                      setStatusMessage "No item selected"
-                                    else case readFloat qty of
-                                      Nothing ->
-                                        setStatusMessage "Invalid quantity"
-                                      Just qtyNum ->
-                                        case maybeSelectedItem of
-                                          Just menuItem ->
-                                            processValidItem qtyNum
-                                              menuItem
-                                              currSubtotal
-                                              currTaxTotal
-                                              currTotal
-                                              currItems
-                                              setSubtotal
-                                              setTaxTotal
-                                              setTotal
-                                              setItems
-                                              setSelectedItem
-                                              setStatusMessage
-                                          Nothing ->
-                                            -- This shouldn't happen due to the earlier check
-                                            setStatusMessage "No item selected"
-                                )
-                                ( { qty: _
-                                  , maybeSelectedItem: _
-                                  , currSubtotal: _
-                                  , currTaxTotal: _
-                                  , currTotal: _
-                                  , currItems: _
-                                  }
-                                    <$> itemQuantityValue
-                                    <*> selectedItemValue
-                                    <*> subtotalValue
-                                    <*> taxTotalValue
-                                    <*> totalValue
-                                    <*> itemsValue
-                                )
-                          ]
-                          [ text_ "Add to Transaction" ]
-                      ]
-                  ]
-        ]
-
-    , D.div
-        [ DA.klass_ "transaction-items mb-8" ]
-        [ D.h3
-            [ DA.klass_ "text-lg font-semibold mb-2" ]
-            [ text_ "Transaction Items" ]
-        , itemsValue <#~> \items ->
-            if null items then
-              D.div [ DA.klass_ "text-gray-500" ] [ text_ "No items added yet" ]
-            else
-              D.table
-                [ DA.klass_ "w-full border" ]
-                [ D.thead_
-                    [ D.tr [ DA.klass_ "bg-gray-100" ]
-                        [ D.th [ DA.klass_ "p-2 text-left" ] [ text_ "Item" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ]
-                            [ text_ "Quantity" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ] [ text_ "Price" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ]
-                            [ text_ "Subtotal" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ] [ text_ "Tax" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ] [ text_ "Total" ]
-                        , D.th [ DA.klass_ "p-2" ] [ text_ "Actions" ]
-                        ]
-                    ]
-                , D.tbody_
-                    ( items <#> \(TransactionItem item) ->
-                        let
-                          taxTotal = foldl
-                            (\acc tax -> acc + toDiscrete tax.amount)
-                            (Discrete 0)
-                            item.taxes
-                          taxTotalMoney = fromDiscrete' taxTotal
-                        in
-                          D.tr [ DA.klass_ "border-t" ]
-                            [ D.td [ DA.klass_ "p-2" ]
-                                [ inventoryValue <#~> \invItems ->
-                                    let
-                                      itemInfo = find
-                                        ( \(MenuItem i) -> i.sku ==
-                                            item.menuItemSku
-                                        )
-                                        invItems
-                                    in
-                                      case itemInfo of
-                                        Just (MenuItem i) -> text_ i.name
-                                        Nothing -> text_ "Unknown Item"
-                                ]
-                            , D.td [ DA.klass_ "p-2 text-right" ]
-                                [ text_ (show item.quantity) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ]
-                                [ text_ (formatMoney' item.pricePerUnit) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ]
-                                [ text_ (formatMoney' item.subtotal) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ]
-                                [ text_ (formatMoney' taxTotalMoney) ]
-                            , D.td [ DA.klass_ "p-2 text-right" ]
-                                [ text_ (formatMoney' item.total) ]
-                            , D.td [ DA.klass_ "p-2 text-center" ]
-                                [ D.button
-                                    [ DA.klass_
-                                        "text-red-600 hover:text-red-800"
-                                    , runOn DL.click $
-                                        ( \currItems
-                                           currSubtotal
-                                           currTaxTotal
-                                           currTotal ->
-                                            do
-                                              let
-                                                updatedItems = filter
-                                                  ( \(TransactionItem i) -> i.id
-                                                      /= item.id
-                                                  )
-                                                  currItems
-
-                                              setSubtotal
-                                                ( currSubtotal - toDiscrete
-                                                    item.subtotal
-                                                )
-                                              setTaxTotal
-                                                (currTaxTotal - taxTotal)
-                                              setTotal
-                                                ( currTotal - toDiscrete
-                                                    item.total
-                                                )
-                                              setItems updatedItems
-                                              setStatusMessage
-                                                "Item removed from transaction"
-                                        ) <$> itemsValue <*> subtotalValue
-                                          <*> taxTotalValue
-                                          <*> totalValue
-                                    ]
-                                    [ text_ "Remove" ]
-                                ]
-                            ]
-                    )
-                ]
-        ]
-
-    , D.div
-        [ DA.klass_ "payment-section mb-8 p-4 border rounded" ]
-        [ D.h3
-            [ DA.klass_ "text-lg font-semibold mb-2" ]
-            [ text_ "Payment" ]
-        , D.div
-            [ DA.klass_ "grid grid-cols-2 gap-4" ]
-            [ D.div_
-                [ D.label
-                    [ DA.klass_ "block mb-2" ]
-                    [ text_ "Payment Method" ]
-                , D.select
-                    [ DA.klass_ "form-select w-full"
-                    , DL.change_ \evt -> do
-                        for_ (target evt >>= Select.fromEventTarget) \el -> do
-                          value <- Select.value el
-                          case value of
-                            "Cash" -> setPaymentMethod Cash
-                            "Credit" -> setPaymentMethod Credit
-                            "Debit" -> setPaymentMethod Debit
-                            "ACH" -> setPaymentMethod ACH
-                            "GiftCard" -> setPaymentMethod GiftCard
-                            _ -> setPaymentMethod Cash
-                    ]
-                    [ D.option [ DA.value_ "Cash" ] [ text_ "Cash" ]
-                    , D.option [ DA.value_ "Credit" ] [ text_ "Credit Card" ]
-                    , D.option [ DA.value_ "Debit" ] [ text_ "Debit Card" ]
-                    , D.option [ DA.value_ "ACH" ] [ text_ "ACH Transfer" ]
-                    , D.option [ DA.value_ "GiftCard" ] [ text_ "Gift Card" ]
-                    ]
-                ]
-            , D.div_
-                [ D.label
-                    [ DA.klass_ "block mb-2" ]
-                    [ text_ "Amount" ]
-                , D.input
-                    [ DA.klass_ "form-input w-full"
-                    , DA.xtype_ "text"
-                    , DA.placeholder_ "Amount"
-                    , DL.input_ \evt -> do
-                        for_ (target evt >>= Input.fromEventTarget) \el -> do
-                          value <- Input.value el
-                          setPaymentAmount value
-                    ]
-                    []
-                ]
-            ]
-        , paymentMethodValue <#~> \method ->
-            if method == Cash then
-              D.div
-                [ DA.klass_ "mt-4" ]
-                [ D.label
-                    [ DA.klass_ "block mb-2" ]
-                    [ text_ "Tendered Amount" ]
-                , D.input
-                    [ DA.klass_ "form-input w-full"
-                    , DA.xtype_ "text"
-                    , DA.placeholder_ "Tendered Amount"
-                    , DL.input_ \evt -> do
-                        for_ (target evt >>= Input.fromEventTarget) \el -> do
-                          value <- Input.value el
-                          setTenderedAmount value
-                    ]
-                    []
-                ]
-            else
-              D.div_ []
-        , D.button
-            [ DA.klass_ (F.buttonClass "blue" <> " mt-4")
-            , runOn DL.click $
-                ( \payAmt tenderedAmt method currPayments ->
-                    do
-                      case (readFloat payAmt) of
-                        Nothing -> do
-                          setStatusMessage "Invalid payment amount"
-                        Just amount -> do
-                          let
-                            tenderedAmount = case readFloat tenderedAmt of
-                              Just t -> t
-                              Nothing -> amount
-
-                            paymentAmount = fromDiscrete'
-                              (Discrete (Int.floor (amount * 100.0)))
-                            paymentTendered = fromDiscrete'
-                              (Discrete (Int.floor (tenderedAmount * 100.0)))
-                            change =
-                              if
-                                toDiscrete paymentTendered > toDiscrete
-                                  paymentAmount then
-                                fromDiscrete'
-                                  ( toDiscrete paymentTendered - toDiscrete
-                                      paymentAmount
-                                  )
-                              else fromDiscrete' (Discrete 0)
-
-                          void $ launchAff do
-                            paymentId <- liftEffect genUUID
-                            transactionId <- liftEffect genUUID
-
-                            let
-                              newPayment = PaymentTransaction
-                                { id: paymentId
-                                , transactionId: transactionId
-                                , method: method
-                                , amount: paymentAmount
-                                , tendered: paymentTendered
-                                , change: change
-                                , reference: Nothing
-                                , approved: true
-                                , authorizationCode: Nothing
-                                }
-
-                            liftEffect do
-                              setPayments (newPayment : currPayments)
-                              setPaymentAmount ""
-                              setTenderedAmount ""
-                              setStatusMessage "Payment added"
-                ) <$> paymentAmountValue
-                  <*> tenderedAmountValue
-                  <*> paymentMethodValue
-                  <*> paymentsValue
-            ]
-            [ text_ "Add Payment" ]
-        ]
-
-    , D.div
-        [ DA.klass_ "payment-list mb-8" ]
-        [ D.h3
-            [ DA.klass_ "text-lg font-semibold mb-2" ]
-            [ text_ "Payment Details" ]
-        , paymentsValue <#~> \payments ->
-            if null payments then
-              D.div [ DA.klass_ "text-gray-500" ]
-                [ text_ "No payments added yet" ]
-            else
-              D.table
-                [ DA.klass_ "w-full border" ]
-                [ D.thead_
-                    [ D.tr [ DA.klass_ "bg-gray-100" ]
-                        [ D.th [ DA.klass_ "p-2 text-left" ] [ text_ "Method" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ] [ text_ "Amount" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ]
-                            [ text_ "Tendered" ]
-                        , D.th [ DA.klass_ "p-2 text-right" ] [ text_ "Change" ]
-                        , D.th [ DA.klass_ "p-2" ] [ text_ "Actions" ]
-                        ]
-                    ]
-                , D.tbody_
-                    ( payments <#> \(PaymentTransaction payment) ->
-                        D.tr [ DA.klass_ "border-t" ]
-                          [ D.td [ DA.klass_ "p-2" ]
-                              [ text_ (show payment.method) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ]
-                              [ text_ (formatMoney' payment.amount) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ]
-                              [ text_ (formatMoney' payment.tendered) ]
-                          , D.td [ DA.klass_ "p-2 text-right" ]
-                              [ text_ (formatMoney' payment.change) ]
-                          , D.td [ DA.klass_ "p-2 text-center" ]
-                              [ D.button
-                                  [ DA.klass_ "text-red-600 hover:text-red-800"
-                                  , runOn DL.click $
-                                      ( \currPayments -> do
-                                          let
-                                            updatedPayments = filter
-                                              ( \(PaymentTransaction p) -> p.id
-                                                  /= payment.id
-                                              )
-                                              currPayments
-                                          setPayments updatedPayments
-                                          setStatusMessage "Payment removed"
-                                      ) <$> paymentsValue
-                                  ]
-                                  [ text_ "Remove" ]
-                              ]
-                          ]
-                    )
-                ]
-        ]
-
-    , D.div
-        [ DA.klass_ "transaction-summary mb-8 p-4 border rounded bg-gray-50" ]
-        [ D.h3
-            [ DA.klass_ "text-lg font-semibold mb-2 border-b pb-2" ]
-            [ text_ "Transaction Summary" ]
-        , D.div
-            [ DA.klass_ "grid grid-cols-2 gap-2" ]
-            [ D.div [ DA.klass_ "text-right font-semibold" ]
-                [ text_ "Subtotal:" ]
-            , D.div [ DA.klass_ "text-right" ]
-                [ subtotalValue <#~> \amount -> text_
-                    (formatMoney' (fromDiscrete' amount))
-                ]
-            , D.div [ DA.klass_ "text-right font-semibold" ]
-                [ text_ "Discount:" ]
-            , D.div [ DA.klass_ "text-right" ]
-                [ discountTotalValue <#~> \amount -> text_
-                    (formatMoney' (fromDiscrete' amount))
-                ]
-            , D.div [ DA.klass_ "text-right font-semibold" ] [ text_ "Tax:" ]
-            , D.div [ DA.klass_ "text-right" ]
-                [ taxTotalValue <#~> \amount -> text_
-                    (formatMoney' (fromDiscrete' amount))
-                ]
-            , D.div
-                [ DA.klass_ "text-right font-semibold text-lg border-t pt-1" ]
-                [ text_ "Total:" ]
-            , D.div [ DA.klass_ "text-right text-lg border-t pt-1" ]
-                [ totalValue <#~> \amount -> text_
-                    (formatMoney' (fromDiscrete' amount))
-                ]
-            , D.div [ DA.klass_ "text-right font-semibold pt-4" ]
-                [ text_ "Payment Total:" ]
-            , D.div [ DA.klass_ "text-right pt-4" ]
-                [ paymentsValue <#~> \payments ->
-                    let
-                      paymentTotal = foldl
-                        ( \acc (PaymentTransaction p) -> acc + toDiscrete
-                            p.amount
-                        )
-                        (Discrete 0)
-                        payments
-                    in
-                      text_ (formatMoney' (fromDiscrete' paymentTotal))
-                ]
-            , D.div [ DA.klass_ "text-right font-semibold" ]
-                [ text_ "Remaining:" ]
-            , D.div [ DA.klass_ "text-right" ]
-                [ (Tuple <$> totalValue <*> paymentsValue) <#~>
-                    \(Tuple total payments) ->
-                      let
-                        paymentTotal = foldl
-                          ( \acc (PaymentTransaction p) -> acc + toDiscrete
-                              p.amount
-                          )
-                          (Discrete 0)
-                          payments
-                        remaining = total - paymentTotal
-                      in
-                        if remaining <= Discrete 0 then D.span
-                          [ DA.klass_ "text-green-600" ]
-                          [ text_ "$0.00" ]
-                        else D.span [ DA.klass_ "text-red-600" ]
-                          [ text_ (formatMoney' (fromDiscrete' remaining)) ]
-                ]
-            ]
-        ]
-
-    , D.div
-        [ DA.klass_ "action-buttons flex justify-between" ]
-        [ D.button
-            [ DA.klass_ (F.buttonClass "red")
-            , DL.click_ \_ -> do
-                setItems []
-                setPayments []
-                setSubtotal (Discrete 0)
-                setDiscountTotal (Discrete 0)
-                setTaxTotal (Discrete 0)
-                setTotal (Discrete 0)
-                setStatusMessage "Transaction cleared"
-            ]
-            [ text_ "Clear Transaction" ]
-
-        , D.button
-            [ DA.klass_ (F.buttonClass "green")
-            , DA.disabled $
-                isProcessingValue <#> \isProcessing ->
-                  if isProcessing then "true" else ""
-            , runOn DL.click $
-                ( \currItems
-                   currPayments
-                   currTotal
-                   empId
-                   regId
-                   locId
-                   discTotal
-                   taxTotal ->
-                    do
-                      if null currItems then do
-                        setStatusMessage
-                          "Cannot complete: No items in transaction"
-                      else do
-                        let
-                          paymentTotal = foldl
-                            ( \acc (PaymentTransaction p) -> acc + toDiscrete
-                                p.amount
-                            )
-                            (Discrete 0)
-                            currPayments
-                        if paymentTotal < currTotal then do
-                          setStatusMessage
-                            "Cannot complete: Payment amount is insufficient"
-                        else do
-                          setIsProcessing true
-                          setStatusMessage "Processing transaction..."
-
-                          void $ launchAff do
-                            transactionId <- liftEffect genUUID
-                            currentTime <- liftEffect now
-
-                            let
-                              curTime = toDateTime currentTime
-                              updatedItems = map
-                                ( \(TransactionItem item) ->
-                                    TransactionItem
-                                      (item { transactionId = transactionId })
-                                )
-                                currItems
-
-                              updatedPayments = map
-                                ( \(PaymentTransaction payment) ->
-                                    PaymentTransaction
-                                      ( payment
-                                          { transactionId = transactionId }
-                                      )
-                                )
-                                currPayments
-
-                              employeeUUID = parseUUID empId
-                              registerUUID = parseUUID regId
-                              locationUUID = parseUUID locId
-
-                            case
-                              Tuple (Tuple employeeUUID registerUUID)
-                                locationUUID
-                              of
-                              Tuple (Tuple (Just empId') (Just regId'))
-                                (Just locId') ->
-                                do
-                                  let
-                                    transaction = Transaction
-                                      { id: transactionId
-                                      , status: Completed
-                                      , created: toDateTime currentTime
-                                      , completed: Just curTime
-                                      , customer: Nothing
-                                      , employee: empId'
-                                      , register: regId'
-                                      , location: locId'
-                                      , items: updatedItems
-                                      , payments: updatedPayments
-                                      , subtotal: fromDiscrete'
-                                          (currTotal - taxTotal + discTotal)
-                                      , discountTotal: fromDiscrete' discTotal
-                                      , taxTotal: fromDiscrete' taxTotal
-                                      , total: fromDiscrete' currTotal
-                                      , transactionType: Sale
-                                      , isVoided: false
-                                      , voidReason: Nothing
-                                      , isRefunded: false
-                                      , refundReason: Nothing
-                                      , referenceTransactionId: Nothing
-                                      , notes: Nothing
-                                      }
-
-                                  result <- API.createTransaction transaction
-
-                                  liftEffect case result of
-                                    Right completedTx -> do
-                                      setItems []
-                                      setPayments []
-                                      setSubtotal (Discrete 0)
-                                      setDiscountTotal (Discrete 0)
-                                      setTaxTotal (Discrete 0)
-                                      setTotal (Discrete 0)
-                                      setStatusMessage
-                                        "Transaction completed successfully"
-                                    Left err -> do
-                                      setStatusMessage $
-                                        "Error completing transaction: " <> err
-
-                              _ -> liftEffect $ setStatusMessage
-                                "Invalid employee, register or location ID"
-
-                            liftEffect $ setIsProcessing false
-                ) <$> itemsValue
-                  <*> paymentsValue
-                  <*> totalValue
-                  <*> employeeValue
-                  <*> registerIdValue
-                  <*> locationIdValue
-                  <*> discountTotalValue
-                  <*> taxTotalValue
-            ]
-            [ isProcessingValue <#~> \isProcessing ->
-                if isProcessing then text_ "Processing..."
-                else text_ "Complete Transaction"
-            ]
-        ]
-
-    , D.div
-        [ DA.klass_ "status-message mt-4 p-2 text-center" ]
-        [ statusMessageValue <#~> \msg ->
-            if msg == "" then
-              D.span_ []
-            else if contains "Error" msg then
-              D.div [ DA.klass_ "bg-red-100 text-red-800 p-2 rounded" ]
-                [ text_ msg ]
-            else
-              D.div [ DA.klass_ "bg-green-100 text-green-800 p-2 rounded" ]
-                [ text_ msg ]
-        ]
-    ]
-
-processValidItem
-  :: Number
+-- Helper to process valid items
+processValidItem :: Number
   -> MenuItem
   -> Discrete USD
   -> Discrete USD
@@ -775,10 +80,12 @@ processValidItem
   -> (Array TransactionItem -> Effect Unit)
   -> (Maybe MenuItem -> Effect Unit)
   -> (String -> Effect Unit)
+  -> (String -> Effect Unit)
+  -> (String -> Effect Unit)
   -> Effect Unit
-processValidItem
+processValidItem 
   qtyNum
-  (MenuItem item)
+  menuItem@(MenuItem item)
   currSubtotal
   currTaxTotal
   currTotal
@@ -788,11 +95,12 @@ processValidItem
   setTotal
   setItems
   setSelectedItem
-  setStatusMessage = do
+  setStatusMessage
+  setNumpadValue
+  setItemQuantity = do
   void $ launchAff do
     itemId <- liftEffect genUUID
     transactionId <- liftEffect genUUID
-    currentTime <- liftEffect now
 
     let
       priceInDollars = toDollars item.price
@@ -802,18 +110,14 @@ processValidItem
       qtyAsInt = Int.floor qtyNum
       itemSubtotal = fromDiscrete' (price * (Discrete qtyAsInt))
 
-      -- Fixed tax calculation - convert to Int, calculate, then convert back
       taxRate = 0.1
       taxRateInt = Int.floor (taxRate * 100.0)
 
-      -- Extract the raw Int value from Discrete
       subtotalAsInt = case toDiscrete itemSubtotal of
         Discrete n -> n
 
-      -- Calculate tax amount in Int
       taxAmountInt = (subtotalAsInt * taxRateInt) / 100
 
-      -- Convert back to DiscreteMoney
       itemTaxTotal = fromDiscrete' (Discrete taxAmountInt)
 
       itemTotal = itemSubtotal + itemTaxTotal
@@ -844,23 +148,862 @@ processValidItem
       setItems (newItem : currItems)
       setSelectedItem Nothing
       setStatusMessage "Item added to transaction"
+      setNumpadValue ""
+      setItemQuantity "1"
 
-readFloat :: String -> Maybe Number
-readFloat str = Number.fromString (trim str)
-
-contains :: String -> String -> Boolean
-contains str substr =
-  case String.indexOf (Pattern substr) str of
-    Just _ -> true
-    Nothing -> false
-
-toLowerCase :: String -> String
-toLowerCase = String.toLower
-
-padStart :: Int -> String -> String
-padStart targetLength str =
+formatCentsToDollars :: Int -> String
+formatCentsToDollars cents =
   let
-    paddingLength = max 0 (targetLength - String.length str)
-    padding = replicate paddingLength "0"
+    dollars = cents / 100
+    centsRemaining = cents `mod` 100
+    centsStr = if centsRemaining < 10
+               then "0" <> show centsRemaining
+               else show centsRemaining
   in
-    joinWith "" padding <> str
+    show dollars <> "." <> centsStr
+
+createTransaction :: Nut
+createTransaction = Deku.do
+  -- State for cart and transaction
+  setItems /\ itemsValue <- useState []
+  setPayments /\ paymentsValue <- useState []
+
+  -- Transaction data
+  setEmployee /\ employeeValue <- useState ""
+  setRegisterId /\ registerIdValue <- useState ""
+  setLocationId /\ locationIdValue <- useState ""
+  setSubtotal /\ subtotalValue <- useState (Discrete 0)
+  setDiscountTotal /\ discountTotalValue <- useState (Discrete 0)
+  setTaxTotal /\ taxTotalValue <- useState (Discrete 0)
+  setTotal /\ totalValue <- useState (Discrete 0)
+
+  -- Inventory and search
+  setInventory /\ inventoryValue <- useState (Inventory [])
+  
+  -- Selected item and quantity
+  setSelectedItem /\ selectedItemValue <- useState Nothing
+  setItemQuantity /\ itemQuantityValue <- useState "1"
+  
+  -- Payment information
+  setPaymentMethod /\ paymentMethodValue <- useState Cash
+  setPaymentAmount /\ paymentAmountValue <- useState ""
+  setTenderedAmount /\ tenderedAmountValue <- useState ""
+  
+  -- UI state
+  setStatusMessage /\ statusMessageValue <- useState ""
+  setIsProcessing /\ isProcessingValue <- useState false
+  setActiveCategory /\ activeCategoryValue <- useState "All Items"
+  setNumpadValue /\ numpadValueValue <- useState ""
+
+  -- Function to update items from inventory selector
+  let 
+    handleUpdateItems :: Array TransactionItem -> Effect Unit
+    handleUpdateItems newItems = do
+      -- Calculate totals from new items
+      let 
+        calcTotals = foldl (\acc (TransactionItem item) -> 
+          { subtotal: acc.subtotal + (toDiscrete item.subtotal)
+          , tax: acc.tax + (foldl (\taxAcc tax -> taxAcc + (toDiscrete tax.amount)) (Discrete 0) item.taxes)
+          , total: acc.total + (toDiscrete item.total)
+          }) { subtotal: Discrete 0, tax: Discrete 0, total: Discrete 0 } newItems
+      
+      -- Update transaction state
+      setItems newItems
+      setSubtotal calcTotals.subtotal
+      setTaxTotal calcTotals.tax
+      setTotal calcTotals.total
+      setStatusMessage "Transaction items updated"
+
+  D.div
+    [ DA.klass_ "tx-main-container"
+    , DL.load_ \_ -> do
+        liftEffect $ Console.log "Transaction component loading"
+
+        void $ launchAff do
+          employeeId <- liftEffect genUUID
+          registerId <- liftEffect genUUID
+          locationId <- liftEffect genUUID
+
+          liftEffect do
+            setEmployee (show employeeId)
+            setRegisterId (show registerId)
+            setLocationId (show locationId)
+
+        void $ launchAff do
+          result <- readInventory
+          liftEffect case result of
+            Right (InventoryData inventory@(Inventory items)) -> do
+              Console.log $ "Loaded " <> show (length items) <> " inventory items"
+              setInventory inventory
+              setStatusMessage ""
+            Right (Message msg) -> do
+              Console.error $ "API Message: " <> msg
+              setStatusMessage $ "Error: " <> msg
+            Left err -> do
+              Console.error $ "Failed to load inventory: " <> err
+              setStatusMessage $ "Error loading inventory: " <> err
+    ]
+    [ 
+      -- Content area with cart and inventory
+      D.div
+        [ DA.klass_ "tx-content-area" ]
+        [
+          -- Cart container
+          D.div
+            [ DA.klass_ "tx-cart-container" ]
+            [
+              -- Cart header with column titles
+              D.div
+                [ DA.klass_ "tx-cart-header" ]
+                [
+                  D.div 
+                    [ DA.klass_ "tx-item-details" ]
+                    [
+                      D.div [ DA.klass_ "tx-item-quantity" ] [ text_ "Qty" ],
+                      D.div [ DA.klass_ "tx-item-name" ] [ text_ "Item" ]
+                    ],
+                  D.div [ DA.klass_ "tx-item-price" ] [ text_ "Price" ],
+                  D.div [ DA.klass_ "tx-item-total" ] [ text_ "Total" ],
+                  D.div [ DA.klass_ "tx-item-actions" ] [ text_ "" ]
+                ],
+              
+              -- Scrollable cart items area
+              D.div
+                [ DA.klass_ "tx-cart-items" ]
+                [ itemsValue <#~> \items ->
+                    if null items then
+                      D.div [ DA.klass_ "tx-empty-cart" ] [ text_ "No items added yet" ]
+                    else
+                      D.div_ (items <#> \(TransactionItem item) ->
+                        let
+                          taxTotal = foldl (\acc tax -> acc + (toDiscrete tax.amount)) (Discrete 0) item.taxes
+                          taxTotalMoney = fromDiscrete' taxTotal
+                        in
+                          D.div
+                            [ DA.klass_ "tx-cart-item" ]
+                            [
+                              D.div 
+                                [ DA.klass_ "tx-item-details" ]
+                                [
+                                  D.div [ DA.klass_ "tx-item-quantity" ] [ text_ (show item.quantity) ],
+                                  D.div [ DA.klass_ "tx-item-name" ] 
+                                    [ inventoryValue <#~> \(Inventory invItems) ->
+                                        let
+                                          itemInfo = find (\(MenuItem i) -> i.sku == item.menuItemSku) invItems
+                                        in
+                                          case itemInfo of
+                                            Just (MenuItem i) -> text_ i.name
+                                            Nothing -> text_ "Unknown Item"
+                                    ]
+                                ],
+                              D.div [ DA.klass_ "tx-item-price" ] [ text_ (formatMoney' item.pricePerUnit) ],
+                              D.div [ DA.klass_ "tx-item-total" ] [ text_ (formatMoney' item.total) ],
+                              D.div 
+                                [ DA.klass_ "tx-item-actions" ]
+                                [
+                                  D.button
+                                    [ DA.klass_ "tx-delete-btn"
+                                    , runOn DL.click $ (\currItems currSubtotal currTaxTotal currTotal -> do
+                                        let
+                                          updatedItems = filter (\(TransactionItem i) -> i.id /= item.id) currItems
+                                        setSubtotal (currSubtotal - toDiscrete item.subtotal)
+                                        setTaxTotal (currTaxTotal - taxTotal)
+                                        setTotal (currTotal - toDiscrete item.total)
+                                        setItems updatedItems
+                                        setStatusMessage "Item removed from transaction"
+                                      ) <$> itemsValue <*> subtotalValue <*> taxTotalValue <*> totalValue
+                                    ]
+                                    [ text_ "✕" ]
+                                ]
+                            ]
+                      )
+                  
+                ],
+              
+              -- Cart totals area
+              D.div
+                [ DA.klass_ "tx-cart-totals" ]
+                [
+                  D.div
+                    [ DA.klass_ "tx-total-row" ]
+                    [
+                      D.div_ [ text_ "Subtotal" ],
+                      D.div_ [ subtotalValue <#~> \amount -> text_ (formatMoney' (fromDiscrete' amount)) ]
+                    ],
+                  D.div
+                    [ DA.klass_ "tx-total-row" ]
+                    [
+                      D.div_ [ text_ "Tax" ],
+                      D.div_ [ taxTotalValue <#~> \amount -> text_ (formatMoney' (fromDiscrete' amount)) ]
+                    ],
+                  D.div
+                    [ DA.klass_ "tx-grand-total" ]
+                    [
+                      D.div_ [ text_ "Total" ],
+                      D.div_ [ totalValue <#~> \amount -> text_ (formatMoney' (fromDiscrete' amount)) ]
+                    ]
+                ]
+            ],
+          
+          -- Inventory container - now using LiveInventoryView component 
+          D.div
+            [ DA.klass_ "tx-inventory-container" ]
+            [ liveInventoryView handleUpdateItems inventoryValue ]
+        ],
+      
+      -- Bottom area with payment options
+      D.div
+        [ DA.klass_ "tx-bottom-area" ]
+        [
+          -- Payment panel
+          D.div
+            [ DA.klass_ "tx-payment-panel" ]
+            [
+              D.div
+                [ DA.klass_ "tx-payment-header" ]
+                [ text_ "Payment Options" ],
+              
+              -- Payment methods
+              D.div
+                [ DA.klass_ "tx-payment-methods" ]
+                [
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == Cash then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod Cash
+                    ]
+                    [ text_ "Cash" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == Credit then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod Credit
+                    ]
+                    [ text_ "Credit Card" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == Debit then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod Debit
+                    ]
+                    [ text_ "Debit Card" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == ACH then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod ACH
+                    ]
+                    [ text_ "ACH" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == GiftCard then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod GiftCard
+                    ]
+                    [ text_ "Gift Card" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == StoredValue then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod StoredValue
+                    ]
+                    [ text_ "Stored Value" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == Mixed then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod Mixed
+                    ]
+                    [ text_ "Split" ],
+                  D.div
+                    [ DA.klass $ paymentMethodValue <#> \method ->
+                        "payment-method" <> if method == Other "" then " active" else ""
+                    , DL.click_ \_ -> setPaymentMethod (Other "")
+                    ]
+                    [ text_ "Other" ]
+                ],
+              
+              -- Payment amount inputs (only show when payment method is selected)
+              D.div
+                [ DA.klass_ "tx-payment-inputs mt-4" ]
+                [
+                  D.div
+                    [ DA.klass_ "tx-payment-input-row" ]
+                    [
+                      D.label [ DA.klass_ "tx-payment-label" ] [ text_ "Amount:" ],
+                      D.input
+                        [ DA.klass_ "tx-payment-field"
+                        , DA.xtype_ "text"
+                        , DA.value paymentAmountValue
+                        , DL.input_ \evt -> do
+                            for_ (target evt >>= Input.fromEventTarget) \el -> do
+                              value <- Input.value el
+                              setPaymentAmount value
+                        ]
+                        []
+                    ],
+                  
+                  -- Show tendered amount only for cash payments
+                  paymentMethodValue <#~> \method ->
+                    if method == Cash then
+                      D.div
+                        [ DA.klass_ "tx-payment-input-row" ]
+                        [
+                          D.label [ DA.klass_ "tx-payment-label" ] [ text_ "Tendered:" ],
+                          D.input
+                            [ DA.klass_ "tx-payment-field"
+                            , DA.xtype_ "text"
+                            , DA.value tenderedAmountValue
+                            , DL.input_ \evt -> do
+                                for_ (target evt >>= Input.fromEventTarget) \el -> do
+                                  value <- Input.value el
+                                  setTenderedAmount value
+                            ]
+                            []
+                        ]
+                    else
+                      D.div_ []
+                ],
+              
+              -- Display existing payments
+              D.div
+                [ DA.klass_ "tx-existing-payments" ]
+                [ paymentsValue <#~> \payments ->
+                    if null payments 
+                    then D.div_ []
+                    else D.div
+                      [ DA.klass_ "tx-payments-container" ]
+                      [ 
+                        D.div [ DA.klass_ "tx-payments-header" ] [ text_ "Current Payments:" ],
+                        D.div_ (payments <#> \(PaymentTransaction p) ->
+                          D.div
+                            [ DA.klass_ "tx-payment-item" ]
+                            [
+                              D.div [ DA.klass_ "tx-payment-method" ] [ text_ (show p.method) ],
+                              D.div [ DA.klass_ "tx-payment-amount" ] [ text_ (formatMoney' p.amount) ],
+                              D.button
+                                [ DA.klass_ "tx-payment-remove"
+                                , runOn DL.click $ (\currPayments -> do
+                                    let updatedPayments = filter (\(PaymentTransaction pay) -> 
+                                                            pay.id /= p.id) currPayments
+                                    setPayments updatedPayments
+                                  ) <$> paymentsValue
+                                ]
+                                [ text_ "✕" ]
+                            ]
+                        )
+                      ]
+                ],
+              
+              -- Payment totals
+              D.div
+                [ DA.klass_ "tx-payment-summary" ]
+                [
+                  (Tuple <$> totalValue <*> paymentsValue) <#~> \(Tuple total payments) ->
+                    let
+                      paymentTotal = foldl (\acc (PaymentTransaction p) -> 
+                                          acc + toDiscrete p.amount) (Discrete 0) payments
+                      remaining = total - paymentTotal
+                      paidClass = if remaining <= Discrete 0 then "tx-paid" else "tx-unpaid"
+                    in
+                      D.div
+                        [ DA.klass_ "tx-payment-remaining" ]
+                        [
+                          D.div [ DA.klass_ "tx-remaining-label" ] [ text_ "Remaining:" ],
+                          D.div
+                            [ DA.klass_ ("tx-remaining-amount " <> paidClass) ]
+                            [ text_ (formatMoney' (fromDiscrete' (max (Discrete 0) remaining))) ]
+                        ]
+                ],
+              
+              -- Add payment button
+              D.button
+                [ DA.klass_ "tx-add-payment-btn"
+                , runOn DL.click $
+                    (\payAmt tenderedAmt method currPayments ->
+                      do
+                        case (readFloat payAmt) of
+                          Nothing -> do
+                            setStatusMessage "Invalid payment amount"
+                          Just amount -> do
+                            let
+                              tenderedAmount = case readFloat tenderedAmt of
+                                Just t -> t
+                                Nothing -> amount
+
+                              paymentAmount = fromDiscrete' (Discrete (Int.floor (amount * 100.0)))
+                              paymentTendered = fromDiscrete' (Discrete (Int.floor (tenderedAmount * 100.0)))
+                              change = if toDiscrete paymentTendered > toDiscrete paymentAmount 
+                                      then fromDiscrete' (toDiscrete paymentTendered - toDiscrete paymentAmount)
+                                      else fromDiscrete' (Discrete 0)
+
+                            void $ launchAff do
+                              paymentId <- liftEffect genUUID
+                              transactionId <- liftEffect genUUID
+
+                              let
+                                newPayment = PaymentTransaction
+                                  { id: paymentId
+                                  , transactionId: transactionId
+                                  , method: method
+                                  , amount: paymentAmount
+                                  , tendered: paymentTendered
+                                  , change: change
+                                  , reference: Nothing
+                                  , approved: true
+                                  , authorizationCode: Nothing
+                                  }
+
+                              liftEffect do
+                                setPayments (newPayment : currPayments)
+                                setPaymentAmount ""
+                                setTenderedAmount ""
+                                setStatusMessage "Payment added"
+                    ) <$> paymentAmountValue <*> tenderedAmountValue <*> paymentMethodValue <*> paymentsValue
+                ]
+                [ text_ "Add Payment" ],
+              
+              -- Payment action buttons
+              D.div
+                [ DA.klass_ "tx-payment-actions" ]
+                [
+                  D.button
+                    [ DA.klass_ "tx-cancel-btn"
+                    , DL.click_ \_ -> do
+                        setItems []
+                        setPayments []
+                        setSubtotal (Discrete 0)
+                        setDiscountTotal (Discrete 0)
+                        setTaxTotal (Discrete 0)
+                        setTotal (Discrete 0)
+                        setStatusMessage "Transaction cleared"
+                    ]
+                    [ text_ "Cancel Sale" ],
+                  D.button
+                    [ DA.klass_ "tx-checkout-btn"
+                    , DA.disabled $ isProcessingValue <#> \isProcessing ->
+                        if isProcessing then "true" else ""
+                    , runOn DL.click $
+                        (\currItems currPayments currTotal empId regId locId discTotal taxTotal ->
+                          do
+                            if null currItems then do
+                              setStatusMessage "Cannot complete: No items in transaction"
+                            else do
+                              let
+                                paymentTotal = foldl (\acc (PaymentTransaction p) -> 
+                                                acc + toDiscrete p.amount) (Discrete 0) currPayments
+                              if paymentTotal < currTotal then do
+                                setStatusMessage "Cannot complete: Payment amount is insufficient"
+                              else do
+                                setIsProcessing true
+                                setStatusMessage "Processing transaction..."
+
+                                void $ launchAff do
+                                  transactionId <- liftEffect genUUID
+                                  currentTime <- liftEffect now
+
+                                  let
+                                    curTime = toDateTime currentTime
+                                    updatedItems = map (\(TransactionItem item) ->
+                                                    TransactionItem (item { transactionId = transactionId })) currItems
+
+                                    updatedPayments = map (\(PaymentTransaction payment) ->
+                                                      PaymentTransaction (payment { transactionId = transactionId })) currPayments
+
+                                    employeeUUID = parseUUID empId
+                                    registerUUID = parseUUID regId
+                                    locationUUID = parseUUID locId
+
+                                  case Tuple (Tuple employeeUUID registerUUID) locationUUID of
+                                    Tuple (Tuple (Just empId') (Just regId')) (Just locId') -> do
+                                      liftEffect $ Console.log $ "Creating transaction with ID: " <> show transactionId
+                                      
+                                      let
+                                        transaction = Transaction
+                                          { id: transactionId
+                                          , status: Completed
+                                          , created: toDateTime currentTime
+                                          , completed: Just curTime
+                                          , customer: Nothing
+                                          , employee: empId'
+                                          , register: regId'
+                                          , location: locId'
+                                          , items: updatedItems
+                                          , payments: updatedPayments
+                                          , subtotal: fromDiscrete' (currTotal - taxTotal + discTotal)
+                                          , discountTotal: fromDiscrete' discTotal
+                                          , taxTotal: fromDiscrete' taxTotal
+                                          , total: fromDiscrete' currTotal
+                                          , transactionType: Sale
+                                          , isVoided: false
+                                          , voidReason: Nothing
+                                          , isRefunded: false
+                                          , refundReason: Nothing
+                                          , referenceTransactionId: Nothing
+                                          , notes: Nothing
+                                          }
+                                      
+                                      result <- API.createTransaction transaction
+                                      
+                                      liftEffect case result of
+                                        Right completedTx -> do
+                                          setItems []
+                                          setPayments []
+                                          setSubtotal (Discrete 0)
+                                          setDiscountTotal (Discrete 0)
+                                          setTaxTotal (Discrete 0)
+                                          setTotal (Discrete 0)
+                                          setStatusMessage "Transaction completed successfully"
+                                        Left err -> do
+                                          setStatusMessage $ "Error completing transaction: " <> err
+
+                                    _ -> liftEffect $ setStatusMessage "Invalid employee, register or location ID"
+
+                                  liftEffect $ setIsProcessing false
+                        ) <$> itemsValue <*> paymentsValue <*> totalValue <*> employeeValue <*> registerIdValue <*> locationIdValue <*> discountTotalValue <*> taxTotalValue
+                    ]
+                    [ totalValue <#~> \totalVal -> 
+                        text_ ("Process Payment " <> formatMoney' (fromDiscrete' totalVal))
+                    ]
+                ]
+            ]
+        ]
+      ,
+      
+      -- Status message (placed outside any other container as a floating element)
+      statusMessageValue <#~> \msg ->
+        if msg == "" then D.div_ []
+        else D.div
+          [ DA.klass_ "tx-status-message" ]
+          [ text_ msg ]
+    ]
+
+-- -- CSS styles for the transaction component
+-- styles :: String
+-- styles = """
+-- .tx-main-container {
+--   display: flex;
+--   flex-direction: column;
+--   height: 100vh;
+--   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+-- }
+
+-- .tx-content-area {
+--   display: flex;
+--   flex: 1;
+--   overflow: hidden;
+-- }
+
+-- .tx-cart-container {
+--   flex: 2;
+--   display: flex;
+--   flex-direction: column;
+--   border-right: 1px solid #ddd;
+--   overflow: hidden;
+-- }
+
+-- .tx-cart-header {
+--   display: flex;
+--   padding: 0.75rem;
+--   font-weight: bold;
+--   font-size: 1.1rem;
+--   margin-top: 0.5rem;
+--   padding-top: 0.5rem;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- /* Inventory Section */
+-- .tx-inventory-container {
+--   flex: 3;
+--   display: flex;
+--   flex-direction: column;
+--   overflow: hidden;
+-- }
+
+-- /* Payment Section */
+-- .tx-bottom-area {
+--   display: flex;
+--   border-top: 1px solid #ddd;
+--   min-height: 250px; /* Ensure enough space for payment panel */
+-- }
+
+-- .tx-payment-panel {
+--   flex: 1;
+--   padding: 1rem;
+--   background-color: #f9f9f9;
+-- }
+
+-- .tx-payment-header {
+--   font-weight: bold;
+--   margin-bottom: 1rem;
+--   font-size: 1.1rem;
+-- }
+
+-- .tx-payment-methods {
+--   display: flex;
+--   flex-wrap: wrap;
+--   gap: 0.5rem;
+--   margin-bottom: 1rem;
+-- }
+
+-- .payment-method {
+--   padding: 0.5rem 0.75rem;
+--   background-color: #eee;
+--   border: 1px solid #ddd;
+--   border-radius: 4px;
+--   cursor: pointer;
+--   transition: all 0.2s ease;
+-- }
+
+-- .payment-method:hover {
+--   background-color: #e0e0e0;
+-- }
+
+-- .payment-method.active {
+--   background-color: #3498db;
+--   color: white;
+--   border-color: #2980b9;
+-- }
+
+-- .tx-payment-input-row {
+--   display: flex;
+--   align-items: center;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-payment-label {
+--   width: 80px;
+--   font-weight: 500;
+-- }
+
+-- .tx-payment-field {
+--   flex: 1;
+--   padding: 0.5rem;
+--   border: 1px solid #ddd;
+--   border-radius: 4px;
+--   font-size: 1rem;
+-- }
+
+-- .tx-existing-payments {
+--   margin-top: 1rem;
+-- }
+
+-- .tx-payments-container {
+--   border-top: 1px solid #ddd;
+--   padding-top: 0.5rem;
+-- }
+
+-- .tx-payments-header {
+--   font-weight: 600;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-payment-item {
+--   display: flex;
+--   align-items: center;
+--   padding: 0.25rem 0;
+-- }
+
+-- .tx-payment-method {
+--   flex: 1;
+-- }
+
+-- .tx-payment-amount {
+--   flex: 1;
+--   text-align: right;
+--   font-weight: 500;
+-- }
+
+-- .tx-payment-remove {
+--   margin-left: 0.5rem;
+--   color: #e74c3c;
+--   background: none;
+--   border: none;
+--   cursor: pointer;
+--   font-weight: bold;
+-- }
+
+-- .tx-payment-summary {
+--   margin: 1rem 0;
+--   padding-top: 0.5rem;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- .tx-payment-remaining {
+--   display: flex;
+--   justify-content: space-between;
+--   font-weight: bold;
+--   font-size: 1.1rem;
+-- }
+
+-- .tx-remaining-label {
+--   font-weight: 600;
+-- }
+
+-- .tx-remaining-amount.tx-paid {
+--   color: #2ecc71;
+-- }
+
+-- .tx-remaining-amount.tx-unpaid {
+--   color: #e74c3c;
+-- }
+
+-- .tx-add-payment-btn {
+--   width: 100%;
+--   padding: 0.75rem;
+--   background-color: #3498db;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   margin: 1rem 0;
+--   cursor: pointer;
+--   font-weight: 600;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-add-payment-btn:hover {
+--   background-color: #2980b9;
+-- }
+
+-- .tx-payment-actions {
+--   display: flex;
+--   gap: 0.5rem;
+-- }
+
+-- .tx-cancel-btn {
+--   flex: 1;
+--   padding: 0.75rem;
+--   background-color: #e74c3c;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   font-weight: bold;
+--   cursor: pointer;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-cancel-btn:hover {
+--   background-color: #c0392b;
+-- }
+
+-- .tx-checkout-btn {
+--   flex: 2;
+--   padding: 0.75rem;
+--   background-color: #2ecc71;
+--   color: white;
+--   border: none;
+--   border-radius: 4px;
+--   font-weight: bold;
+--   cursor: pointer;
+--   transition: background-color 0.2s;
+-- }
+
+-- .tx-checkout-btn:hover {
+--   background-color: #27ae60;
+-- }
+
+-- .tx-checkout-btn:disabled {
+--   background-color: #95a5a6;
+--   cursor: not-allowed;
+-- }
+
+-- /* Status Message */
+-- .tx-status-message {
+--   position: fixed;
+--   bottom: 1rem;
+--   right: 1rem;
+--   padding: 0.75rem 1.5rem;
+--   background-color: #2ecc71;
+--   color: white;
+--   border-radius: 4px;
+--   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+--   animation: fadeOut 3s forwards;
+--   animation-delay: 2s;
+--   z-index: 100;
+-- }
+
+-- @keyframes fadeOut {
+--   from { opacity: 1; }
+--   to { opacity: 0; visibility: hidden; }
+-- }
+--   background-color: #f5f5f5;
+--   border-bottom: 1px solid #ddd;
+-- }
+
+-- .tx-cart-items {
+--   flex: 1;
+--   overflow-y: auto;
+--   padding: 0 0.5rem;
+-- }
+
+-- .tx-empty-cart {
+--   padding: 2rem;
+--   text-align: center;
+--   color: #95a5a6;
+-- }
+
+-- .tx-cart-item {
+--   display: flex;
+--   padding: 0.5rem;
+--   border-bottom: 1px solid #eee;
+--   align-items: center;
+-- }
+
+-- .tx-item-details {
+--   flex: 3;
+--   display: flex;
+-- }
+
+-- .tx-item-quantity {
+--   min-width: 40px;
+--   text-align: center;
+--   font-weight: 500;
+-- }
+
+-- .tx-item-name {
+--   margin-left: 0.5rem;
+-- }
+
+-- .tx-item-price {
+--   flex: 1;
+--   text-align: right;
+-- }
+
+-- .tx-item-total {
+--   flex: 1;
+--   text-align: right;
+-- }
+
+-- .tx-item-actions {
+--   flex: 1;
+--   display: flex;
+--   justify-content: center;
+-- }
+
+-- .tx-delete-btn {
+--   background-color: #e74c3c;
+--   color: white;
+--   border: none;
+--   border-radius: 50%;
+--   width: 24px;
+--   height: 24px;
+--   display: flex;
+--   align-items: center;
+--   justify-content: center;
+--   cursor: pointer;
+-- }
+
+-- .tx-delete-btn:hover {
+--   background-color: #c0392b;
+-- }
+
+-- .tx-cart-totals {
+--   padding: 1rem;
+--   background-color: #f9f9f9;
+--   border-top: 1px solid #ddd;
+-- }
+
+-- .tx-total-row {
+--   display: flex;
+--   justify-content: space-between;
+--   margin-bottom: 0.5rem;
+-- }
+
+-- .tx-grand-total {
+--   display: flex;
+--   justify-content: space-between;
+--   font-weight: bold;

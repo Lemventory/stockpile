@@ -24,6 +24,8 @@ package:
     - lists: ">=7.0.0 <8.0.0"
     - maybe: ">=6.0.0 <7.0.0"
     - money: "*"
+    - linear-algebra: "*"
+    - vector: "*"
     - newtype: ">=5.0.0 <6.0.0"
     - node-fs: ">=9.2.0 <10.0.0"
     - numbers: ">=9.0.1 <10.0.0"
@@ -38,9 +40,48 @@ package:
     - validation: ">=6.0.0 <7.0.0"
     - web-html: ">=4.1.0 <5.0.0"
     - yoga-json: ">=5.1.0 <6.0.0"
-  test:
-    main: Test.Main
-    dependencies: []
+  # test:
+  #   main: Test.Main
+  #   dependencies:
+  #       - spec-discovery
+  #       - spec
+  #       - aff: ">=7.1.0 <8.0.0"
+  #       - aff-promise: ">=4.0.0 <5.0.0"
+  #       - affjax: ">=13.0.0 <14.0.0"
+  #       - affjax-web: ">=1.0.0 <2.0.0"
+  #       - arraybuffer: ">=13.2.0 <14.0.0"
+  #       - arraybuffer-types: ">=3.0.2 <4.0.0"
+  #       - arrays: ">=7.3.0 <8.0.0"
+  #       - console: ">=6.1.0 <7.0.0"
+  #       - css: ">=6.0.0 <7.0.0"
+  #       - datetime: ">=6.1.0 <7.0.0"
+  #       - debug: ">=6.0.2 <7.0.0"
+  #       - deku-core: "*"
+  #       - deku-css: "*"
+  #       - deku-dom: "*"
+  #       - effect: ">=4.0.0 <5.0.0"
+  #       - either: ">=6.1.0 <7.0.0"
+  #       - encoding: ">=0.0.9 <0.0.10"
+  #       - enums: ">=6.0.1 <7.0.0"
+  #       - fetch: ">=4.1.0 <5.0.0"
+  #       - fetch-yoga-json: ">=1.1.0 <2.0.0"
+  #       - lists: ">=7.0.0 <8.0.0"
+  #       - maybe: ">=6.0.0 <7.0.0"
+  #       - money: "*"
+  #       - newtype: ">=5.0.0 <6.0.0"
+  #       - node-fs: ">=9.2.0 <10.0.0"
+  #       - numbers: ">=9.0.1 <10.0.0"
+  #       - parsing: ">=10.2.0 <11.0.0"
+  #       - prelude: ">=6.0.1 <7.0.0"
+  #       - routing: ">=11.0.0 <12.0.0"
+  #       - routing-duplex: ">=0.7.0 <0.8.0"
+  #       - stringutils: ">=0.0.12 <0.0.13"
+  #       - transformers: ">=6.1.0 <7.0.0"
+  #       - tuples: ">=7.0.0 <8.0.0"
+  #       - uuid: ">=9.0.0 <10.0.0"
+  #       - validation: ">=6.0.0 <7.0.0"
+  #       - web-html: ">=4.1.0 <5.0.0"
+  #       - yoga-json: ">=5.1.0 <6.0.0"
 workspace:
   packageSet:
     registry: 56.4.0
@@ -57,6 +98,29 @@ workspace:
         - newtype
         - prelude
         - rationals
+    linear-algebra:
+      git: "https://github.com/harryprayiv/purescript-linear-algebra.git"
+      ref: "d7b640afab25a3abdc6b9e8d55a2f9389d6a40eb"
+      dependencies:
+        - arrays
+        - assert
+        - console
+        - effect
+        - numbers
+        - prelude
+        - tuples
+    vector:
+      git: "https://github.com/harryprayiv/purescript-vector.git"
+      ref: "086268b7e60b570b2be7c104159e021259de98df"
+      dependencies:
+        - arrays
+        - assert
+        - effect
+        - either
+        - exceptions
+        - foldable-traversable
+        - numbers
+        - prelude
     hyrule:
       git: "https://github.com/mikesol/purescript-hyrule.git"
       ref: "a2a32e02a0d8518d906ec5fb3192261f63667338"

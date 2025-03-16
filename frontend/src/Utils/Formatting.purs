@@ -22,9 +22,6 @@ import Data.String as String
 import Data.String.Regex (regex, replace) as Regex
 import Data.String.Regex.Flags (global) as Regex
 import Partial.Unsafe (unsafePartial)
-import Data.Int as Int
-import Data.Maybe (Maybe, fromMaybe)
-import Data.String (trim)
 
 uuidToString :: UUID -> String
 uuidToString (UUID uuid) = uuid
@@ -92,6 +89,35 @@ formatDollarAmount str =
               else fromMaybe "" (parts !! 0) <> "." <> decimals <> "0"
           _ -> str
     Nothing -> str
+
+formatCentsToDisplayDollars :: String -> String
+formatCentsToDisplayDollars centsStr =
+  case Int.fromString centsStr of
+    Just cents -> 
+      let 
+        dollars = Int.toNumber cents / 100.0
+      in
+        show dollars
+    Nothing -> centsStr  -- If not a valid number, return as is
+
+formatCentsToDollars :: Int -> String
+formatCentsToDollars cents =
+  let
+    dollars = cents / 100
+    centsRemaining = cents `mod` 100
+    centsStr = if centsRemaining < 10 
+               then "0" <> show centsRemaining
+               else show centsRemaining
+  in
+    show dollars <> "." <> centsStr
+
+-- Converts Int cents to a dollar amount (for form fields)
+formatCentsToDecimal :: Int -> String
+formatCentsToDecimal cents = 
+  let
+    dollars = Int.toNumber cents / 100.0
+  in
+    show dollars
 
 getAllEnumValues :: ∀ a. BoundedEnum a => Bounded a => Array a
 getAllEnumValues = catMaybes $ map toEnum $ range 0 (fromEnum (top :: a))

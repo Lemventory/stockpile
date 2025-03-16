@@ -2,7 +2,9 @@ module MenuLiveView where
 
 import Prelude
 
+import Config.LiveView (LiveViewConfig, defaultViewConfig)
 import Data.Array (filter, length, sortBy)
+import Data.Newtype (unwrap)
 import Deku.Control (text, text_)
 import Deku.Core (Nut)
 import Deku.DOM as D
@@ -13,8 +15,7 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import FRP.Poll (Poll)
 import Types.Inventory (Inventory(..), MenuItem(..), StrainLineage(..))
-import Config.LiveView (LiveViewConfig, defaultViewConfig)
-import Utils.Formatting (compareMenuItems, generateClassName, summarizeLongText)
+import Utils.Formatting (compareMenuItems, formatCentsToDollars, generateClassName, summarizeLongText)
 
 createMenuLiveView :: Poll Inventory -> Poll Boolean -> Poll String -> Nut
 createMenuLiveView inventoryPoll loadingPoll errorPoll =
@@ -78,6 +79,8 @@ renderItem (MenuItem record) =
       , species: meta.species
       }
 
+    -- Format price using the cents value from unwrapping Discrete USD
+    formattedPrice = "$" <> formatCentsToDollars (unwrap record.price)
     formattedDescription = summarizeLongText record.description
   in
     D.div
@@ -99,7 +102,7 @@ renderItem (MenuItem record) =
           [ text_ ("Strain: " <> meta.strain) ]
       , D.div [ DA.klass_ "item-price" ]
           [ text_
-              ( "$" <> show record.price <> " (" <> record.per_package <> " "
+              ( formattedPrice <> " (" <> record.per_package <> " "
                   <> record.measure_unit
                   <> ")"
               )

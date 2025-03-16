@@ -66,6 +66,9 @@
               "fetch-yoga-json": ">=1.1.0 <2.0.0"
             },
             {
+              "linear-algebra": "*"
+            },
+            {
               "lists": ">=7.0.0 <8.0.0"
             },
             {
@@ -109,6 +112,9 @@
             },
             {
               "validation": ">=6.0.0 <7.0.0"
+            },
+            {
+              "vector": "*"
             },
             {
               "web-html": ">=4.1.0 <5.0.0"
@@ -176,6 +182,7 @@
             "js-uri",
             "lazy",
             "lcg",
+            "linear-algebra",
             "lists",
             "literals",
             "maybe",
@@ -230,6 +237,7 @@
             "uuid",
             "validation",
             "variant",
+            "vector",
             "web-dom",
             "web-events",
             "web-file",
@@ -841,6 +849,19 @@
           "web-uievents"
         ]
       },
+      "linear-algebra": {
+        "git": "https://github.com/harryprayiv/purescript-linear-algebra.git",
+        "ref": "d7b640afab25a3abdc6b9e8d55a2f9389d6a40eb",
+        "dependencies": [
+          "arrays",
+          "assert",
+          "console",
+          "effect",
+          "numbers",
+          "prelude",
+          "tuples"
+        ]
+      },
       "money": {
         "git": "https://github.com/harryprayiv/purescript-money.git",
         "ref": "338d7cce83af935f078839d88b2ffc72de432b73",
@@ -918,6 +939,20 @@
           "tuples",
           "type-equality",
           "unicode"
+        ]
+      },
+      "vector": {
+        "git": "https://github.com/harryprayiv/purescript-vector.git",
+        "ref": "086268b7e60b570b2be7c104159e021259de98df",
+        "dependencies": [
+          "arrays",
+          "assert",
+          "effect",
+          "either",
+          "exceptions",
+          "foldable-traversable",
+          "numbers",
+          "prelude"
         ]
       }
     }
@@ -1696,6 +1731,20 @@
         "random"
       ]
     },
+    "linear-algebra": {
+      "type": "git",
+      "url": "https://github.com/harryprayiv/purescript-linear-algebra.git",
+      "rev": "d7b640afab25a3abdc6b9e8d55a2f9389d6a40eb",
+      "dependencies": [
+        "arrays",
+        "assert",
+        "console",
+        "effect",
+        "numbers",
+        "prelude",
+        "tuples"
+      ]
+    },
     "lists": {
       "type": "registry",
       "version": "7.0.0",
@@ -2437,6 +2486,21 @@
         "record",
         "tuples",
         "unsafe-coerce"
+      ]
+    },
+    "vector": {
+      "type": "git",
+      "url": "https://github.com/harryprayiv/purescript-vector.git",
+      "rev": "086268b7e60b570b2be7c104159e021259de98df",
+      "dependencies": [
+        "arrays",
+        "assert",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "numbers",
+        "prelude"
       ]
     },
     "web-dom": {

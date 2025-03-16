@@ -2,79 +2,72 @@ module Test.Main where
 
 import Prelude
 
-import Data.Array (filter)
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
-import Effect.Aff (Aff)
-import Node.Encoding (Encoding(..))
-import Node.FS.Aff as FS
-import Types.Inventory (Inventory(..), InventoryResponse(..), MenuItem(..))
-import Types.UUID (UUID)
-import Yoga.JSON (readJSON_, writeJSON)
+-- import Effect (Effect)
+-- import Effect.Aff (launchAff_)
+-- import Effect.Class.Console (log)
+-- import Test.Spec (describe, it)
+-- import Test.Spec.Assertions (shouldEqual)
+-- import Test.Spec.Reporter.Console (consoleReporter)
+-- import Test.Spec.Runner (runSpec)
 
--- Read current inventory
-handleReadInventory :: String -> Aff (Either String InventoryResponse)
-handleReadInventory path = do
-  content <- FS.readTextFile UTF8 path
-  pure case readJSON_ content of
-    Nothing -> Left "Failed to parse inventory"
-    Just inventory -> Right $ InventoryData inventory
+-- -- Import modules to test
+-- import Utils.Validation as Validation
+-- import Utils.Formatting as Formatting
+-- import Utils.Money as Money
 
--- Create new menu item
-handleWriteInventory :: String -> MenuItem -> Aff (Either String String)
-handleWriteInventory path menuItem = do
-  currentContent <- FS.readTextFile UTF8 path
-  case readJSON_ currentContent of
-    Nothing -> pure $ Left "Failed to parse current inventory"
-    Just (Inventory items) -> do
-      let
-        newInventory = Inventory (items <> [ menuItem ])
-        content = writeJSON newInventory
-      FS.writeTextFile UTF8 path content
-      pure $ Right "Successfully created item"
+-- -- Mock imports for API related tests
+-- import Test.Mock.API.Inventory (mockInventoryResponse)
 
-handleUpdateInventory :: String -> MenuItem -> Aff (Either String String)
-handleUpdateInventory path updatedItem = do
-  currentContent <- FS.readTextFile UTF8 path
-  case readJSON_ currentContent of
-    Nothing -> pure $ Left "Failed to parse current inventory"
-    Just (Inventory items) -> do
-      let
-        newItems :: Array MenuItem
-        newItems = map
-          ( \(MenuItem item) ->
-              let
-                updatedSku :: UUID
-                updatedSku = (unwrap updatedItem).sku
-
-                currentSku :: UUID
-                currentSku = item.sku
-              in
-                if currentSku == updatedSku then updatedItem
-                else MenuItem item
-          )
-          items
-
-        newInventory :: Inventory
-        newInventory = Inventory newItems
-
-        content :: String
-        content = writeJSON newInventory
-
-      FS.writeTextFile UTF8 path content
-      pure $ Right "Successfully updated item"
-
--- Delete menu item
-handleDeleteInventory :: String -> String -> Aff (Either String String)
-handleDeleteInventory path itemId = do
-  currentContent <- FS.readTextFile UTF8 path
-  case readJSON_ currentContent of
-    Nothing -> pure $ Left "Failed to parse current inventory"
-    Just (Inventory items) -> do
-      let
-        newItems = filter (\(MenuItem item) -> show item.sku /= itemId) items
-        newInventory = Inventory newItems
-        content = writeJSON newInventory
-      FS.writeTextFile UTF8 path content
-      pure $ Right "Successfully deleted item"
+-- main :: Effect Unit
+-- main = 
+        -- tests
+  -- describe "Utility Functions" do
+    
+  --   describe "Utils.Formatting" do
+  --     it "summarizeLongText should truncate text correctly" do
+  --       let longText = "This is a very long text that should be truncated at some point because it's too long to display in a single line without scrolling."
+  --       let result = Formatting.summarizeLongText longText
+  --       (Formatting.String.length result <= 103) `shouldEqual` true -- 100 + "..."
+        
+  --     it "ensureNumber should handle valid numbers" do
+  --       Formatting.ensureNumber "123.45" `shouldEqual` "123.45"
+      
+  --     it "ensureNumber should default invalid numbers to 0.0" do
+  --       Formatting.ensureNumber "not-a-number" `shouldEqual` "0.0"
+    
+  --   describe "Utils.Money" do
+  --     it "formatMoney should format currency correctly" do
+  --       Money.formatMoney' (Money.fromDiscrete' (Money.fromDollars 123.45)) `shouldEqual` "123.45"
+      
+  --   describe "Utils.Validation" do
+  --     it "nonEmpty should validate non-empty strings" do
+  --       Validation.runValidation Validation.nonEmpty "some text" `shouldEqual` true
+  --       Validation.runValidation Validation.nonEmpty "" `shouldEqual` false
+  --       Validation.runValidation Validation.nonEmpty "  " `shouldEqual` false
+        
+  --     it "validateMenuItem should validate valid menu items" do
+  --       TODO: Add test for validateMenuItem with valid data
+        
+  --     it "validateMenuItem should reject invalid menu items" do
+  --       -- TODO: Add test for validateMenuItem with invalid data
+  
+  -- -- Component tests
+  -- describe "UI Components" do
+    
+  --   describe "MenuLiveView" do
+  --     it "should filter items when hideOutOfStock is true" do
+  --       -- TODO: Implement test to verify hiding out of stock items
+    
+  --   describe "CreateItem Form" do
+  --     it "should validate form before submission" do
+  --       -- TODO: Test form validation logic
+        
+  -- -- Integration tests
+  -- describe "API Integration" do
+    
+  --   describe "Inventory API" do
+  --     it "should parse inventory response correctly" do
+  --       -- TODO: Test parsing the JSON response from API
+        
+  --     it "should handle error responses gracefully" do
+  --       -- TODO: Test error handling logic

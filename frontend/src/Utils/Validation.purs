@@ -4,7 +4,9 @@ import Prelude
 
 import Data.Array (all, any)
 import Data.Either (Either(..))
+import Data.Finance.Money (Discrete(..))
 import Data.Int (fromString)
+import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Number (fromString) as Number
 import Data.String (joinWith)
@@ -17,7 +19,6 @@ import Types.Common (ValidationRule(..))
 import Types.Inventory (ItemCategory(..), MenuItem(..), MenuItemFormInput, Species(..), StrainLineage(..), StrainLineageFormInput)
 import Types.UUID (UUID, parseUUID)
 import Utils.Formatting (parseCommaList)
-import Utils.Money (fromDollars)
 
 mkValidationRule :: (String -> Boolean) -> ValidationRule
 mkValidationRule = ValidationRule
@@ -224,6 +225,12 @@ validatePercentage fieldName str =
     invalid [ fieldName <> " must be in the format XX.XX%" ]
   else pure str
 
+-- validateNumber :: String -> String -> V (Array String) Number
+-- validateNumber fieldName str =
+--   case Number.fromString (String.trim str) of
+--     Just n | n >= 0.0 -> pure n
+--     _ -> invalid [ fieldName <> " must be a non-negative number" ]
+
 validateNumber :: String -> String -> V (Array String) Number
 validateNumber fieldName str =
   case Number.fromString (String.trim str) of
@@ -294,7 +301,7 @@ validateMenuItem input =
     validateUUID "SKU" input.sku `andThen` \sku ->
       validateString "Name" input.name `andThen` \name ->
         validateString "Brand" input.brand `andThen` \brand ->
-          validateNumber "Price" input.price `andThen` \price ->
+          validateNumber "Price" input.price `andThen` \priceValue ->
             validateInt "Quantity" input.quantity `andThen` \quantity ->
               validateString "Measure Unit" input.measure_unit `andThen`
                 \measure_unit ->
@@ -308,22 +315,67 @@ validateMenuItem input =
                                 `andThen` \strain_lineage ->
                                   validateInt "Sort" input.sort `andThen`
                                     \sort ->
-                                      pure $ MenuItem
-                                        { sort
-                                        , sku
-                                        , brand
-                                        , name
-                                        , price: fromDollars price
-                                        , measure_unit
-                                        , per_package
-                                        , quantity
-                                        , category
-                                        , subcategory
-                                        , description: input.description
-                                        , tags: parseCommaList input.tags
-                                        , effects: parseCommaList input.effects
-                                        , strain_lineage
-                                        }
+                                      -- Convert dollars to cents and create Discrete value
+                                      let 
+                                        priceCents = Int.floor (priceValue * 100.0)
+                                      in
+                                        pure $ MenuItem
+                                          { sort
+                                          , sku
+                                          , brand
+                                          , name
+                                          , price: Discrete priceCents
+                                          , measure_unit
+                                          , per_package
+                                          , quantity
+                                          , category
+                                          , subcategory
+                                          , description: input.description
+                                          , tags: parseCommaList input.tags
+                                          , effects: parseCommaList input.effects
+                                          , strain_lineage
+                                          }
+
+-- validateMenuItem :: MenuItemFormInput -> Either String MenuItem
+-- validateMenuItem input =
+--   case toEither validationResult of
+--     Left errors -> Left (joinWith ", " errors)
+--     Right result -> Right result
+--   where
+--   validationResult =
+--     validateUUID "SKU" input.sku `andThen` \sku ->
+--       validateString "Name" input.name `andThen` \name ->
+--         validateString "Brand" input.brand `andThen` \brand ->
+--           validateNumber "Price" input.price `andThen` \price ->
+--             validateInt "Quantity" input.quantity `andThen` \quantity ->
+--               validateString "Measure Unit" input.measure_unit `andThen`
+--                 \measure_unit ->
+--                   validateString "Per Package" input.per_package `andThen`
+--                     \per_package ->
+--                       validateCategory "Category" input.category `andThen`
+--                         \category ->
+--                           validateString "Subcategory" input.subcategory
+--                             `andThen` \subcategory ->
+--                               validateStrainLineage input.strain_lineage
+--                                 `andThen` \strain_lineage ->
+--                                   validateInt "Sort" input.sort `andThen`
+--                                     \sort ->
+--                                       pure $ MenuItem
+--                                         { sort
+--                                         , sku
+--                                         , brand
+--                                         , name
+--                                         , price: fromDollars price
+--                                         , measure_unit
+--                                         , per_package
+--                                         , quantity
+--                                         , category
+--                                         , subcategory
+--                                         , description: input.description
+--                                         , tags: parseCommaList input.tags
+--                                         , effects: parseCommaList input.effects
+--                                         , strain_lineage
+--                                         }
 
 validateStrainLineage
   :: StrainLineageFormInput -> V (Array String) StrainLineage
